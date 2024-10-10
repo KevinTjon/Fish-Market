@@ -5,5 +5,6 @@ This project is a 2D art-style fishing economy management game. It combines enga
 This project is built using **Unity 2022.3.49f1**.
 
 ## Instructions
-- Ensure that you have **Unity 2022.3.49f1** installed.
+- Ensure that you have **Unigit sty 2022.3.49f1** installed.
 - Clone the repository and open it in Unity to start development.
+ 
