@@ -73,14 +73,14 @@ public class Flock : MonoBehaviour
     }
 
     //Rather than iterating through all the agents and find the distance compared to the radius to find our neighbours
-    //we can use Unity physics engine, we can run a physics overlap check and just check which agent gets hit
+    //we can use Unity physics engine. we can run a physics overlap check and just check which agent gets hit by a casted circle
     List<Transform> GetNearbyObjects(FlockAgent agent){
         List<Transform> context = new List<Transform>();
         Collider2D[] contextColliders = Physics2D.OverlapCircleAll(agent.transform.position, neighbourRadius); //creates an imaginary circle in space
         
         foreach (Collider2D c in contextColliders){
             if (c != agent.AgentCollider){ // if not iself
-                context.Add(c.transform);
+                context.Add(c.transform); // add to the context list
             }
         }
         return context;

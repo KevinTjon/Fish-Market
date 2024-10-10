@@ -5,8 +5,11 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Flock/Behaviour/Avoidance")]
 public class AvoidanceBehavoiur : FlockBehaviour
 {
+    // calculates new move based on if the agent is too close to surrounding neighbours
+    // if too close to any neighbours find the mid point between all neighbours
+    // this is affected by the vision range of the agent (lower, less range to see neighbours)
     public override Vector2 CalculateMove(FlockAgent agent, List<Transform> context, Flock flock){
-            // if no neighbours, return no adjustment. Reutrn no magnitude
+            // if no neighbours, return no adjustment. Reutrn no magnitude (no change in movement)
             if (context.Count == 0){
                 return Vector2.zero;
             }
@@ -24,7 +27,7 @@ public class AvoidanceBehavoiur : FlockBehaviour
             if (nAvoid > 0){ //avg of all the neighbours
                 avoidanceMove /= nAvoid;
             }
-            return avoidanceMove;
+            return avoidanceMove; //returns new movement
     }   
     
 }
