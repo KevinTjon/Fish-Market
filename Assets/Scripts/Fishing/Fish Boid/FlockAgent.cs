@@ -8,6 +8,9 @@ using UnityEngine;
 
 public class FlockAgent : MonoBehaviour
 {
+    
+    Flock agentFlock;
+    public Flock AgentFlock{get{return agentFlock;}}
     Collider2D agentCollider;
 
     // allows us to get the collider without being able assign it during runtime, the only time collider should be assigned is at the start
@@ -17,6 +20,10 @@ public class FlockAgent : MonoBehaviour
     void Start()
     {
         agentCollider = GetComponent<Collider2D>(); //Assign collider
+    }
+
+    public void Initialize(Flock flock){
+        agentFlock = flock;
     }
 
     // turn agent towards the dirction we want, and move it to destination

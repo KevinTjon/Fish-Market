@@ -47,6 +47,7 @@ public class Flock : MonoBehaviour
                 transform // flock's parent/transform
             );
             newAgent.name  = "Agent " + i; //creates new agents and names them accoring to the iteration
+            newAgent.Initialize(this); // assigns the proper flock to this agent
             agents.Add(newAgent); //stores it to agents to allow us to access them
         }
     }

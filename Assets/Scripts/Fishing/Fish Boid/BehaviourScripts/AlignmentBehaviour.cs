@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Flock/Behaviour/Alignment")]
-public class AlignmentBehaviour : FlockBehaviour
+public class AlignmentBehaviour : FilteredFlockBehaviour
 {
     // returns the new alignment of the agent based on surround neighbours' alignment
     public override Vector2 CalculateMove(FlockAgent agent, List<Transform> context, Flock flock){
@@ -14,7 +14,8 @@ public class AlignmentBehaviour : FlockBehaviour
 
             //if have neighbours, add all points(where the neighbours are looking at)
             Vector2 alignmentMove = Vector2.zero;
-            foreach (Transform item in context){
+            List<Transform> filteredContext = (filter == null)? context: filter.Filter(agent,context);
+            foreach (Transform item in filteredContext){
                 alignmentMove += (Vector2)item.up;
             }
             alignmentMove /= context.Count; //find avg for all
