@@ -31,5 +31,32 @@ public class FlockAgent : MonoBehaviour
     public void Move(Vector2 velocity){
         transform.up = velocity;
         transform.position += (Vector3)velocity * Time.deltaTime; //using delta time to ensure constant movement regardless of framerate of the running system
+
+        // Get the child sprite object
+        Transform spriteTransform = transform.Find("Sprite"); //finds the child sprite renderer
+
+        // Flip the sprite based on the movement direction
+        if (velocity.x > 0)
+        {
+            if (spriteTransform != null)
+            {
+                spriteTransform.localScale = new Vector3(1, 1, 1); // Face right
+            }
+        }
+        else if (velocity.x < 0)
+        {
+            if (spriteTransform != null)
+            {
+                spriteTransform.localScale = new Vector3(-1, 1, 1); // Face left
+            }
+        }
+        // If moving up or down, do not change the scale
+
+        // Restrict rotation of the child sprite
+        if (spriteTransform != null)
+        {
+            spriteTransform.rotation = Quaternion.identity; // Reset rotation to prevent any rotation
+        }
+        
     }
 }

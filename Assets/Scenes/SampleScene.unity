@@ -122,6 +122,58 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &340731986
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 340731988}
+  - component: {fileID: 340731987}
+  m_Layer: 0
+  m_Name: FlocOrange
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &340731987
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340731986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f217075d07ae0ed4c903f1e2d31f909a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agentPrefab: {fileID: 5317058714821455866, guid: 0eb0238b234bfe14daeb9b1a751fb7bb, type: 3}
+  behaviour: {fileID: 11400000, guid: 178e9fced6d3a6f4a9f8f2789d3f141b, type: 2}
+  startingCount: 12
+  driveFactor: 1
+  maxSpeed: 2.3
+  neighbourRadius: 1.5
+  avoidanceRadiusMultiplier: 1
+  avoidancePredatorMultiplier: 5
+--- !u!4 &340731988
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340731986}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -338,7 +390,7 @@ Transform:
   m_GameObject: {fileID: 535043890}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: 0.70617765, w: 0.7080347}
-  m_LocalPosition: {x: 23.89102, y: 0.24569309, z: 0.036277477}
+  m_LocalPosition: {x: 18.84, y: -0.65, z: 0.036277477}
   m_LocalScale: {x: 18.1924, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -468,7 +520,7 @@ Transform:
   m_GameObject: {fileID: 830692944}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9.627919, y: 9.725694, z: 0.036277477}
+  m_LocalPosition: {x: 8.42, y: 4.06, z: 0.036277477}
   m_LocalScale: {x: 29.766403, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -598,7 +650,7 @@ Transform:
   m_GameObject: {fileID: 875252503}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9.62842, y: -8.284307, z: 0.036277477}
+  m_LocalPosition: {x: 8.97, y: -6.93, z: 0.036277477}
   m_LocalScale: {x: 29.287945, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -614,7 +666,7 @@ GameObject:
   m_Component:
   - component: {fileID: 880063855}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: Walls
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -637,57 +689,6 @@ Transform:
   - {fileID: 2127171127}
   - {fileID: 830692947}
   - {fileID: 875252506}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1457036389
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1457036391}
-  - component: {fileID: 1457036390}
-  m_Layer: 0
-  m_Name: FlockOrange
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1457036390
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1457036389}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f217075d07ae0ed4c903f1e2d31f909a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  agentPrefab: {fileID: 5317058714821455866, guid: 0eb0238b234bfe14daeb9b1a751fb7bb, type: 3}
-  behaviour: {fileID: 11400000, guid: 178e9fced6d3a6f4a9f8f2789d3f141b, type: 2}
-  startingCount: 10
-  driveFactor: 5
-  maxSpeed: 5
-  neighbourRadius: 1.5
-  avoidanceRadiusMultiplier: 1
---- !u!4 &1457036391
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1457036389}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1627843156
@@ -721,11 +722,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   agentPrefab: {fileID: 5317058714821455866, guid: 481647d1b5a66444c8c819c51909a0df, type: 3}
   behaviour: {fileID: 11400000, guid: 178e9fced6d3a6f4a9f8f2789d3f141b, type: 2}
-  startingCount: 46
-  driveFactor: 5
-  maxSpeed: 5
+  startingCount: 8
+  driveFactor: 1
+  maxSpeed: 3.3
   neighbourRadius: 1.5
   avoidanceRadiusMultiplier: 0.5
+  avoidancePredatorMultiplier: 5
 --- !u!4 &1627843158
 Transform:
   m_ObjectHideFlags: 0
@@ -771,12 +773,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   agentPrefab: {fileID: 5317058714821455866, guid: 6b09fd19084158d4caf2b8405db81612, type: 3}
-  behaviour: {fileID: 11400000, guid: 178e9fced6d3a6f4a9f8f2789d3f141b, type: 2}
+  behaviour: {fileID: 11400000, guid: 8fe686afec22fd6498f9f19e0325f22a, type: 2}
   startingCount: 1
   driveFactor: 5
   maxSpeed: 5
   neighbourRadius: 1.5
-  avoidanceRadiusMultiplier: 0.409
+  avoidanceRadiusMultiplier: 0.5
+  avoidancePredatorMultiplier: 2
 --- !u!4 &1781768360
 Transform:
   m_ObjectHideFlags: 0
@@ -916,7 +919,7 @@ Transform:
   m_GameObject: {fileID: 2127171124}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: 0.70617765, w: 0.7080347}
-  m_LocalPosition: {x: -4.808981, y: 0.45569313, z: 0.036277477}
+  m_LocalPosition: {x: -0.07, y: -0.05, z: 0.036277477}
   m_LocalScale: {x: 18.1924, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -928,6 +931,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 1627843158}
-  - {fileID: 1457036391}
+  - {fileID: 340731988}
   - {fileID: 1781768360}
   - {fileID: 880063855}
