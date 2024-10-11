@@ -9,7 +9,7 @@ public class Flock : MonoBehaviour
     List<FlockAgent> agents = new List<FlockAgent>(); // empty list at start but once populated, allow us to iterate through all the agents
     public FlockBehaviour behaviour;
 
-    [Range(10,500)]
+    [Range(1,500)]
     public int startingCount = 250; //populate initial flock
     const float AgentDensity = 0.08f;
 
@@ -68,6 +68,7 @@ public class Flock : MonoBehaviour
             if (move.sqrMagnitude > sqaureMaxSpeed){ //checks if move is greater than our set maxspeed
                 move = move.normalized * maxSpeed; //reset the move speed back to 1 and then set it to max speed
             }
+            Debug.Log("Move: "+ move);
             agent.Move(move);
 
         }

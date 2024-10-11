@@ -16,7 +16,8 @@ public class StayInRadiusBehaviour : FlockBehaviour
         if (t < 0.9f){
             return Vector2.zero;
         }
-        
+
+        //Debug.Log("Radius "+ centerOffset * t * t);
         return centerOffset * t * t;
     }
 

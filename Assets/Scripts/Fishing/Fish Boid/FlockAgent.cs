@@ -13,6 +13,7 @@ public class FlockAgent : MonoBehaviour
     public Flock AgentFlock{get{return agentFlock;}}
     Collider2D agentCollider;
 
+    public bool isPredator;
     // allows us to get the collider without being able assign it during runtime, the only time collider should be assigned is at the start
     public Collider2D AgentCollider {get {return agentCollider;}}
 
@@ -20,6 +21,7 @@ public class FlockAgent : MonoBehaviour
     void Start()
     {
         agentCollider = GetComponent<Collider2D>(); //Assign collider
+        isPredator = false;
     }
 
     public void Initialize(Flock flock){

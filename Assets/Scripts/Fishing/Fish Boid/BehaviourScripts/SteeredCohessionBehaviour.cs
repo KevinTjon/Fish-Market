@@ -14,19 +14,22 @@ public class CohessionSteeredBehaviour : FilteredFlockBehaviour
 
     // finds the middlepoint of all the object's neighbours and move there
     public override Vector2 CalculateMove(FlockAgent agent, List<Transform> context, Flock flock){
-            // if no neighbours, return no adjustment. Reutrn no magnitude
-            if (context.Count == 0 || filter.Filter(agent, context).Count == 0){
-                return Vector2.up;
+
+            //if no neighbors, return no adjustment
+            if (context.Count == 0){
+                return Vector2.zero;
             }
+
+            //Debug.Log("Did Cohession ");
 
             //if have neighbours, add all points and average
             Vector2 cohessionMove = Vector2.zero;
 
-            List<Transform> filteredContext = (filter == null)? context: filter.Filter(agent,context);
+            List<Transform> filteredContext = (context == null)? context: filter.Filter(agent,context);
             foreach (Transform item in filteredContext){
                 cohessionMove += (Vector2)item.position;
             }
-            cohessionMove /= filteredContext.Count; //find avg
+            cohessionMove /= context.Count; //find avg
 
             //create offset from agent postion
             cohessionMove -= (Vector2)agent.transform.position;
@@ -39,6 +42,8 @@ public class CohessionSteeredBehaviour : FilteredFlockBehaviour
             //only change comparing to origianl cohessionbehaviour
             //using unity smooth damp function
             cohessionMove = Vector2.SmoothDamp(agent.transform.up, cohessionMove, ref currentVelocity, agentSmoothTime); 
+            //Debug.Log("Cohession, reached end");
+            //Debug.Log("Cohession "+ cohessionMove);
             return cohessionMove;
     }   
     
