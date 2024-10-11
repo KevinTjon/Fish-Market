@@ -21,7 +21,6 @@ public class FlockAgent : MonoBehaviour
     void Start()
     {
         agentCollider = GetComponent<Collider2D>(); //Assign collider
-        isPredator = false;
     }
 
     public void Initialize(Flock flock){

@@ -25,6 +25,9 @@ public class Flock : MonoBehaviour
     [Range(0f,1f)] 
     public float avoidanceRadiusMultiplier = 0.5f;
 
+    [Range(1f, 10f)] // multiplier for avoidance from predator
+    public float avoidancePredatorMultiplier = 2f;
+
     float sqaureMaxSpeed;
     float squareNeighbourRadius;
     float squareAvoidanceRadius;
@@ -68,7 +71,7 @@ public class Flock : MonoBehaviour
             if (move.sqrMagnitude > sqaureMaxSpeed){ //checks if move is greater than our set maxspeed
                 move = move.normalized * maxSpeed; //reset the move speed back to 1 and then set it to max speed
             }
-            Debug.Log("Move: "+ move);
+            //Debug.Log("Move: "+ move);
             agent.Move(move);
 
         }

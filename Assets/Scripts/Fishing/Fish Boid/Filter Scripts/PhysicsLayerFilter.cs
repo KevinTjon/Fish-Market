@@ -12,15 +12,11 @@ public class PhysicsLayerFilter : ContextFilter
         foreach(Transform item in original){
             
             //bit shifting 1 by game object.layer (=5) will reutrn 10000 layermask
-            var layerMaskForItem = 1 << item.gameObject.layer;
-
-            //OR it with the mask
-            layerMaskForItem = layerMaskForItem | mask;
-
-            //now if the layermaskforitem is same as mask it means the item is included in the mask
-            if(mask == layerMaskForItem){
+            if (mask == (mask | (1 << item.gameObject.layer)))
+            {
                 filtered.Add(item);
             }
+        
         }
         return filtered;
     }
