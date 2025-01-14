@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 2176179295089037980}
   - component: {fileID: 5317058714821455866}
   m_Layer: 0
-  m_Name: FlockAgentRedSmall
+  m_Name: RedFish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
