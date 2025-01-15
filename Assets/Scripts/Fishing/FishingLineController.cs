@@ -4,12 +4,15 @@ public class FishingLineController : MonoBehaviour
 {    
     // Add to FishingLine class
     private Color lineColor = Color.black;
-    private const float width = .1f;
-    private const float pullConstant = 10f;
-    private const float pushConstant = 15f;
+    private const float Width = .1f;
+    private const float PullConstant = 40f;
+    private const float PushConstant = 50f;
+    private const float ReelSpeed = 2f;
+    
 
     // Length of the rod
     private float baseLength;
+    private const float ReelDownConstant = .6f;
     // ------------------------
 
 
@@ -35,49 +38,48 @@ public class FishingLineController : MonoBehaviour
         baseLength = lineBounds.x / normal.x;
     }
 
-    // Assigns the points of the line to draw
-    /*
-    public void CreateLine(Transform rodPoint, Transform hookPoint)
-    {
-        line.positionCount = 2;
-        rodPosition = rodPoint.position;
-        hookPosition = hookPoint.position;
-    }
-    */
 
+    /**
+        Creates the line visuals
+    */
     private void Update()
     {
+        // Line visuals
         line.SetPosition(0, rod.position);
         line.SetPosition(1, hook.position);
     }
 
+    public void AlterLength(float input)
+    {
+        var deltaLength = input * ReelSpeed * Time.fixedDeltaTime;
+        if (IsOppositeDirection(input, 1f))
+        {
+            deltaLength *= ReelDownConstant;
+        }
+        baseLength -= deltaLength;
+        if (baseLength < 0f)
+        {
+            baseLength = 0f;
+        }
+    }
     // Calculates the force vector when simulating tension
     // 
     // Uses Hooke's law
     public Vector2 CalculateTension()
     {
-        var hookPos = hook.position;
-        var rodPos = rod.position;
-        
-        var currVector = hookPos - rodPos;
-        var displacement = CalculateLineDisplacement(currVector);
+        var currVector = hook.position - rod.position;
+        // Gets line as a vector pointing towards the fishing line
+        var baseVector = currVector.normalized * baseLength;
+        var displacement = baseVector - currVector;
 
         if (IsOppositeDirection(currVector.x, displacement.x))
-            return pullConstant * displacement;
+        {
+            return PullConstant * displacement;
+        }
         else
-            return pushConstant * displacement;
-    }
-    
-    // Calculate the difference between the current position of the 
-    // line and the unstretched line (line in the same direction, but
-    // has length "baseLength").
-    //
-    // The vector will face towards the rod connection point
-    public Vector2 CalculateLineDisplacement(Vector2 currVector)
-    {
-        var direction = currVector.normalized;
-        var baseVector = direction * baseLength;
-        return baseVector - currVector;
+        {
+            return PushConstant * displacement;
+        }
     }
 
     private bool IsOppositeDirection(float x, float y)

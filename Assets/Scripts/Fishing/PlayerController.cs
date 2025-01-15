@@ -5,33 +5,42 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    // BOAT FEATURES
+    private FishingControls.PlayerActions playerActions;
+
+    private BoatController boat;
     private FishingLineController line;
     private HookController hook;
     
-    //[SerializeField] private Rigidbody2D hookRB;
-
-    [SerializeField] private Transform rodPoint;
-    [SerializeField] private Transform hookPoint;
-
-    // Controls
-    [SerializeField] private InputActionAsset playerControls;
-    // Start is called before the first frame update
-    
     private void Awake()
     {
-        
-    }
-    private void Start()
-    {
         var currTransform = gameObject.transform;
-
+        boat = currTransform.GetChild(0).GetComponent<BoatController>();
         line = currTransform.GetChild(1).GetComponent<FishingLineController>();
         hook = currTransform.GetChild(2).GetComponent<HookController>();
-        //line.CreateLine(rodPoint, hookPoint);
+        
+        FishingControls fishingControls = new FishingControls();
+        playerActions = fishingControls.Player;
     }
 
-    void FixedUpdate()
+    private void Start()
     {
+        playerActions.MoveBoat.Enable();
+        // Change when line casting is added
+        playerActions.ReelLine.Enable();
+    }
+
+    private void FixedUpdate()
+    {
+        // Handle input
+        // Boat Movement
+        var boatInput = playerActions.MoveBoat.ReadValue<float>();
+        boat.SetBoatForce(boatInput);
+        // Line reeling
+        var reelInput = playerActions.ReelLine.ReadValue<float>();
+        line.AlterLength(reelInput);
+
+        // Hook/Line Movement
         var tensionForce = line.CalculateTension();
         hook.AddForce(tensionForce);
     }
@@ -42,12 +51,5 @@ public class PlayerController : MonoBehaviour
         // Get Rod Position
         // Calculate Tension
     }
-
-    private void MoveBoat()
-    {
-
-    }
-
-    //private
 
 }

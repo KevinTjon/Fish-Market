@@ -1,5 +1,5 @@
 {
-    "name": "PlayerControls",
+    "name": "FishingControls",
     "maps": [
         {
             "name": "Player",
@@ -35,7 +35,7 @@
             ],
             "bindings": [
                 {
-                    "name": "Kbm",
+                    "name": "1D Axis",
                     "id": "0b56ac64-01c4-4b66-8b81-64d737f123d1",
                     "path": "1DAxis",
                     "interactions": "",
@@ -68,40 +68,18 @@
                     "isPartOfComposite": true
                 },
                 {
-                    "name": "Pad",
-                    "id": "87fc0c12-6d0d-4a3a-8b99-adcf5100a2b8",
-                    "path": "1DAxis",
+                    "name": "",
+                    "id": "88bef1fd-bbfa-4467-bd5d-f23055292926",
+                    "path": "<Gamepad>/leftStick/x",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Gamepad",
                     "action": "MoveBoat",
-                    "isComposite": true,
+                    "isComposite": false,
                     "isPartOfComposite": false
                 },
                 {
-                    "name": "negative",
-                    "id": "47034dad-6f87-4550-a0f4-9a031022d90e",
-                    "path": "<Gamepad>/leftStick/x",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "MoveBoat",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "positive",
-                    "id": "afe67ea9-a4ab-4cde-b457-e2222606b46b",
-                    "path": "<Gamepad>/leftStick/x",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "MoveBoat",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "Kbm",
+                    "name": "1D Axis",
                     "id": "efcd29bc-f189-4582-bbee-7c7f00251c46",
                     "path": "1DAxis",
                     "interactions": "",
@@ -117,7 +95,7 @@
                     "path": "<Keyboard>/s",
                     "interactions": "",
                     "processors": "",
-                    "groups": ";Gamepad;Keyboard&Mouse",
+                    "groups": ";Keyboard&Mouse",
                     "action": "ReelLine",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -128,43 +106,21 @@
                     "path": "<Keyboard>/w",
                     "interactions": "",
                     "processors": "",
-                    "groups": ";Gamepad;Keyboard&Mouse",
+                    "groups": ";Keyboard&Mouse",
                     "action": "ReelLine",
                     "isComposite": false,
                     "isPartOfComposite": true
                 },
                 {
-                    "name": "Pad",
-                    "id": "2772ecb0-e62f-43a8-a292-05ac10aac158",
-                    "path": "1DAxis",
+                    "name": "",
+                    "id": "3defa62f-734a-41dd-a8de-157a4b08bd7a",
+                    "path": "<Gamepad>/rightStick/y",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Gamepad",
                     "action": "ReelLine",
-                    "isComposite": true,
+                    "isComposite": false,
                     "isPartOfComposite": false
-                },
-                {
-                    "name": "negative",
-                    "id": "44dc260f-ef57-421a-9f88-cd4c9bbf4c88",
-                    "path": "<Gamepad>/rightStick/y",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "ReelLine",
-                    "isComposite": false,
-                    "isPartOfComposite": true
-                },
-                {
-                    "name": "positive",
-                    "id": "f87c8f00-a6eb-463b-b34e-448d4b1fbae4",
-                    "path": "<Gamepad>/rightStick/y",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "ReelLine",
-                    "isComposite": false,
-                    "isPartOfComposite": true
                 },
                 {
                     "name": "",
@@ -172,7 +128,7 @@
                     "path": "<Keyboard>/space",
                     "interactions": "",
                     "processors": "",
-                    "groups": ";Keyboard&Mouse;Gamepad",
+                    "groups": ";Keyboard&Mouse",
                     "action": "UseHook",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -730,39 +686,6 @@
             "devices": [
                 {
                     "devicePath": "<Gamepad>",
-                    "isOptional": false,
-                    "isOR": false
-                }
-            ]
-        },
-        {
-            "name": "Touch",
-            "bindingGroup": "Touch",
-            "devices": [
-                {
-                    "devicePath": "<Touchscreen>",
-                    "isOptional": false,
-                    "isOR": false
-                }
-            ]
-        },
-        {
-            "name": "Joystick",
-            "bindingGroup": "Joystick",
-            "devices": [
-                {
-                    "devicePath": "<Joystick>",
-                    "isOptional": false,
-                    "isOR": false
-                }
-            ]
-        },
-        {
-            "name": "XR",
-            "bindingGroup": "XR",
-            "devices": [
-                {
-                    "devicePath": "<XRController>",
                     "isOptional": false,
                     "isOR": false
                 }
