@@ -64,6 +64,7 @@ public class FishInventory : MonoBehaviour
                         if (spriteRenderer != null){
                             //Now that we have the fish image, we go into the slot object and find its child object called image
                             Transform imageTransform = fishSlot.transform.Find("Image");
+                            slotData.fishImage = spriteRenderer.sprite;
                             if (imageTransform != null){
                                 //Take the actual image component from the child object
                                 Image fishImage = imageTransform.GetComponent<Image>();
