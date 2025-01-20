@@ -8,11 +8,15 @@ public class FishBigView : MonoBehaviour
     public string typeText;      // Reference to the Text component for fish type
     public string rarityText;    // Reference to the Text component for fish rarity
 
-     public void Setup(Sprite img, string type, string rarity)
+    public int quantityText;
+
+     public void Setup(Sprite img, string type, string rarity, int qty)
     {
         displayImage = img;
         typeText = type;
         rarityText = rarity;
+        quantityText = qty;
+
     }
 
     // Method to show fish details
@@ -43,6 +47,26 @@ public class FishBigView : MonoBehaviour
         else
         {
             Debug.LogError("Child Image GameObject not found under Panel_Image!");
+        }
+
+         // Find the TextMeshPro component for the quantity in Panel_Image
+        Transform qtyTransform = transform.Find("Panel_Image/Qty");
+        if (qtyTransform != null)
+        {
+            TextMeshProUGUI qtyTextComponent = qtyTransform.GetComponent<TextMeshProUGUI>(); // Get the TextMeshProUGUI component
+            if (qtyTextComponent != null)
+            {
+                qtyTextComponent.text = "X" + quantityText; // Set the quantity text
+                Debug.Log("Quantity text assigned.");
+            }
+            else
+            {
+                Debug.LogError("TextMeshProUGUI component not found on the qty GameObject!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Child qty GameObject not found under Panel_Image!");
         }
 
         // Find the TextMeshPro component for the type in Panel_Type

@@ -22,9 +22,9 @@ public class FishDB : MonoBehaviour
         //dbPath = "URI=file::memory:";
         Debug.Log("Database Path: " + dbPath);
         CreateTable();
-        // AddFish("Green Fish", "Medium","UNCOMMON","Prefabs/Fish/GreenFish");
-        // AddFish("Pink Fish", "small","COMMON","Prefabs/Fish/PinkFish");
-        // AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
+        //AddFish("Green Fish", "Medium","UNCOMMON","Prefabs/Fish/GreenFish");
+        //AddFish("Pink Fish", "small","COMMON","Prefabs/Fish/PinkFish");
+        //AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
     }
 
     void CreateTable(){
