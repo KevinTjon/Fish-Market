@@ -1,18 +1,23 @@
+
 using UnityEngine;
 
 public class FishingLineController : MonoBehaviour
 {    
     // Add to FishingLine class
     private Color lineColor = Color.black;
-    private const float Width = .1f;
-    private const float PullConstant = 40f;
-    private const float PushConstant = 50f;
-    private const float ReelSpeed = 2f;
+    private const float Width = .03f;
+    private const float PullConstant = 100f;
+    private const float PushConstant = 120f;
+    private const float ReelSpeed = 3f;
     
+    //private const
 
     // Length of the rod
-    private float baseLength;
+    
+    public float baseLength { get; private set; }
+    public float prevLength { get; private set; }
     private const float ReelDownConstant = .6f;
+    private const float Damping = 25f;    
     // ------------------------
 
 
@@ -27,15 +32,19 @@ public class FishingLineController : MonoBehaviour
     private void Awake()
     {
         line = GetComponent<LineRenderer>();
+        line.startColor = lineColor;
+        line.endColor = lineColor;
     }
 
     private void Start()
     {
-        line.positionCount = 2;
 
+        line.positionCount = 2;
         var lineBounds = hook.position - rod.position;
-        var normal = lineBounds.normalized;
-        baseLength = lineBounds.x / normal.x;
+        baseLength = lineBounds.magnitude;
+        prevLength = baseLength;
+        
+        line.startWidth = Width;
     }
 
 
@@ -51,34 +60,43 @@ public class FishingLineController : MonoBehaviour
 
     public void AlterLength(float input)
     {
-        var deltaLength = input * ReelSpeed * Time.fixedDeltaTime;
+        var dLength = input * ReelSpeed * Time.fixedDeltaTime;
         if (IsOppositeDirection(input, 1f))
         {
-            deltaLength *= ReelDownConstant;
+            dLength *= ReelDownConstant;
         }
-        baseLength -= deltaLength;
+        baseLength -= dLength;
         if (baseLength < 0f)
         {
             baseLength = 0f;
         }
     }
+
     // Calculates the force vector when simulating tension
     // 
     // Uses Hooke's law
-    public Vector2 CalculateTension()
+    public Vector2 CalculateHookForce()
     {
         var currVector = hook.position - rod.position;
+        var currUnitVector = currVector.normalized;
         // Gets line as a vector pointing towards the fishing line
-        var baseVector = currVector.normalized * baseLength;
-        var displacement = baseVector - currVector;
+        var baseVector = currUnitVector * baseLength;
+        var dVector = baseVector - currVector;
+        
+        // Damping force
+        var currLength = currVector.magnitude;
+        var dMagnitude = currLength - prevLength;
+        var dampForce = Damping * dMagnitude * currUnitVector / Time.fixedDeltaTime;
 
-        if (IsOppositeDirection(currVector.x, displacement.x))
+        prevLength = currLength;
+
+        if (IsOppositeDirection(currVector.x, dVector.x))
         {
-            return PullConstant * displacement;
+            return (PullConstant * dVector) - dampForce;
         }
         else
         {
-            return PushConstant * displacement;
+            return (PushConstant * dVector) - dampForce;
         }
     }
 
@@ -86,7 +104,5 @@ public class FishingLineController : MonoBehaviour
     {
         return ((int)x)>>31 != ((int)y)>>31;
     }
-
-    // function to draw current length to screen
 
 }

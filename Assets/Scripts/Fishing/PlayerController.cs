@@ -41,15 +41,15 @@ public class PlayerController : MonoBehaviour
         line.AlterLength(reelInput);
 
         // Hook/Line Movement
-        var tensionForce = line.CalculateTension();
+        var tensionForce = line.CalculateHookForce();
         hook.AddForce(tensionForce);
-    }
 
-    private void CalculatePhysics()
-    {
-        // Get hook posiiton
-        // Get Rod Position
-        // Calculate Tension
+        // Debug testing
+        /*if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Debug.Log("Object is :" + hook.baitObject);
+        }
+        */
     }
 
 }
