@@ -9,6 +9,8 @@ public class StayInRadiusBehaviour : FlockBehaviour
     public Vector2 center;
     public float radius = 15f;
 
+    //VERY BUGGY RIGHT NOW, THIS METHOD MIGHT NOT BE NEEDED IF USING CHUNK LIMITER IDEA
+
     public override Vector2 CalculateMove(FlockAgent agent, List<Transform> context, Flock flock)
     {
         Vector2 centerOffset = center - (Vector2)agent.transform.position;

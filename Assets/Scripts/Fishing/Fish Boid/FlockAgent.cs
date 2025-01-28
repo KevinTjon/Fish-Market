@@ -28,6 +28,7 @@ public class FlockAgent : MonoBehaviour
     }
 
     // turn agent towards the dirction we want, and move it to destination
+    // this combines all the behaviours we want for the fish and makes a final move
     public void Move(Vector2 velocity){
         transform.up = velocity;
         transform.position += (Vector3)velocity * Time.deltaTime; //using delta time to ensure constant movement regardless of framerate of the running system

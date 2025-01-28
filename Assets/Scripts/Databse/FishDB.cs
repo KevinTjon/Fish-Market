@@ -22,6 +22,8 @@ public class FishDB : MonoBehaviour
         //dbPath = "URI=file::memory:";
         Debug.Log("Database Path: " + dbPath);
         CreateTable();
+
+        //TEST LINES, FINAL PRODUCT WILL TAKE DATA FROM FISH CAUGHT
         //AddFish("Green Fish", "Medium","UNCOMMON","Prefabs/Fish/GreenFish");
         //AddFish("Pink Fish", "small","COMMON","Prefabs/Fish/PinkFish");
         //AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
@@ -32,7 +34,7 @@ public class FishDB : MonoBehaviour
             connection.Open();
             using (var command = connection.CreateCommand()){
                 command.CommandText = 
-                    @"CREATE TABLE IF NOT EXISTS Fish
+                    @"CREATE TABLE IF NOT EXISTS Inventory
                     (
                     Id INTEGER PRIMARY KEY,
                     Name TEXT,

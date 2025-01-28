@@ -62,7 +62,7 @@ public class Flock : MonoBehaviour
         {
             List<Transform> context = GetNearbyObjects(agent); //What things exists in our neighbour radius
 
-            //For demo, not intended for production. INEFFICIENT
+            //For demo, not intended for production. INEFFICIENT, REALLY BAD WILL LAG AND EXPLODE IF TOO MUCH!!
             //agent.GetComponentInChildren<SpriteRenderer>().color = Color.Lerp(Color.white, Color.red, context.Count / 6f); //if 0 neighbours white, if 6 red, between a hue betwwen
 
 
@@ -78,7 +78,7 @@ public class Flock : MonoBehaviour
     }
 
     //Rather than iterating through all the agents and find the distance compared to the radius to find our neighbours
-    //we can use Unity physics engine. we can run a physics overlap check and just check which agent gets hit by a casted circle
+    //using Unity physics engine, we can run a physics overlap check and just check which agent gets hit by a casted circle
     List<Transform> GetNearbyObjects(FlockAgent agent){
         List<Transform> context = new List<Transform>();
         Collider2D[] contextColliders = Physics2D.OverlapCircleAll(agent.transform.position, neighbourRadius); //creates an imaginary circle in space
