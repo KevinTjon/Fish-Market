@@ -29,27 +29,20 @@ public class FishDB : MonoBehaviour
         AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
     }
 
-    void CreateTable(){
-        using (var connection = new SqliteConnection(dbPath)){
+    void CreateTable() {
+        // Ensure StreamingAssets directory exists
+        string streamingAssetsPath = Application.dataPath + "/StreamingAssets";
+        if (!System.IO.Directory.Exists(streamingAssetsPath)) {
+            System.IO.Directory.CreateDirectory(streamingAssetsPath);
+        }
+
+        string sqlFilePath = streamingAssetsPath + "/CreateTables.sql";
+        string sqlCommands = System.IO.File.ReadAllText(sqlFilePath);
+        
+        using (var connection = new SqliteConnection(dbPath)) {
             connection.Open();
-            using (var command = connection.CreateCommand()){
-                command.CommandText = 
-                    @"CREATE TABLE IF NOT EXISTS Inventory
-                    (
-                    Id INTEGER PRIMARY KEY,
-                    Name TEXT,
-                    Type TEXT,
-                    Rarity TEXT,
-                    AssetPath TEXT
-                    );
-                    
-                    CREATE TABLE IF NOT EXISTS Fish (
-                    FishID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Name TEXT NOT NULL,
-                    Description TEXT,
-                    Rarity TEXT,
-                    AssetPath TEXT
-                    );";
+            using (var command = connection.CreateCommand()) {
+                command.CommandText = sqlCommands;
                 command.ExecuteNonQuery();
             }
         }
