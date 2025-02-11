@@ -24,9 +24,9 @@ public class FishDB : MonoBehaviour
         CreateTable();
 
         //TEST LINES, FINAL PRODUCT WILL TAKE DATA FROM FISH CAUGHT
-        //AddFish("Green Fish", "Medium","UNCOMMON","Prefabs/Fish/GreenFish");
-        //AddFish("Pink Fish", "small","COMMON","Prefabs/Fish/PinkFish");
-        //AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
+        AddFish("Green Fish", "Medium","UNCOMMON","Prefabs/Fish/GreenFish");
+        AddFish("Pink Fish", "small","COMMON","Prefabs/Fish/PinkFish");
+        AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
     }
 
     void CreateTable(){
@@ -41,7 +41,15 @@ public class FishDB : MonoBehaviour
                     Type TEXT,
                     Rarity TEXT,
                     AssetPath TEXT
-                    )";
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS Fish (
+                    FishID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Description TEXT,
+                    Rarity TEXT,
+                    AssetPath TEXT
+                    );";
                 command.ExecuteNonQuery();
             }
         }
@@ -52,7 +60,7 @@ public class FishDB : MonoBehaviour
             connection.Open();
             using(var command = connection.CreateCommand()){
                 command.CommandText =
-                @"INSERT INTO Fish (Name, Type, Rarity, AssetPath)
+                @"INSERT INTO Inventory (Name, Type, Rarity, AssetPath)
                 VALUES (@name, @type, @rarity, @assetPath)";
                 command.Parameters.AddWithValue("@name", name);
                 command.Parameters.AddWithValue("@type", type);
@@ -69,7 +77,7 @@ public class FishDB : MonoBehaviour
             connection.Open();
             using (var command = connection.CreateCommand()){
                 command.CommandText = 
-                "SELECT * FROM Fish;"; 
+                "SELECT * FROM Inventory;"; 
                 using (IDataReader reader = command.ExecuteReader()){
                     while (reader.Read()){
                         Fish fish = new Fish();

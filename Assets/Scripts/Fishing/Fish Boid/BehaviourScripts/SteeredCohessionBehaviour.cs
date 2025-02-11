@@ -4,7 +4,7 @@ using UnityEngine;
 
 [CreateAssetMenu(menuName = "Flock/Behaviour/Steered Cohession")]
 
-//new version of cohessionbehaviour, due to unwanted flickering when agents move
+//new version of cohessionbehaviour, fixing flickering when agents move possibly due to amount of frame skips
 //using unity smooth damp to adjust the steering. Make the objects move more naturally and not flickering
 public class CohessionSteeredBehaviour : FilteredFlockBehaviour
 {
