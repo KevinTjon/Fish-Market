@@ -1,6 +1,7 @@
 using UnityEngine;
 using Mono.Data.Sqlite;
 using System.Collections.Generic;
+using System.IO;
 
 public class MarketPriceGenerator : MonoBehaviour
 {
@@ -21,6 +22,24 @@ public class MarketPriceGenerator : MonoBehaviour
     {
         dbPath = @"Data Source=" + Application.dataPath + "/StreamingAssets/FishDB.db";
         random = new System.Random();
+        
+        // Ensure tables are created
+        CreateDatabaseTables();
+    }
+
+    void Update()
+    {
+        // Press 1 to generate prices for day 1
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            GeneratePricesForDay(1);
+        }
+
+        // Press 2 to clear all prices
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            ClearAllPrices();
+        }
     }
 
     void OnDisable()
@@ -33,6 +52,27 @@ public class MarketPriceGenerator : MonoBehaviour
                 connection.Close();
             }
             connection.Dispose();
+        }
+    }
+
+    private void CreateDatabaseTables()
+    {
+        try
+        {
+            using (connection = new SqliteConnection(dbPath))
+            {
+                connection.Open();
+                string sql = File.ReadAllText(Path.Combine(Application.dataPath, "StreamingAssets/CreateTables.sql"));
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = sql;
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Database error during table creation: {e.Message}");
         }
     }
 
@@ -65,7 +105,7 @@ public class MarketPriceGenerator : MonoBehaviour
                         }
                     }
                 }
-
+                
                 // Generate and insert prices for each fish
                 using (var command = connection.CreateCommand())
                 {
@@ -75,7 +115,8 @@ public class MarketPriceGenerator : MonoBehaviour
                     var priceParam = command.Parameters.Add("@price", System.Data.DbType.Double);
 
                     foreach (var fish in fishList)
-                    {
+                    {   
+                        Debug.Log("AAAA");
                         var priceRange = rarityPriceRanges[fish.rarity];
                         float basePrice = Random.Range(priceRange.min, priceRange.max);
                         float variation = basePrice * Random.Range(-0.1f, 0.1f);
