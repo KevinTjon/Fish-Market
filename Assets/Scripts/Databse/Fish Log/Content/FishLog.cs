@@ -38,7 +38,7 @@ public class FishLog : MonoBehaviour
             {
                 // Set the fish data from the database
                 fishSlot.SetFishData(fishDataList[i]);
-                Debug.Log($"Setting data for slot {i}: {fishDataList[i].Name}");
+                //Debug.Log($"Setting data for slot {i}: {fishDataList[i].Name}");
 
                 // Get the Image component from the child GameObject named "Image"
                 Image fishImage = fishSlots[i].transform.Find("Image").GetComponent<Image>();
