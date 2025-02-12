@@ -34,7 +34,8 @@ public class FishSlotButton : MonoBehaviour
                     fishSlot.assetPath, // Assuming assetPath is a property of FishSlot
                     float.Parse(fishSlot.minWeight), // Assuming minWeight is a string property of FishSlot
                     float.Parse(fishSlot.maxWeight), // Assuming maxWeight is a string property of FishSlot
-                    float.Parse(fishSlot.topSpeed) // Assuming topSpeed is a string property of FishSlot
+                    float.Parse(fishSlot.topSpeed),//Assuming topSpeed is a string property of FishSlot
+                    fishSlot.isDiscovered// Assuming isDiscovered is an integer property of FishSlot
                 );
 
                  extensiveTab.ShowFishDetails(extensiveTabData);

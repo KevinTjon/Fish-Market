@@ -33,28 +33,28 @@ CREATE TABLE IF NOT EXISTS MarketPrices
     FOREIGN KEY (FishID) REFERENCES Fish(FishID)
 );
 
--- Populate Fish table with test data
+-- Populate Fish table with enhanced test data
 INSERT OR REPLACE INTO Fish (Name, Description, Rarity, AssetPath, MinWeight, MaxWeight, TopSpeed, HookedFuncNum, IsDiscovered) VALUES
-('Fish 1', 'A common small fish', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.1, 0.5, 3.0, 1, 0),
-('Fish 2', 'A quick swimmer', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.2, 0.8, 5.0, 1, 0),
-('Fish 3', 'A heavy fish', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 1.0, 3.0, 2.5, 2, 1),
-('Fish 4', 'An elusive fish', 'RARE', 'Art/Sprites/Fish/FoundFish', 0.3, 1.2, 6.0, 1, 0),
-('Fish 5', 'A massive specimen', 'EPIC', 'Art/Sprites/Fish/FoundFish', 5.0, 15.0, 4.0, 2, 0),
-('Fish 6', 'A tiny fish', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.05, 0.2, 4.5, 0, 0),
-('Fish 7', 'A colorful fish', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 0.4, 1.5, 3.5, 1, 0),
-('Fish 8', 'A deep-sea dweller', 'RARE', 'Art/Sprites/Fish/FoundFish', 2.0, 5.0, 2.0, 2, 1),
-('Fish 9', 'A legendary fish', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 10.0, 30.0, 7.0, 2, 0),
-('Fish 10', 'A common fish', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.3, 1.0, 3.0, 1, 1),
-('Fish 11', 'A swift fish', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 0.4, 1.2, 5.5, 1, 0),
-('Fish 12', 'A heavy fighter', 'RARE', 'Art/Sprites/Fish/FoundFish', 3.0, 8.0, 4.0, 2, 0),
-('Fish 13', 'A tiny swimmer', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.1, 0.4, 3.5, 0, 0),
-('Fish 14', 'A rare specimen', 'RARE', 'Art/Sprites/Fish/FoundFish', 1.5, 4.0, 4.5, 2, 0),
-('Fish 15', 'An ancient fish', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 8.0, 25.0, 3.0, 2, 1),
-('Fish 16', 'A common catch', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.2, 0.7, 3.0, 1, 0),
-('Fish 17', 'A mysterious fish', 'EPIC', 'Art/Sprites/Fish/FoundFish', 4.0, 12.0, 5.0, 2, 1),
-('Fish 18', 'A quick fish', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 0.3, 0.9, 6.0, 1, 0),
-('Fish 19', 'A massive fish', 'RARE', 'Art/Sprites/Fish/FoundFish', 6.0, 18.0, 2.5, 2, 0),
-('Fish 20', 'A legendary beast', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 15.0, 40.0, 8.0, 2, 0);
+('Golden Trout', 'The Golden Trout is a rare fish known for its vibrant golden scales. It thrives in cold, clear waters and is a favorite among anglers.', 'RARE', 'Art/Sprites/Fish/FoundFish', 0.5, 1.5, 4.0, 1, 0),
+('Silver Salmon', 'Silver Salmon are known for their acrobatic leaps and strong fighting spirit. They are often found in rivers and coastal waters.', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 1.0, 3.0, 5.0, 2, 1),
+('Crimson Snapper', 'The Crimson Snapper is a vibrant red fish that inhabits coral reefs. Its striking color makes it a popular catch for divers.', 'EPIC', 'Art/Sprites/Fish/FoundFish', 0.8, 2.5, 3.5, 1, 0),
+('Emerald Catfish', 'Emerald Catfish are known for their unique greenish hue and whisker-like barbels. They prefer murky waters and are bottom feeders.', 'COMMON', 'Art/Sprites/Fish/FoundFish', 1.2, 4.0, 2.0, 1, 1),
+('Bluefin Tuna', 'The Bluefin Tuna is a large and powerful fish, highly sought after for its delicious meat. It can swim at incredible speeds and is a challenge to catch.', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 10.0, 30.0, 8.0, 2, 0),
+('Rainbow Trout', 'Rainbow Trout are known for their colorful appearance and are a popular target for sport fishing. They are often found in freshwater lakes and streams.', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.3, 1.0, 3.0, 1, 1),
+('Mysterious Anglerfish', 'The Mysterious Anglerfish is a deep-sea creature known for its bioluminescent lure. It is rarely seen by humans and remains a subject of fascination.', 'RARE', 'Art/Sprites/Fish/FoundFish', 2.0, 5.0, 1.5, 2, 1),
+('Giant Squid', 'The Giant Squid is a legendary sea creature that has captured the imagination of sailors for centuries. Its elusive nature makes it a rare sight in the ocean.', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 15.0, 50.0, 3.0, 2, 1),
+('Spotted Pike', 'The Spotted Pike is a fierce predator known for its sharp teeth and aggressive behavior. It is often found lurking in weedy areas of lakes and rivers.', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 1.5, 5.0, 4.5, 1, 1),
+('Tropical Clownfish', 'The Tropical Clownfish is a small, colorful fish that lives among sea anemones. Its symbiotic relationship with the anemone provides protection from predators.', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.1, 0.3, 2.0, 0, 0),
+('Black Marlin', 'The Black Marlin is one of the fastest fish in the ocean, known for its incredible speed and agility. It is a prized catch for sport fishermen.', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 20.0, 100.0, 10.0, 2, 1),
+('Tiger Shark', 'The Tiger Shark is a large predator known for its distinctive stripes and voracious appetite. It is often found in warm coastal waters.', 'RARE', 'Art/Sprites/Fish/FoundFish', 200.0, 400.0, 5.0, 2, 1),
+('Guppy', 'Guppies are small, colorful freshwater fish that are popular in home aquariums. They are known for their lively behavior and ease of care.', 'COMMON', 'Art/Sprites/Fish/FoundFish', 0.01, 0.02, 1.0, 0, 1),
+('Pufferfish', 'Pufferfish are unique for their ability to inflate when threatened. They are often found in tropical waters and are known for their toxic spines.', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 0.5, 1.0, 2.0, 1, 0),
+('Lionfish', 'The Lionfish is a venomous fish known for its striking appearance and long, spiky fins. It is a popular aquarium fish but can be invasive in some regions.', 'EPIC', 'Art/Sprites/Fish/FoundFish', 0.5, 1.5, 3.0, 1, 1),
+('Swordfish', 'Swordfish are large, powerful fish known for their long, flat bills. They are fast swimmers and are often sought after by sport fishermen.', 'LEGENDARY', 'Art/Sprites/Fish/FoundFish', 100.0, 200.0, 6.0, 2, 0),
+('Mahi-Mahi', 'Mahi-Mahi, also known as Dorado, are colorful fish known for their delicious taste. They are often found in warm ocean waters and are a favorite among anglers.', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 5.0, 15.0, 7.0, 1, 1),
+('Koi', 'Koi are ornamental fish that are often kept in outdoor ponds. They are known for their beautiful colors and patterns, and they can live for many years.', 'COMMON', 'Art/Sprites/Fish/FoundFish', 1.0, 3.0, 2.0, 0, 0),
+('Electric Eel', 'Electric Eels are fascinating creatures capable of generating electric shocks. They are often found in freshwater rivers and are known for their unique hunting methods.', 'RARE', 'Art/Sprites/Fish/FoundFish', 5.0, 10.0, 3.0, 2, 1),
+('Barracuda', 'Barracudas are fierce predators known for their sharp teeth and streamlined bodies. They are often found in tropical and subtropical oceans.', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 5.0, 15.0, 7.0, 1, 1);
 
 -- Populate MarketPrices table with 5 days of data
 -- INSERT OR IGNORE INTO MarketPrices (FishID, Day, Price) VALUES

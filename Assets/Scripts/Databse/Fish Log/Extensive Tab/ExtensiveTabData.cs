@@ -7,8 +7,9 @@ public class ExtensiveTabData
     public float MinWeight { get; private set; }
     public float MaxWeight { get; private set; }
     public float TopSpeed { get; private set; }
+    public string IsDiscovered { get; private set; }
 
-    public ExtensiveTabData(string name, string description, string rarity, string assetPath, float minWeight, float maxWeight, float topSpeed)
+    public ExtensiveTabData(string name, string description, string rarity, string assetPath, float minWeight, float maxWeight, float topSpeed, string isDiscovered)
     {
         Name = name;
         Description = description;
@@ -17,5 +18,6 @@ public class ExtensiveTabData
         MinWeight = minWeight;
         MaxWeight = maxWeight;
         TopSpeed = topSpeed;
+        IsDiscovered = isDiscovered;
     }
 }
