@@ -82,7 +82,7 @@ public class FishDB : MonoBehaviour
                 }
             }
         }
-        Debug.Log("Number of fish retrieved: " + fishList.Count);
+        // Debug.Log("Number of fish retrieved: " + fishList.Count);
         return fishList; // Return the list of fish
     }
 }

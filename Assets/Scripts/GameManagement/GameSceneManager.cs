@@ -41,7 +41,7 @@ public class GameSceneManager : MonoBehaviour
         try
         {
             string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
-            Debug.Log($"Attempting to load database from: {dbPath}");
+            // Debug.Log($"Attempting to load database from: {dbPath}");
 
             using (IDbConnection connection = new SqliteConnection(dbPath))
             {
@@ -51,7 +51,7 @@ public class GameSceneManager : MonoBehaviour
                     // First, let's count how many fish are in the database
                     command.CommandText = "SELECT COUNT(*) FROM Fish";
                     int count = Convert.ToInt32(command.ExecuteScalar());
-                    Debug.Log($"Found {count} fish in database");
+                    // Debug.Log($"Found {count} fish in database");
 
                     // Now load the fish data
                     command.CommandText = "SELECT Name, Rarity, AssetPath, MinWeight, MaxWeight, TopSpeed, HookedFuncNum FROM Fish";
@@ -75,7 +75,6 @@ public class GameSceneManager : MonoBehaviour
                                     HookedFuncNum = reader.GetInt32(6)
                                 };
                                 fishDatabase[fish.Name] = fish;
-                                Debug.Log($"Successfully loaded fish: {name} with rarity: {rarity}");
                             }
                             catch (Exception e)
                             {
@@ -84,14 +83,6 @@ public class GameSceneManager : MonoBehaviour
                         }
                     }
                 }
-            }
-
-            Debug.Log($"Final fish database count: {fishDatabase.Count}");
-            
-            // Print all fish in database
-            foreach (var fish in fishDatabase)
-            {
-                Debug.Log($"Fish in database: {fish.Key} - {fish.Value.Rarity}");
             }
         }
         catch (Exception e)

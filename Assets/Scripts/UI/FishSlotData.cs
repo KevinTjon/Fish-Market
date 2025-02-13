@@ -24,7 +24,7 @@ public class FishSlotData : MonoBehaviour
                     // Pass the fish name instead of weight
                     bigViewComponent.Setup(fishImage, fishName, fishRarity, quantity);
                     bigViewComponent.ShowFishDetails(); // Show the details
-                    Debug.Log("Sent info to show BIGUI");
+                    // Debug.Log("Sent info to show BIGUI");
                 }
                 else
                 {

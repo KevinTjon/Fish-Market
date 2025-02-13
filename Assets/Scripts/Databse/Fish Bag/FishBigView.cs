@@ -97,7 +97,7 @@ public class FishBigView : MonoBehaviour
             if (rarityTextComponent != null)
             {
                 rarityTextComponent.text = !string.IsNullOrEmpty(rarityText) ? rarityText : "Unknown Rarity"; // Set the rarity text
-                Debug.Log("Rarity text assigned.");
+                // Debug.Log("Rarity text assigned.");
             }
             else
             {
