@@ -1,36 +1,35 @@
--- Create Inventory table
+
 CREATE TABLE IF NOT EXISTS Inventory
 (
     Id INTEGER PRIMARY KEY,
     Name TEXT,
-    Type TEXT,
+    Weight TEXT,
     Rarity TEXT,
     AssetPath TEXT
 );
 
--- Create Fish table
-CREATE TABLE IF NOT EXISTS Fish
-(
-    FishID INTEGER PRIMARY KEY AUTOINCREMENT,
-    Name TEXT NOT NULL UNIQUE,
+-- Create the Fish table
+CREATE TABLE IF NOT EXISTS Fish (
+    Name TEXT PRIMARY KEY, -- Unique fish name
     Description TEXT,
     Rarity TEXT,
-    IsDiscovered INTEGER,
     AssetPath TEXT,
     MinWeight REAL,
     MaxWeight REAL,
     TopSpeed REAL,
-    HookedFuncNum INTEGER
+    HookedFuncNum INTEGER,
+    IsDiscovered INTEGER
 );
 
 -- Create MarketPrices table
 CREATE TABLE IF NOT EXISTS MarketPrices
 (
-    PriceID INTEGER PRIMARY KEY AUTOINCREMENT,
-    FishID INTEGER,
-    Day INTEGER,
-    Price REAL,
-    FOREIGN KEY (FishID) REFERENCES Fish(FishID)
+    ID INTEGER PRIMARY KEY AUTOINCREMENT, -- Primary key with auto-increment
+    FishName TEXT NOT NULL,
+    Day INTEGER NOT NULL,
+    Price REAL NOT NULL,
+    FOREIGN KEY (FishName) REFERENCES Fish(Name), -- Foreign key constraint
+    UNIQUE(FishName, Day) -- Ensure unique fish names for each day
 );
 
 -- Populate Fish table with enhanced test data
@@ -56,34 +55,119 @@ INSERT OR REPLACE INTO Fish (Name, Description, Rarity, AssetPath, MinWeight, Ma
 ('Electric Eel', 'Electric Eels are fascinating creatures capable of generating electric shocks. They are often found in freshwater rivers and are known for their unique hunting methods.', 'RARE', 'Art/Sprites/Fish/FoundFish', 5.0, 10.0, 3.0, 2, 1),
 ('Barracuda', 'Barracudas are fierce predators known for their sharp teeth and streamlined bodies. They are often found in tropical and subtropical oceans.', 'UNCOMMON', 'Art/Sprites/Fish/FoundFish', 5.0, 15.0, 7.0, 1, 1);
 
--- Populate MarketPrices table with 5 days of data
--- INSERT OR IGNORE INTO MarketPrices (FishID, Day, Price) VALUES
--- -- Day 1
--- (1, 1, 25.50), (2, 1, 30.00), (3, 1, 75.00), (4, 1, 150.00), (5, 1, 300.00),
--- (6, 1, 15.00), (7, 1, 85.00), (8, 1, 180.00), (9, 1, 500.00), (10, 1, 28.00),
--- (11, 1, 80.00), (12, 1, 200.00), (13, 1, 20.00), (14, 1, 160.00), (15, 1, 450.00),
--- (16, 1, 27.00), (17, 1, 280.00), (18, 1, 70.00), (19, 1, 190.00), (20, 1, 550.00),
+-- Populate MarketPrice table with fish names and prices for 5 days
 
--- -- Day 2
--- (1, 2, 23.00), (2, 2, 32.00), (3, 2, 80.00), (4, 2, 145.00), (5, 2, 320.00),
--- (6, 2, 14.00), (7, 2, 90.00), (8, 2, 175.00), (9, 2, 520.00), (10, 2, 26.00),
--- (11, 2, 85.00), (12, 2, 195.00), (13, 2, 18.00), (14, 2, 170.00), (15, 2, 460.00),
--- (16, 2, 29.00), (17, 2, 290.00), (18, 2, 75.00), (19, 2, 185.00), (20, 2, 540.00),
+-- Day 1 Prices
+INSERT OR REPLACE INTO MarketPrices (FishName, Day, Price) VALUES
+('Golden Trout', 1, 15.00),
+('Silver Salmon', 1, 10.00),
+('Crimson Snapper', 1, 20.00),
+('Emerald Catfish', 1, 8.00),
+('Bluefin Tuna', 1, 30.00),
+('Rainbow Trout', 1, 12.00),
+('Mysterious Anglerfish', 1, 25.00),
+('Giant Squid', 1, 40.00),
+('Spotted Pike', 1, 18.00),
+('Tropical Clownfish', 1, 5.00),
+('Black Marlin', 1, 50.00),
+('Tiger Shark', 1, 200.00),
+('Guppy', 1, 2.00),
+('Pufferfish', 1, 10.00),
+('Lionfish', 1, 15.00),
+('Swordfish', 1, 100.00),
+('Mahi-Mahi', 1, 20.00),
+('Koi', 1, 10.00),
+('Electric Eel', 1, 30.00),
+('Barracuda', 1, 25.00);
 
--- -- Day 3
--- (1, 3, 26.00), (2, 3, 29.00), (3, 3, 70.00), (4, 3, 160.00), (5, 3, 310.00),
--- (6, 3, 16.00), (7, 3, 82.00), (8, 3, 190.00), (9, 3, 490.00), (10, 3, 30.00),
--- (11, 3, 78.00), (12, 3, 210.00), (13, 3, 21.00), (14, 3, 155.00), (15, 3, 470.00),
--- (16, 3, 25.00), (17, 3, 275.00), (18, 3, 72.00), (19, 3, 195.00), (20, 3, 560.00),
+-- Day 2 Prices
+INSERT OR REPLACE INTO MarketPrices (FishName, Day, Price) VALUES
+('Golden Trout', 2, 14.50),
+('Silver Salmon', 2, 9.50),
+('Crimson Snapper', 2, 19.50),
+('Emerald Catfish', 2, 7.50),
+('Bluefin Tuna', 2, 28.50),
+('Rainbow Trout', 2, 11.50),
+('Mysterious Anglerfish', 2, 24.50),
+('Giant Squid', 2, 38.50),
+('Spotted Pike', 2, 17.50),
+('Tropical Clownfish', 2, 4.50),
+('Black Marlin', 2, 48.00),
+('Tiger Shark', 2, 190.00),
+('Guppy', 2, 1.50),
+('Pufferfish', 2, 9.00),
+('Lionfish', 2, 14.00),
+('Swordfish', 2, 95.00),
+('Mahi-Mahi', 2, 18.00),
+('Koi', 2, 9.00),
+('Electric Eel', 2, 28.00),
+('Barracuda', 2, 22.00);
 
--- -- Day 4
--- (1, 4, 24.00), (2, 4, 31.00), (3, 4, 77.00), (4, 4, 155.00), (5, 4, 305.00),
--- (6, 4, 13.00), (7, 4, 88.00), (8, 4, 185.00), (9, 4, 510.00), (10, 4, 27.00),
--- (11, 4, 83.00), (12, 4, 205.00), (13, 4, 19.00), (14, 4, 165.00), (15, 4, 455.00),
--- (16, 4, 28.00), (17, 4, 285.00), (18, 4, 73.00), (19, 4, 192.00), (20, 4, 545.00),
+-- Day 3 Prices
+INSERT OR REPLACE INTO MarketPrices (FishName, Day, Price) VALUES
+('Golden Trout', 3, 16.00),
+('Silver Salmon', 3, 11.00),
+('Crimson Snapper', 3, 21.00),
+('Emerald Catfish', 3, 8.50),
+('Bluefin Tuna', 3, 32.00),
+('Rainbow Trout', 3, 12.50),
+('Mysterious Anglerfish', 3, 26.00),
+('Giant Squid', 3, 42.00),
+('Spotted Pike', 3, 19.00),
+('Tropical Clownfish', 3, 5.50),
+('Black Marlin', 3, 52.00),
+('Tiger Shark', 3, 210.00),
+('Guppy', 3, 2.50),
+('Pufferfish', 3, 11.00),
+('Lionfish', 3, 16.00),
+('Swordfish', 3, 105.00),
+('Mahi-Mahi', 3, 22.00),
+('Koi', 3, 11.00),
+('Electric Eel', 3, 32.00),
+('Barracuda', 3, 26.00);
 
--- -- Day 5
--- (1, 5, 27.00), (2, 5, 33.00), (3, 5, 82.00), (4, 5, 158.00), (5, 5, 315.00),
--- (6, 5, 17.00), (7, 5, 86.00), (8, 5, 182.00), (9, 5, 515.00), (10, 5, 29.00),
--- (11, 5, 81.00), (12, 5, 208.00), (13, 5, 22.00), (14, 5, 168.00), (15, 5, 465.00),
--- (16, 5, 26.00), (17, 5, 295.00), (18, 5, 76.00), (19, 5, 188.00), (20, 5, 555.00); 
+-- Day 4 Prices
+INSERT OR REPLACE INTO MarketPrices (FishName, Day, Price) VALUES
+('Golden Trout', 4, 15.75),
+('Silver Salmon', 4, 10.75),
+('Crimson Snapper', 4, 20.75),
+('Emerald Catfish', 4, 8.25),
+('Bluefin Tuna', 4, 31.75),
+('Rainbow Trout', 4, 12.25),
+('Mysterious Anglerfish', 4, 25.75),
+('Giant Squid', 4, 41.75),
+('Spotted Pike', 4, 18.75),
+('Tropical Clownfish', 4, 5.25),
+('Black Marlin', 4, 49.00),
+('Tiger Shark', 4, 205.00),
+('Guppy', 4, 2.25),
+('Pufferfish', 4, 10.50),
+('Lionfish', 4, 15.50),
+('Swordfish', 4, 102.00),
+('Mahi-Mahi', 4, 19.00),
+('Koi', 4, 10.50),
+('Electric Eel', 4, 31.00),
+('Barracuda', 4, 24.00);
+
+-- Day 5 Prices
+INSERT OR REPLACE INTO MarketPrices (FishName, Day, Price) VALUES
+('Golden Trout', 5, 17.00),
+('Silver Salmon', 5, 12.00),
+('Crimson Snapper', 5, 22.00),
+('Emerald Catfish', 5, 9.00),
+('Bluefin Tuna', 5, 33.00),
+('Rainbow Trout', 5, 13.00),
+('Mysterious Anglerfish', 5, 27.00),
+('Giant Squid', 5, 43.00),
+('Spotted Pike', 5, 20.00),
+('Tropical Clownfish', 5, 6.00),
+('Black Marlin', 5, 55.00),
+('Tiger Shark', 5, 215.00),
+('Guppy', 5, 2.75),
+('Pufferfish', 5, 12.00),
+('Lionfish', 5, 17.00),
+('Swordfish', 5, 110.00),
+('Mahi-Mahi', 5, 21.00),
+('Koi', 5, 11.00),
+('Electric Eel', 5, 33.00),
+('Barracuda', 5, 27.00);

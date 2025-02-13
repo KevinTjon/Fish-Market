@@ -13,6 +13,13 @@ public class FishSlotButton : MonoBehaviour
             return; // Exit if fishSlot is null
         }
 
+        if (string.IsNullOrEmpty(fishSlot.isDiscovered) || fishSlot.isDiscovered == "No")
+        {
+            Debug.Log("Fish not yet discovered!");
+            return; // Exit the method if fish is not discovered
+        }
+
+
         // Get the parent of the current GameObject (the slot)
         Transform parentTransform = transform.parent;
 
@@ -21,6 +28,7 @@ public class FishSlotButton : MonoBehaviour
         
         if (extensiveTabTransform != null)
         {
+            extensiveTabTransform.gameObject.SetActive(true);
             // Get the ExtensiveTab component from the found GameObject
             ExtensiveTab extensiveTab = extensiveTabTransform.GetComponent<ExtensiveTab>();
             

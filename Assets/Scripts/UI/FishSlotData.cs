@@ -2,11 +2,11 @@ using UnityEngine;
 
 public class FishSlotData : MonoBehaviour
 {
-    public string fishType;   // To store the type of the fish
+    public string Weight;   // To store the type of the fish
     public string fishRarity; // To store the rarity of the fish
     public Sprite fishImage;  // To store the fish image sprite
     public int quantity;       // To store the quantity of the fish
-    
+    public string fishName;
     // Method to call when the button is pressed
     public void BigView()
     {
@@ -19,10 +19,10 @@ public class FishSlotData : MonoBehaviour
             if (bigViewComponent != null)
             {
                 // Check if the slot has data
-                if (!string.IsNullOrEmpty(fishType) && !string.IsNullOrEmpty(fishRarity) && fishImage != null)
+                if (!string.IsNullOrEmpty(fishName) && !string.IsNullOrEmpty(fishRarity) && fishImage != null)
                 {
-                    // Pass the data to the FishBigView component, including quantity
-                    bigViewComponent.Setup(fishImage, fishType, fishRarity, quantity);
+                    // Pass the fish name instead of weight
+                    bigViewComponent.Setup(fishImage, fishName, fishRarity, quantity);
                     bigViewComponent.ShowFishDetails(); // Show the details
                     Debug.Log("Sent info to show BIGUI");
                 }

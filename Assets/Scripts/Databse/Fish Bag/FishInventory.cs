@@ -32,19 +32,19 @@ public class FishInventory : MonoBehaviour
 
     void LoadFishInventory()
     {
-        List<FishDB.Fish> fishList = fishDB.GetFish(); // Getting a list from the DB on the current player inventory
-        Dictionary<string, int> fishQuantity = new Dictionary<string, int>(); // Dictionary to track fish quantities
+        List<FishDB.Fish> fishList = fishDB.GetFish();
+        Dictionary<string, int> fishQuantity = new Dictionary<string, int>();
 
         // Count the quantities of each fish
         foreach (var fish in fishList)
         {
             if (fishQuantity.ContainsKey(fish.Name))
             {
-                fishQuantity[fish.Name]++; // Increment quantity if fish already exists
+                fishQuantity[fish.Name]++;
             }
             else
             {
-                fishQuantity[fish.Name] = 1; // Add new fish with quantity 1
+                fishQuantity[fish.Name] = 1;
             }
         }
 
@@ -53,75 +53,56 @@ public class FishInventory : MonoBehaviour
         {
             if (i < fishQuantity.Count)
             {
-                // Get the fish name for the current slot
                 string fishName = fishList[i].Name;
-
-                // Inside the Fish Inventory UI there are squares for each fish called FishSlots
                 GameObject fishSlot = fishSlots[i];
 
-                // Looks for the Text child component of each slot
+                // Update quantity text
                 TextMeshProUGUI fishText = fishSlot.GetComponentInChildren<TextMeshProUGUI>();
                 if (fishText != null)
                 {
-                    fishText.text = "X" + fishQuantity[fishName]; // Display fish name and quantity
+                    fishText.text = "X" + fishQuantity[fishName];
                 }
 
                 // Store the type and rarity in the slot
                 FishSlotData slotData = fishSlot.GetComponent<FishSlotData>();
                 if (slotData == null)
                 {
-                    slotData = fishSlot.AddComponent<FishSlotData>(); // Add the component if it doesn't exist
+                    slotData = fishSlot.AddComponent<FishSlotData>();
                 }
-                slotData.fishType = fishList[i].Type; // Store the type
-                slotData.fishRarity = fishList[i].Rarity; // Store the rarity
-                slotData.quantity = fishQuantity[fishName]; // Set the quantity for the slot
+                slotData.fishName = fishName;
+                slotData.Weight = fishList[i].Weight;
+                slotData.fishRarity = fishList[i].Rarity;
+                slotData.quantity = fishQuantity[fishName];
 
-                // Using the asset path stored in the DB, we can path towards the fish prefab
-                GameObject fishPrefab = Resources.Load<GameObject>(fishList[i].AssetPath);
-                if (fishPrefab != null)
+                // Load sprite directly from Resources
+                string spritePath = fishList[i].AssetPath;
+                Sprite fishSprite = Resources.Load<Sprite>(spritePath);
+                
+                if (fishSprite != null)
                 {
-                    // Instantiate the prefab to gather data
-                    GameObject instantiatedFish = Instantiate(fishPrefab);
-                    Transform spriteTransform = instantiatedFish.transform.Find("Sprite");
-                    if (spriteTransform != null)
+                    // Set the sprite to the slot
+                    slotData.fishImage = fishSprite;
+                    Transform imageTransform = fishSlot.transform.Find("Image");
+                    if (imageTransform != null)
                     {
-                        SpriteRenderer spriteRenderer = spriteTransform.GetComponent<SpriteRenderer>();
-                        if (spriteRenderer != null)
+                        Image fishImage = imageTransform.GetComponent<Image>();
+                        if (fishImage != null)
                         {
-                            // Set the sprite to the slot
-                            slotData.fishImage = spriteRenderer.sprite;
-                            Transform imageTransform = fishSlot.transform.Find("Image");
-                            if (imageTransform != null)
-                            {
-                                Image fishImage = imageTransform.GetComponent<Image>();
-                                if (fishImage != null)
-                                {
-                                    fishImage.sprite = spriteRenderer.sprite;
-                                }
-                                else
-                                {
-                                    Debug.LogError("Image component not found in Image child at index: " + i);
-                                }
-                            }
-                            else
-                            {
-                                Debug.LogError("Child GameObject named 'Image' not found in fishSlot at index: " + i);
-                            }
+                            fishImage.sprite = fishSprite;
                         }
                         else
                         {
-                            Debug.LogError("SpriteRenderer not found in Sprite child at index: " + i);
+                            Debug.LogError("Image component not found in Image child at index: " + i);
                         }
                     }
                     else
                     {
-                        Debug.LogError("Child GameObject named 'Sprite' not found in prefab at index: " + i);
+                        Debug.LogError("Child GameObject named 'Image' not found in fishSlot at index: " + i);
                     }
-                    Destroy(instantiatedFish); // Destroy the object after gathering data
                 }
                 else
                 {
-                    Debug.LogError("Prefab not found at path: " + fishList[i].AssetPath);
+                    Debug.LogError("Sprite not found at path: " + spritePath);
                 }
             }
             else

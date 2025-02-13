@@ -91,24 +91,23 @@ public class FishLog : MonoBehaviour
             connection.Open();
             using (var command = connection.CreateCommand())
             {
-                command.CommandText = "SELECT FishID, Name, Description, Rarity, AssetPath, MinWeight, MaxWeight, TopSpeed, HookedFuncNum, IsDiscovered FROM Fish;";
+                command.CommandText = "SELECT Name, Description, Rarity, AssetPath, MinWeight, MaxWeight, TopSpeed, HookedFuncNum, IsDiscovered FROM Fish;";
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        int fishId = reader.GetInt32(0);
-                        string name = reader.GetString(1);
-                        string description = reader.GetString(2);
-                        string rarity = reader.GetString(3);
-                        string assetPath = reader.IsDBNull(4) ? null : reader.GetString(4);
-                        float minWeight = reader.GetFloat(5);
-                        float maxWeight = reader.GetFloat(6);
-                        float topSpeed = reader.GetFloat(7);
-                        int hookedFuncNum = reader.GetInt32(8);
-                        int isDiscovered = reader.GetInt32(9);
+                        string name = reader.GetString(0);
+                        string description = reader.GetString(1);
+                        string rarity = reader.GetString(2);
+                        string assetPath = reader.IsDBNull(3) ? null : reader.GetString(3);
+                        float minWeight = reader.GetFloat(4);
+                        float maxWeight = reader.GetFloat(5);
+                        float topSpeed = reader.GetFloat(6);
+                        int hookedFuncNum = reader.GetInt32(7);
+                        int isDiscovered = reader.GetInt32(8);
 
                         // Create a new FishData object and add it to the list
-                        FishData fishData = new FishData(fishId, name, description, rarity, assetPath, minWeight, maxWeight, topSpeed, hookedFuncNum, isDiscovered);
+                        FishData fishData = new FishData( name, description, rarity, assetPath, minWeight, maxWeight, topSpeed, hookedFuncNum, isDiscovered);
                         fishDataList.Add(fishData);
                     }
                 }

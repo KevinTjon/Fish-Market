@@ -5,15 +5,15 @@ using TMPro; // Make sure to include this at the top of your file
 public class FishBigView : MonoBehaviour
 {
     public Sprite displayImage; // Reference to the Image component where the fish image will be displayed
-    public string typeText;      // Reference to the Text component for fish type
+    public string fishName;      // Changed from typeText to fishName
     public string rarityText;    // Reference to the Text component for fish rarity
 
     public int quantityText;
 
-     public void Setup(Sprite img, string type, string rarity, int qty)
+     public void Setup(Sprite img, string name, string rarity, int qty)
     {
         displayImage = img;
-        typeText = type;
+        fishName = name;         // Updated to use fishName
         rarityText = rarity;
         quantityText = qty;
 
@@ -69,19 +69,19 @@ public class FishBigView : MonoBehaviour
             Debug.LogError("Child qty GameObject not found under Panel_Image!");
         }
 
-        // Find the TextMeshPro component for the type in Panel_Type
-        Transform typeTransform = transform.Find("Panel_Type/Type");
-        if (typeTransform != null)
+        // Find the TextMeshPro component for the fish name in Panel_Type
+        Transform nameTransform = transform.Find("Panel_Name/Name");  // Keep the same path, just showing fish name now
+        if (nameTransform != null)
         {
-            TextMeshProUGUI typeTextComponent = typeTransform.GetComponent<TextMeshProUGUI>(); // Get the TextMeshProUGUI component
-            if (typeTextComponent != null)
+            TextMeshProUGUI nameTextComponent = nameTransform.GetComponent<TextMeshProUGUI>();
+            if (nameTextComponent != null)
             {
-                typeTextComponent.text = !string.IsNullOrEmpty(typeText) ? typeText : "Unknown Type"; // Set the type text
-                Debug.Log("Type text assigned.");
+                nameTextComponent.text = !string.IsNullOrEmpty(fishName) ? fishName : "Unknown Fish";
+                Debug.Log("Fish name assigned.");
             }
             else
             {
-                Debug.LogError("TextMeshProUGUI component not found on the type GameObject!");
+                Debug.LogError("TextMeshProUGUI component not found on the name GameObject!");
             }
         }
         else

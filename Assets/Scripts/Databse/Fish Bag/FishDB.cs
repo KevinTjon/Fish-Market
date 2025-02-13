@@ -11,7 +11,7 @@ public class FishDB : MonoBehaviour
     public class Fish{
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Type { get; set; }
+        public string Weight { get; set; }
         public string Rarity { get; set; }
         public string AssetPath { get; set; }
     }
@@ -20,13 +20,9 @@ public class FishDB : MonoBehaviour
     {
         dbPath = @"Data Source=" + Application.dataPath + "/StreamingAssets/FishDB.db";
         //dbPath = "URI=file::memory:";
-        Debug.Log("Database Path: " + dbPath);
+//        Debug.Log("Database Path: " + dbPath);
         CreateTable();
 
-        //TEST LINES, FINAL PRODUCT WILL TAKE DATA FROM FISH CAUGHT
-        AddFish("Green Fish", "Medium","UNCOMMON","Prefabs/Fish/GreenFish");
-        AddFish("Pink Fish", "small","COMMON","Prefabs/Fish/PinkFish");
-        AddFish("Red Fish", "small","COMMON","Prefabs/Fish/RedFish");
     }
 
     void CreateTable() {
@@ -77,7 +73,7 @@ public class FishDB : MonoBehaviour
                         // Safely read and cast values
                         fish.Id = reader["Id"] is DBNull ? 0 : (int)(long)reader["Id"]; // Cast to long first if it's an INTEGER
                         fish.Name = reader["Name"] is DBNull ? string.Empty : reader["Name"].ToString();
-                        fish.Type = reader["Type"] is DBNull ? string.Empty : reader["Type"].ToString();
+                        fish.Weight = reader["Weight"] is DBNull ? string.Empty : reader["Weight"].ToString();
                         fish.Rarity = reader["Rarity"] is DBNull ? string.Empty : reader["Rarity"].ToString();
                         fish.AssetPath = reader["AssetPath"] is DBNull ? string.Empty : reader["AssetPath"].ToString();
 

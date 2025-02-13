@@ -1,4 +1,8 @@
+using System.Collections.Generic;
+using System.Data;
+using Mono.Data.Sqlite; // Make sure to include this for SQLite
 using UnityEngine;
+using System.Linq;
 
 public class ExtensiveTab : MonoBehaviour
 {
@@ -18,6 +22,8 @@ public class ExtensiveTab : MonoBehaviour
     private FishName fishNameComponent; // Reference to the FishName component
     private Description descriptionComponent; // Reference to the Description component
     private Rarity rarityComponent; // Reference to the Rarity component
+    [SerializeField] private FishPriceChart fishPriceChart;
+
 
 
 
@@ -61,6 +67,7 @@ public class ExtensiveTab : MonoBehaviour
             Debug.LogError("DetailPage GameObject not found in the hierarchy!");
         }
 
+
         if (fishNameComponent != null)
         {
             fishNameComponent.SetFishName(nameText);
@@ -76,7 +83,62 @@ public class ExtensiveTab : MonoBehaviour
             rarityComponent.SetRarity(rarityText);
         }
 
+        List<FishPriceData> fishPricesWithDays = GetFishPrices(fishData.Name);
+    
+        // Convert to arrays for the chart
+        float[] prices = fishPricesWithDays.Select(data => data.Price).ToArray();
+        
+        // Update the chart with the prices
+        fishPriceChart.UpdatePrices(prices);
+
         // Activate the tab to show the details
         gameObject.SetActive(true);
     }
+
+    public struct FishPriceData
+{
+    public int Day;
+    public float Price;
+
+    public FishPriceData(int day, float price)
+    {
+        Day = day;
+        Price = price;
+    }
+}
+
+
+    public List<FishPriceData> GetFishPrices(string fishName)
+{
+    List<FishPriceData> pricesWithDays = new List<FishPriceData>();
+    string connectionString = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+
+    using (IDbConnection dbConnection = new SqliteConnection(connectionString))
+    {
+        dbConnection.Open();
+        using (IDbCommand dbCommand = dbConnection.CreateCommand())
+        {
+            // Modified query to get both Day and Price
+            dbCommand.CommandText = "SELECT Day, Price FROM MarketPrices WHERE FishName = @fishName ORDER BY Day";
+            var parameter = dbCommand.CreateParameter();
+            parameter.ParameterName = "@fishName";
+            parameter.Value = fishName;
+            dbCommand.Parameters.Add(parameter);
+
+            using (IDataReader reader = dbCommand.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    // Add both day and price to the list
+                    int day = reader.GetInt32(0);  // Get Day from first column
+                    float price = reader.GetFloat(1);  // Get Price from second column
+                    pricesWithDays.Add(new FishPriceData(day, price));
+                }
+            }
+        }
+    }
+
+    return pricesWithDays;
+}
+
 }

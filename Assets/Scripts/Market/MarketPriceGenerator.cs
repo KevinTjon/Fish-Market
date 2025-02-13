@@ -91,44 +91,44 @@ public class MarketPriceGenerator : MonoBehaviour
                 connection.Open();
 
                 // Get all fish and their rarities
-                List<(int fishId, string rarity)> fishList = new List<(int fishId, string rarity)>();
+                List<(string Name, string rarity)> fishList = new List<(string Name, string rarity)>();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT FishID, Rarity FROM Fish;";
+                    command.CommandText = "SELECT Name, Rarity FROM Fish;";
                     using (var reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            int fishId = reader.GetInt32(0);
+                            string Name = reader.GetString(0);
                             string rarity = reader.GetString(1);
-                            fishList.Add((fishId, rarity));
+                            fishList.Add((Name, rarity));
                         }
                     }
                 }
                 
-                // Generate and insert prices for each fish
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "INSERT INTO MarketPrices (FishID, Day, Price) VALUES (@fishId, @day, @price)";
-                    var fishIdParam = command.Parameters.Add("@fishId", System.Data.DbType.Int32);
-                    var dayParam = command.Parameters.Add("@day", System.Data.DbType.Int32);
-                    var priceParam = command.Parameters.Add("@price", System.Data.DbType.Double);
+                // // Generate and insert prices for each fish
+                // using (var command = connection.CreateCommand())
+                // {
+                //     command.CommandText = "INSERT INTO MarketPrices (FishID, Day, Price) VALUES (@fishId, @day, @price)";
+                //     var fishIdParam = command.Parameters.Add("@fishId", System.Data.DbType.Int32);
+                //     var dayParam = command.Parameters.Add("@day", System.Data.DbType.Int32);
+                //     var priceParam = command.Parameters.Add("@price", System.Data.DbType.Double);
 
-                    foreach (var fish in fishList)
-                    {   
-                        Debug.Log("AAAA");
-                        var priceRange = rarityPriceRanges[fish.rarity];
-                        float basePrice = Random.Range(priceRange.min, priceRange.max);
-                        float variation = basePrice * Random.Range(-0.1f, 0.1f);
-                        float finalPrice = Mathf.Round((basePrice + variation) * 100f) / 100f;
+                //     foreach (var fish in fishList)
+                //     {   
+                //         Debug.Log("AAAA");
+                //         var priceRange = rarityPriceRanges[fish.rarity];
+                //         float basePrice = Random.Range(priceRange.min, priceRange.max);
+                //         float variation = basePrice * Random.Range(-0.1f, 0.1f);
+                //         float finalPrice = Mathf.Round((basePrice + variation) * 100f) / 100f;
 
-                        fishIdParam.Value = fish.fishId;
-                        dayParam.Value = day;
-                        priceParam.Value = finalPrice;
+                //         fishIdParam.Value = fish.fishId;
+                //         dayParam.Value = day;
+                //         priceParam.Value = finalPrice;
 
-                        command.ExecuteNonQuery();
-                    }
-                }
+                //         command.ExecuteNonQuery();
+                //     }
+                // }
             }
         }
         catch (System.Exception e)
