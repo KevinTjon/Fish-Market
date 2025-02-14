@@ -22,7 +22,7 @@ public class ExtensiveTab : MonoBehaviour
     private FishName fishNameComponent; // Reference to the FishName component
     private Description descriptionComponent; // Reference to the Description component
     private Rarity rarityComponent; // Reference to the Rarity component
-    [SerializeField] private FishPriceChart fishPriceChart;
+    //[SerializeField] private FishPriceChart fishPriceChart;
 
 
 
@@ -89,7 +89,7 @@ public class ExtensiveTab : MonoBehaviour
         float[] prices = fishPricesWithDays.Select(data => data.Price).ToArray();
         
         // Update the chart with the prices
-        fishPriceChart.UpdatePrices(prices);
+        //fishPriceChart.UpdatePrices(prices);
 
         // Activate the tab to show the details
         gameObject.SetActive(true);

@@ -4,7 +4,7 @@ public class FishSlotButton : MonoBehaviour
 {
     public FishSlot fishSlot; // Reference to the fish slot data associated with this slot
 
-    private void OnMouseDown() // This method will be called when the slot is clicked
+    public void OnMouseDown() // This method will be called when the slot is clicked
     {
         // Check if fishSlot is null
         if (fishSlot == null)
@@ -19,12 +19,19 @@ public class FishSlotButton : MonoBehaviour
             return; // Exit the method if fish is not discovered
         }
 
-
-        // Get the parent of the current GameObject (the slot)
-        Transform parentTransform = transform.parent;
-
-        // Find the ExtensiveTab GameObject in the parent
-        Transform extensiveTabTransform = parentTransform.parent.Find("ExtensiveTab");
+        // Find the ExtensiveTab by searching up through all parents
+        Transform current = transform;
+        Transform extensiveTabTransform = null;
+        
+        while (current != null)
+        {
+            // Try to find FishDetails at each level
+            extensiveTabTransform = current.Find("LeftPage/FishDetails");
+            if (extensiveTabTransform != null) break;
+            
+            // Move up to parent
+            current = current.parent;
+        }
         
         if (extensiveTabTransform != null)
         {
@@ -55,7 +62,7 @@ public class FishSlotButton : MonoBehaviour
         }
         else
         {
-            Debug.LogError("ExtensiveTab GameObject not found in the parent hierarchy!");
+            Debug.LogError("Could not find LeftPage/FishDetails in any parent!");
         }
     }
 }

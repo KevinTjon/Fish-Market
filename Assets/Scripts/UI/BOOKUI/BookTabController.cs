@@ -14,6 +14,8 @@ public class BookTabController : MonoBehaviour
     [SerializeField] private Sprite[] tabSelectedSprites;
     [SerializeField] private Sprite normalSprite;
     [SerializeField] private float selectedTabOffset = 10f;  // How far right to move selected tab
+    [Header("Page Content")]
+    [SerializeField] private GameObject[] pageContents;  // Array of page content objects
 
     private Vector3[] originalPositions;  // Store original positions of tab buttons
 
@@ -34,6 +36,21 @@ public class BookTabController : MonoBehaviour
         }
         
         pagesAnimator.enabled = false;
+        
+        // Initialize all pages as hidden
+        foreach (GameObject content in pageContents)
+        {
+            if (content != null)
+            {
+                content.SetActive(false);
+            }
+        }
+        
+        // Show initial page if book starts open
+        if (bookAnimator.GetBool("IsOpen") && pageContents.Length > 0 && pageContents[0] != null)
+        {
+            pageContents[0].SetActive(true);
+        }
     }
 
     void Update()
@@ -45,7 +62,16 @@ public class BookTabController : MonoBehaviour
             bookImage.enabled = true;
             pageImage.enabled = false;
             SetButtonImagesEnabled(false);
-            ResetAllTabPositions();  // Reset positions when book closes
+            ResetAllTabPositions();
+            
+            // Hide all content when book is closed
+            foreach (GameObject content in pageContents)
+            {
+                if (content != null)
+                {
+                    content.SetActive(false);
+                }
+            }
             return;
         }
 
@@ -55,21 +81,33 @@ public class BookTabController : MonoBehaviour
             pageImage.enabled = true;
             pageImage.sprite = tabSelectedSprites[currentTab];
             SetButtonImagesEnabled(true);
-            UpdateTabPositions();  // Update positions when not animating
+            UpdateTabPositions();
+            
+            // Show current tab content when book is open
+            if (currentTab >= 0 && currentTab < pageContents.Length)
+            {
+                pageContents[currentTab].SetActive(true);
+            }
         }
     }
 
     void OnTabClick(int newTab)
     {
         if (!bookAnimator.GetBool("IsOpen")) return;
-        if (isAnimating) return;  // Prevent clicks during animation
-        if (currentTab == newTab) return;  // Prevent clicking same tab
+        if (isAnimating) return;
+        if (currentTab == newTab) return;
 
         Debug.Log($"Clicked tab {newTab}, current page is {currentPage}");
 
-        isAnimating = true;  // Start animation
+        isAnimating = true;
         pagesAnimator.enabled = true;
-        SetButtonImagesEnabled(false);  // Hide button images during flip
+        SetButtonImagesEnabled(false);
+
+        // Hide current page content
+        if (currentTab >= 0 && currentTab < pageContents.Length)
+        {
+            pageContents[currentTab].SetActive(false);
+        }
 
         if (newTab > currentTab)
         {
@@ -87,6 +125,7 @@ public class BookTabController : MonoBehaviour
         currentTab = newTab;
         currentPage = newTab;
         
+        // Show new page content after animation
         Invoke("UpdateTabVisuals", 0.5f);
     }
 
@@ -94,9 +133,16 @@ public class BookTabController : MonoBehaviour
     {
         pagesAnimator.enabled = false;
         pageImage.sprite = tabSelectedSprites[currentTab];
-        SetButtonImagesEnabled(true);  // Show button images after flip
-        UpdateTabPositions();  // Update positions after animation
-        isAnimating = false;  // Animation complete
+        SetButtonImagesEnabled(true);
+        UpdateTabPositions();
+
+        // Show new page content
+        if (currentTab >= 0 && currentTab < pageContents.Length)
+        {
+            pageContents[currentTab].SetActive(true);
+        }
+
+        isAnimating = false;
     }
 
     void UpdateTabPositions()

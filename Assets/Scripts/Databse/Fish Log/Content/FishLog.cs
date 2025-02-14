@@ -41,7 +41,7 @@ public class FishLog : MonoBehaviour
                 //Debug.Log($"Setting data for slot {i}: {fishDataList[i].Name}");
 
                 // Get the Image component from the child GameObject named "Image"
-                Image fishImage = fishSlots[i].transform.Find("Image").GetComponent<Image>();
+                Image fishImage = fishSlots[i].transform.Find("FishImage").GetComponent<Image>();
 
                 // Now check if the fish is discovered
                 if (fishSlot.isDiscovered == "Yes")

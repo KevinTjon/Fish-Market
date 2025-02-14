@@ -82,7 +82,7 @@ public class FishInventory : MonoBehaviour
                 {
                     // Set the sprite to the slot
                     slotData.fishImage = fishSprite;
-                    Transform imageTransform = fishSlot.transform.Find("Image");
+                    Transform imageTransform = fishSlot.transform.Find("FishImage");
                     if (imageTransform != null)
                     {
                         Image fishImage = imageTransform.GetComponent<Image>();
