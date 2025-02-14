@@ -13,11 +13,17 @@ public class BookTabController : MonoBehaviour
     [SerializeField] private Animator pagesAnimator;
     [SerializeField] private Sprite[] tabSelectedSprites;
     [SerializeField] private Sprite normalSprite;
+    [SerializeField] private float selectedTabOffset = 10f;  // How far right to move selected tab
+
+    private Vector3[] originalPositions;  // Store original positions of tab buttons
 
     void Start()
     {
+        // Store original positions
+        originalPositions = new Vector3[tabButtons.Length];
         for (int i = 0; i < tabButtons.Length; i++)
         {
+            originalPositions[i] = tabButtons[i].transform.localPosition;
             int tabIndex = i;
             tabButtons[i].onClick.AddListener(() => OnTabClick(tabIndex));
         }
@@ -38,14 +44,18 @@ public class BookTabController : MonoBehaviour
         {
             bookImage.enabled = true;
             pageImage.enabled = false;
+            SetButtonImagesEnabled(false);
+            ResetAllTabPositions();  // Reset positions when book closes
             return;
         }
 
-        if (isBookOpen)
+        if (isBookOpen && !isAnimating)
         {
             bookImage.enabled = false;
             pageImage.enabled = true;
             pageImage.sprite = tabSelectedSprites[currentTab];
+            SetButtonImagesEnabled(true);
+            UpdateTabPositions();  // Update positions when not animating
         }
     }
 
@@ -59,6 +69,7 @@ public class BookTabController : MonoBehaviour
 
         isAnimating = true;  // Start animation
         pagesAnimator.enabled = true;
+        SetButtonImagesEnabled(false);  // Hide button images during flip
 
         if (newTab > currentTab)
         {
@@ -83,7 +94,42 @@ public class BookTabController : MonoBehaviour
     {
         pagesAnimator.enabled = false;
         pageImage.sprite = tabSelectedSprites[currentTab];
+        SetButtonImagesEnabled(true);  // Show button images after flip
+        UpdateTabPositions();  // Update positions after animation
         isAnimating = false;  // Animation complete
+    }
+
+    void UpdateTabPositions()
+    {
+        for (int i = 0; i < tabButtons.Length; i++)
+        {
+            Vector3 position = originalPositions[i];
+            if (i == currentTab)
+            {
+                position.x += selectedTabOffset;  // Move selected tab right
+            }
+            tabButtons[i].transform.localPosition = position;
+        }
+    }
+
+    void ResetAllTabPositions()
+    {
+        for (int i = 0; i < tabButtons.Length; i++)
+        {
+            tabButtons[i].transform.localPosition = originalPositions[i];
+        }
+    }
+
+    void SetButtonImagesEnabled(bool enabled)
+    {
+        foreach (Button button in tabButtons)
+        {
+            Image buttonImage = button.GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                buttonImage.enabled = enabled;
+            }
+        }
     }
 
     void ResetRightFlip()
