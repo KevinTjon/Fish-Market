@@ -98,7 +98,7 @@ public class GameSceneManager : MonoBehaviour
 
     public void LoadMarketScene()
     {
-        SceneManager.LoadScene("MarketUI"); // Replace with your actual scene name
+        SceneManager.LoadScene("NewMarketUI"); // Replace with your actual scene name
     }
 
     public void SimulateFishCatch()
