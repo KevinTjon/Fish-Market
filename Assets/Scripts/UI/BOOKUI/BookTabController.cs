@@ -3,49 +3,96 @@ using UnityEngine.UI;
 
 public class BookTabController : MonoBehaviour
 {
-    private int currentTab = -1;  // -1 means no tab selected
+    private int currentTab = 0;
+    private int currentPage = 0;
+    private bool isAnimating = false;  // New flag to track animation state
     [SerializeField] private Button[] tabButtons;
-    [SerializeField] private Image pageImage;  // Reference to the page image
-    [SerializeField] private Sprite[] tabSelectedSprites;  // Different tab selection states
-    [SerializeField] private Sprite normalSprite;  // Book with no tab selected
+    [SerializeField] private Image pageImage;
+    [SerializeField] private Image bookImage;
+    [SerializeField] private Animator bookAnimator;
+    [SerializeField] private Animator pagesAnimator;
+    [SerializeField] private Sprite[] tabSelectedSprites;
+    [SerializeField] private Sprite normalSprite;
 
     void Start()
     {
-        Debug.Log($"PageImage reference: {pageImage != null}");
-        Debug.Log($"Number of tab sprites: {tabSelectedSprites.Length}");
-        
-        // Set up click listeners for each tab
         for (int i = 0; i < tabButtons.Length; i++)
         {
-            int tabIndex = i;  // Needed for closure
+            int tabIndex = i;
             tabButtons[i].onClick.AddListener(() => OnTabClick(tabIndex));
         }
-
-        // Set initial sprite
-        if (pageImage != null && normalSprite != null)
+        
+        if (pageImage != null)
         {
-            pageImage.sprite = normalSprite;
+            pageImage.enabled = false;
+        }
+        
+        pagesAnimator.enabled = false;
+    }
+
+    void Update()
+    {
+        bool isBookOpen = bookAnimator.GetBool("IsOpen");
+        
+        if (!isBookOpen)
+        {
+            bookImage.enabled = true;
+            pageImage.enabled = false;
+            return;
+        }
+
+        if (isBookOpen)
+        {
+            bookImage.enabled = false;
+            pageImage.enabled = true;
+            pageImage.sprite = tabSelectedSprites[currentTab];
         }
     }
 
-    void OnTabClick(int tabIndex)
+    void OnTabClick(int newTab)
     {
-        Debug.Log($"Tab {tabIndex} clicked");
-        if (currentTab != tabIndex)
+        if (!bookAnimator.GetBool("IsOpen")) return;
+        if (isAnimating) return;  // Prevent clicks during animation
+        if (currentTab == newTab) return;  // Prevent clicking same tab
+
+        Debug.Log($"Clicked tab {newTab}, current page is {currentPage}");
+
+        isAnimating = true;  // Start animation
+        pagesAnimator.enabled = true;
+
+        if (newTab > currentTab)
         {
-            currentTab = tabIndex;
-            Debug.Log($"Switching to tab {tabIndex}");
-            if (currentTab >= 0 && currentTab < tabSelectedSprites.Length)
-            {
-                Debug.Log($"Setting sprite for tab {tabIndex}");
-                pageImage.sprite = tabSelectedSprites[currentTab];
-            }
+            Debug.Log($"Flipping left from {currentTab} to {newTab}");
+            pagesAnimator.SetBool("FlipLeft", true);
+            Invoke("ResetLeftFlip", 0.5f);
         }
-        else
+        else if (newTab < currentTab)
         {
-            Debug.Log("Deselecting tab");
-            currentTab = -1;
-            pageImage.sprite = normalSprite;
+            Debug.Log($"Flipping right from {currentTab} to {newTab}");
+            pagesAnimator.SetBool("FlipRight", true);
+            Invoke("ResetRightFlip", 0.5f);
         }
+
+        currentTab = newTab;
+        currentPage = newTab;
+        
+        Invoke("UpdateTabVisuals", 0.5f);
+    }
+
+    void UpdateTabVisuals()
+    {
+        pagesAnimator.enabled = false;
+        pageImage.sprite = tabSelectedSprites[currentTab];
+        isAnimating = false;  // Animation complete
+    }
+
+    void ResetRightFlip()
+    {
+        pagesAnimator.SetBool("FlipRight", false);
+    }
+
+    void ResetLeftFlip()
+    {
+        pagesAnimator.SetBool("FlipLeft", false);
     }
 }
