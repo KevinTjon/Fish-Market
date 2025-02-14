@@ -8,7 +8,7 @@ public class PageController : MonoBehaviour
     private Animator animator;
     [SerializeField] private Animator bookAnimator; // Reference to BookBase's animator
     private int currentPage = 0;
-    [SerializeField] private int maxPages = 5; // Adjust this to your total pages
+    //[SerializeField] private int maxPages = 5; // Adjust this to your total pages
 
     void Start()
     {

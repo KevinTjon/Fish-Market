@@ -43,9 +43,9 @@ public class ExtensiveTab : MonoBehaviour
         }
 
         // Populate the string variables with fish data
-        nameText = fishData.Name; // Set the name
+        nameText = "Fish: "  + fishData.Name; // Set the name
         descriptionText = fishData.Description; // Set the description
-        rarityText = fishData.Rarity; // Set the rarity
+        rarityText = "Rarity: " +fishData.Rarity; // Set the rarity
         minWeightText = fishData.MinWeight.ToString(); // Set the minimum weight
         maxWeightText = fishData.MaxWeight.ToString(); // Set the maximum weight
         topSpeedText = fishData.TopSpeed.ToString(); // Set the top speed
@@ -55,33 +55,19 @@ public class ExtensiveTab : MonoBehaviour
         fishImagePanel.SetFishImage(assetPath);
         
 
-        Transform detailPagesTransform = transform.Find("Menu/Pages/DetailsPage");
-        if (detailPagesTransform != null)
+        fishNameComponent = GetComponentInChildren<FishName>();
+        descriptionComponent = GetComponentInChildren<Description>();
+        rarityComponent = GetComponentInChildren<Rarity>();
+
+        if (fishNameComponent == null || descriptionComponent == null || rarityComponent == null)
         {
-            fishNameComponent = detailPagesTransform.GetComponentInChildren<FishName>();
-            descriptionComponent = detailPagesTransform.GetComponentInChildren<Description>();
-            rarityComponent = detailPagesTransform.GetComponentInChildren<Rarity>();
-        }
-        else
-        {
-            Debug.LogError("DetailPage GameObject not found in the hierarchy!");
+            Debug.LogError("One or more components not found in children!");
+            return;
         }
 
-
-        if (fishNameComponent != null)
-        {
-            fishNameComponent.SetFishName(nameText);
-        }
-
-        if (descriptionComponent != null)
-        {
-            descriptionComponent.SetDescription(descriptionText);
-        }
-
-        if (rarityComponent != null)
-        {
-            rarityComponent.SetRarity(rarityText);
-        }
+        fishNameComponent.SetFishName(nameText);
+        descriptionComponent.SetDescription(descriptionText);
+        rarityComponent.SetRarity(rarityText);
 
         List<FishPriceData> fishPricesWithDays = GetFishPrices(fishData.Name);
     

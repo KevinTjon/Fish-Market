@@ -7,7 +7,13 @@ using System;
 
 public class FishDB : MonoBehaviour
 {
-    private string dbPath;
+    private string GetDatabasePath()
+    {
+        string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+        Debug.Log("Database Path: " + dbPath);  // Add this debug line
+        return dbPath;
+    }
+
     public class Fish{
         public int Id { get; set; }
         public string Name { get; set; }
@@ -18,7 +24,7 @@ public class FishDB : MonoBehaviour
 
     void Start()
     {
-        dbPath = @"Data Source=" + Application.dataPath + "/StreamingAssets/FishDB.db";
+        //dbPath = @"Data Source=" + Application.dataPath + "/StreamingAssets/FishDB.db";
         //dbPath = "URI=file::memory:";
 //        Debug.Log("Database Path: " + dbPath);
         CreateTable();
@@ -35,7 +41,7 @@ public class FishDB : MonoBehaviour
         string sqlFilePath = streamingAssetsPath + "/CreateTables.sql";
         string sqlCommands = System.IO.File.ReadAllText(sqlFilePath);
         
-        using (var connection = new SqliteConnection(dbPath)) {
+        using (var connection = new SqliteConnection(GetDatabasePath())) {
             connection.Open();
             using (var command = connection.CreateCommand()) {
                 command.CommandText = sqlCommands;
@@ -45,7 +51,7 @@ public class FishDB : MonoBehaviour
     }
 
     public void AddFish(string name, string type, string rarity, string assetPath){
-        using (var connection = new SqliteConnection(dbPath)){
+        using (var connection = new SqliteConnection(GetDatabasePath())){
             connection.Open();
             using(var command = connection.CreateCommand()){
                 command.CommandText =
@@ -62,26 +68,41 @@ public class FishDB : MonoBehaviour
 
     public List<Fish> GetFish(){
         List<Fish> fishList = new List<Fish>(); 
-        using (var connection = new SqliteConnection(dbPath)){
-            connection.Open();
-            using (var command = connection.CreateCommand()){
-                command.CommandText = 
-                "SELECT * FROM Inventory;"; 
-                using (IDataReader reader = command.ExecuteReader()){
-                    while (reader.Read()){
-                        Fish fish = new Fish();
-                        // Safely read and cast values
-                        fish.Id = reader["Id"] is DBNull ? 0 : (int)(long)reader["Id"]; // Cast to long first if it's an INTEGER
-                        fish.Name = reader["Name"] is DBNull ? string.Empty : reader["Name"].ToString();
-                        fish.Weight = reader["Weight"] is DBNull ? string.Empty : reader["Weight"].ToString();
-                        fish.Rarity = reader["Rarity"] is DBNull ? string.Empty : reader["Rarity"].ToString();
-                        fish.AssetPath = reader["AssetPath"] is DBNull ? string.Empty : reader["AssetPath"].ToString();
+        string dbPath = GetDatabasePath();
 
-                        fishList.Add(fish); // Add fish to the list
+        try
+        {
+            using (IDbConnection dbConnection = new SqliteConnection(dbPath))
+            {
+                dbConnection.Open();
+                using (var command = dbConnection.CreateCommand())
+                {
+                    command.CommandText = 
+                    "SELECT * FROM Inventory;"; 
+                    using (IDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            Fish fish = new Fish();
+                            // Safely read and cast values
+                            fish.Id = reader["Id"] is DBNull ? 0 : (int)(long)reader["Id"]; // Cast to long first if it's an INTEGER
+                            fish.Name = reader["Name"] is DBNull ? string.Empty : reader["Name"].ToString();
+                            fish.Weight = reader["Weight"] is DBNull ? string.Empty : reader["Weight"].ToString();
+                            fish.Rarity = reader["Rarity"] is DBNull ? string.Empty : reader["Rarity"].ToString();
+                            fish.AssetPath = reader["AssetPath"] is DBNull ? string.Empty : reader["AssetPath"].ToString();
+
+                            fishList.Add(fish); // Add fish to the list
+                        }
                     }
                 }
             }
         }
+        catch (Exception e)
+        {
+            Debug.LogError($"Database error: {e.Message}");
+            Debug.LogError($"Database path: {dbPath}");
+        }
+
         // Debug.Log("Number of fish retrieved: " + fishList.Count);
         return fishList; // Return the list of fish
     }
