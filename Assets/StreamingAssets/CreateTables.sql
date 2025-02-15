@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS Inventory
 (
     Id INTEGER PRIMARY KEY,
@@ -30,6 +29,17 @@ CREATE TABLE IF NOT EXISTS MarketPrices
     Price REAL NOT NULL,
     FOREIGN KEY (FishName) REFERENCES Fish(Name), -- Foreign key constraint
     UNIQUE(FishName, Day) -- Ensure unique fish names for each day
+);
+
+-- Create MarketListings table
+CREATE TABLE IF NOT EXISTS MarketListings
+(
+    ListingID INTEGER PRIMARY KEY AUTOINCREMENT,
+    FishName TEXT NOT NULL,
+    ListedPrice REAL NOT NULL,
+    IsSold INTEGER DEFAULT 0,    -- 0 = not sold, 1 = sold
+    SellerID INTEGER NOT NULL,   -- 0 for player, 1+ for NPCs/bots
+    FOREIGN KEY (FishName) REFERENCES Fish(Name)
 );
 
 -- Populate Fish table with enhanced test data

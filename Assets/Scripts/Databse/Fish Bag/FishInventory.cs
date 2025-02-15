@@ -1,13 +1,16 @@
 using UnityEngine;
 using UnityEngine.UI; // If you're still using standard UI components
 using TMPro; // Import the TextMeshPro namespace
+using System;  // Add this for Exception
 using System.Collections.Generic;
+using Mono.Data.Sqlite;
 
 public class FishInventory : MonoBehaviour
 {
     public GameObject content; 
     private List<GameObject> fishSlots = new List<GameObject>();     
     private FishDB fishDB;
+    [SerializeField] private Sprite defaultFishSprite;  // Add this field
 
     void Start()
     {
@@ -30,10 +33,44 @@ public class FishInventory : MonoBehaviour
         }
     }
 
-    void LoadFishInventory()
+    public void LoadFishInventory()
     {
         List<FishDB.Fish> fishList = fishDB.GetFish();
         Dictionary<string, int> fishQuantity = new Dictionary<string, int>();
+        Dictionary<string, float> latestPrices = GetLatestMarketPrices();
+
+        // First, clear all slots
+        foreach (GameObject slot in fishSlots)
+        {
+            // Clear the quantity text
+            TextMeshProUGUI fishText = slot.GetComponentInChildren<TextMeshProUGUI>();
+            if (fishText != null)
+            {
+                fishText.text = "";
+            }
+
+            // Clear the slot data
+            FishSlotData slotData = slot.GetComponent<FishSlotData>();
+            if (slotData != null)
+            {
+                slotData.fishName = "";
+                slotData.fishRarity = "";
+                slotData.quantity = 0;
+                slotData.marketPrice = 0f;
+                slotData.fishImage = defaultFishSprite;  // Set to default sprite
+
+                // Find the specific Image child component named "FishImage" or similar
+                Transform fishImageTransform = slot.transform.Find("FishImage");
+                if (fishImageTransform != null)
+                {
+                    Image fishImage = fishImageTransform.GetComponent<Image>();
+                    if (fishImage != null)
+                    {
+                        fishImage.sprite = defaultFishSprite;  // Set to default sprite
+                    }
+                }
+            }
+        }
 
         // Count the quantities of each fish
         foreach (var fish in fishList)
@@ -63,67 +100,75 @@ public class FishInventory : MonoBehaviour
                     fishText.text = "X" + fishQuantity[fishName];
                 }
 
-                // Store the type and rarity in the slot
+                // Store the data in the slot
                 FishSlotData slotData = fishSlot.GetComponent<FishSlotData>();
                 if (slotData == null)
                 {
                     slotData = fishSlot.AddComponent<FishSlotData>();
                 }
                 slotData.fishName = fishName;
-                slotData.Weight = fishList[i].Weight;
                 slotData.fishRarity = fishList[i].Rarity;
                 slotData.quantity = fishQuantity[fishName];
+                slotData.marketPrice = latestPrices.ContainsKey(fishName) ? latestPrices[fishName] : 0f;
+                slotData.fishImage = Resources.Load<Sprite>(fishList[i].AssetPath);
 
-                // Load sprite directly from Resources
-                string spritePath = fishList[i].AssetPath;
-                Sprite fishSprite = Resources.Load<Sprite>(spritePath);
-                
-                if (fishSprite != null)
+                // Find and update the specific Image child component
+                Transform fishImageTransform = fishSlot.transform.Find("FishImage");
+                if (fishImageTransform != null)
                 {
-                    // Set the sprite to the slot
-                    slotData.fishImage = fishSprite;
-                    Transform imageTransform = fishSlot.transform.Find("FishImage");
-                    if (imageTransform != null)
+                    Image fishImage = fishImageTransform.GetComponent<Image>();
+                    if (fishImage != null)
                     {
-                        Image fishImage = imageTransform.GetComponent<Image>();
-                        if (fishImage != null)
-                        {
-                            fishImage.sprite = fishSprite;
-                        }
-                        else
-                        {
-                            Debug.LogError("Image component not found in Image child at index: " + i);
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError("Child GameObject named 'Image' not found in fishSlot at index: " + i);
+                        fishImage.sprite = slotData.fishImage;
                     }
                 }
                 else
                 {
-                    Debug.LogError("Sprite not found at path: " + spritePath);
+                    Debug.LogError($"FishImage child not found in slot {i}");
                 }
             }
-            else
-            {
-                // Clear the slot if there are no more fish
-                TextMeshProUGUI fishText = fishSlots[i].GetComponentInChildren<TextMeshProUGUI>();
-                if (fishText != null)
-                {
-                    fishText.text = "";
-                }
+        }
+    }
 
-                Transform imageTransform = fishSlots[i].transform.Find("Image");
-                if (imageTransform != null)
+    private Dictionary<string, float> GetLatestMarketPrices()
+    {
+        Dictionary<string, float> prices = new Dictionary<string, float>();
+        string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+
+        try
+        {
+            using (var connection = new SqliteConnection(dbPath))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
                 {
-                    Image fishImage = imageTransform.GetComponent<Image>();
-                    if (fishImage != null)
+                    command.CommandText = @"
+                        SELECT FishName, Price 
+                        FROM MarketPrices 
+                        WHERE (FishName, Day) IN (
+                            SELECT FishName, MAX(Day) 
+                            FROM MarketPrices 
+                            GROUP BY FishName
+                        )";
+
+                    using (var reader = command.ExecuteReader())
                     {
-                        fishImage.sprite = null;
+                        while (reader.Read())
+                        {
+                            string fishName = reader.GetString(0);
+                            float price = (float)reader.GetDouble(1);
+                            prices[fishName] = price;
+                            Debug.Log($"Loaded market price for {fishName}: {price}");
+                        }
                     }
                 }
             }
         }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error loading market prices: {e.Message}");
+        }
+
+        return prices;
     }
 }

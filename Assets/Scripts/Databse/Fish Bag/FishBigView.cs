@@ -7,24 +7,104 @@ using System;  // Add this for DBNull
 
 public class FishBigView : MonoBehaviour
 {
-    public Sprite displayImage; // Reference to the Image component where the fish image will be displayed
-    public string fishName;      // Changed from typeText to fishName
-    public string rarityText;    // Reference to the Text component for fish rarity
-
-    public int quantityText;
+    public Sprite displayImage;
+    public string fishName;
+    public string rarityText;
+    public string quantityText;
+    public string marketPriceText;
     private float currentMarketPrice;
-    private string Weight;  // Store the weight of the fish
+    private int currentQuantity;
 
     [SerializeField] private SellPanel sellPanel;
+    [SerializeField] private Sprite defaultSprite;
 
-    public void Setup(Sprite img, string name, string rarity, int qty, string weight)
+    // References to UI components
+    private TextMeshProUGUI nameTextComponent;
+    private TextMeshProUGUI rarityTextComponent;
+    private TextMeshProUGUI quantityTextComponent;
+    private TextMeshProUGUI marketPriceTextComponent;
+
+    void Start()
+    {
+        // Find all text components
+        nameTextComponent = transform.Find("FishName").GetComponent<TextMeshProUGUI>();
+        rarityTextComponent = transform.Find("FishRarity").GetComponent<TextMeshProUGUI>();
+        quantityTextComponent = transform.Find("FishQuantity").GetComponent<TextMeshProUGUI>();
+        marketPriceTextComponent = transform.Find("MarketPrice").GetComponent<TextMeshProUGUI>();
+
+        ShowDefaultState();
+    }
+
+    public void ShowDefaultState()
+    {
+        displayImage = defaultSprite;
+        fishName = "Fish:";
+        rarityText = "Rarity: ";
+        quantityText = "";
+        marketPriceText = "Market Price:";
+        currentMarketPrice = 0;
+        currentQuantity = 0;
+
+        // Update UI components
+        if (nameTextComponent) nameTextComponent.text = fishName;
+        if (rarityTextComponent) rarityTextComponent.text = rarityText;
+        if (quantityTextComponent) quantityTextComponent.text = quantityText;
+        if (marketPriceTextComponent) marketPriceTextComponent.text = marketPriceText;
+
+        // Find and update the fish image
+        Transform imageTransform = transform.Find("FishIconBorder/FishIcon");
+        if (imageTransform != null)
+        {
+            Image fishImage = imageTransform.GetComponent<Image>();
+            if (fishImage != null)
+            {
+                fishImage.sprite = defaultSprite;
+            }
+        }
+
+        // Make sure sell panel is hidden
+        if (sellPanel != null)
+            sellPanel.gameObject.SetActive(true);
+
+        Debug.Log("FishBigView reset to default state");
+    }
+
+    public void Setup(Sprite img, string name, string rarity, int qty, float marketPrice)
     {
         displayImage = img;
-        fishName = name;         // Updated to use fishName
-        rarityText = rarity;
-        quantityText = qty;
-        Weight = weight;  // Store the weight
-        FetchLatestMarketPrice();
+        fishName = "Fish: " + name;
+        rarityText = "Rarity: " + rarity;
+        currentQuantity = qty;
+        quantityText = "x" + qty;
+        marketPriceText = "Market Price: " + marketPrice + "g";
+        currentMarketPrice = marketPrice;
+
+        // Update UI components
+        if (nameTextComponent) nameTextComponent.text = fishName;
+        if (rarityTextComponent) rarityTextComponent.text = rarityText;
+        if (quantityTextComponent) quantityTextComponent.text = quantityText;
+        if (marketPriceTextComponent) marketPriceTextComponent.text = marketPriceText;
+
+        // Find and update the fish image
+        Transform imageTransform = transform.Find("FishIconBorder/FishIcon");
+        if (imageTransform != null)
+        {
+            Image fishImage = imageTransform.GetComponent<Image>();
+            if (fishImage != null)
+            {
+                fishImage.sprite = displayImage;
+            }
+        }
+
+        if (sellPanel != null)
+        {
+            sellPanel.SetupSellPanel(
+                name,  // Pass just the name without "Fish: "
+                currentMarketPrice,
+                currentQuantity,
+                currentMarketPrice
+            );
+        }
     }
 
     private void FetchLatestMarketPrice()
@@ -71,136 +151,21 @@ public class FishBigView : MonoBehaviour
         }
     }
 
-    // Method to show fish details
     public void ShowFishDetails()
     {
-        // Find the Image GameObject that is a child of the Panel_Image
-        Transform imageTransform = transform.Find("FishIconBorder/FishIcon");
-        if (imageTransform != null)
-        {
-            Image childImage = imageTransform.GetComponent<Image>(); // Get the Image component from the GameObject
-            if (childImage != null)
-            {
-                if (displayImage != null)
-                {
-                    childImage.sprite = displayImage; // Set the sprite for the child Image
-                    //Debug.Log("Sprite assigned to child Image.");
-                }
-                else
-                {
-                    Debug.LogWarning("Display image is not set! Cannot assign sprite to child Image.");
-                }
-            }
-            else
-            {
-                Debug.LogError("Child Image component not found on the Image GameObject!");
-            }
-        }
-        else
-        {
-            Debug.LogError("Child Image GameObject not found under Panel_Image!");
-        }
-
-         // Find the TextMeshPro component for the quantity in Panel_Image
-        Transform qtyTransform = transform.Find("FishQuantity");
-        if (qtyTransform != null)
-        {
-            TextMeshProUGUI qtyTextComponent = qtyTransform.GetComponent<TextMeshProUGUI>(); // Get the TextMeshProUGUI component
-            if (qtyTextComponent != null)
-            {
-                qtyTextComponent.text = "x" + quantityText; // Set the quantity text
-                //Debug.Log("Quantity text assigned.");
-            }
-            else
-            {
-                Debug.LogError("TextMeshProUGUI component not found on the qty GameObject!");
-            }
-        }
-        else
-        {
-            Debug.LogError("Child qty GameObject not found under Panel_Image!");
-        }
-
-        // Find the TextMeshPro component for the fish name in Panel_Type
-        Transform nameTransform = transform.Find("FishName");  // Keep the same path, just showing fish name now
-        if (nameTransform != null)
-        {
-            TextMeshProUGUI nameTextComponent = nameTransform.GetComponent<TextMeshProUGUI>();
-            if (nameTextComponent != null)
-            {
-                nameTextComponent.text = "Fish: " + (!string.IsNullOrEmpty(fishName) ? fishName : "Unknown Fish");
-                //Debug.Log("Fish name assigned.");
-            }
-            else
-            {
-                Debug.LogError("TextMeshProUGUI component not found on the name GameObject!");
-            }
-        }
-        else
-        {
-            Debug.LogError("Child Text GameObject not found under Panel_Type!");
-        }
-
-        // Find the TextMeshPro component for the rarity in Panel_Rarity
-        Transform rarityTransform = transform.Find("FishRarity");
-        if (rarityTransform != null)
-        {
-            TextMeshProUGUI rarityTextComponent = rarityTransform.GetComponent<TextMeshProUGUI>(); // Get the TextMeshProUGUI component
-            if (rarityTextComponent != null)
-            {
-                rarityTextComponent.text = "Rarity: " + (!string.IsNullOrEmpty(rarityText) ? rarityText : "Unknown Rarity"); // Set the rarity text
-                // Debug.Log("Rarity text assigned.");
-            }
-            else
-            {
-                Debug.LogError("TextMeshProUGUI component not found on the rarity GameObject!");
-            }
-        }
-        else
-        {
-            Debug.LogError("Child Text GameObject not found under Panel_Rarity!");
-        }
-
-        // New market price display
-        Transform priceTransform = transform.Find("MarketPrice");
-        if (priceTransform != null)
-        {
-            TextMeshProUGUI priceTextComponent = priceTransform.GetComponent<TextMeshProUGUI>();
-            if (priceTextComponent != null)
-            {
-                priceTextComponent.text = $"Market Price: {currentMarketPrice:F2} g";
-            }
-        }
-
-        // Setup sell panel with current fish data
-        if (sellPanel != null)
-        {
-            // First deactivate and reactivate the sell panel to reset its state
-            sellPanel.gameObject.SetActive(false);
-            
-            Debug.Log($"Setting up sell panel for: {fishName}, Quantity: {quantityText}");
-            sellPanel.SetupSellPanel(
-                fishName,
-                float.Parse(Weight),
-                quantityText,
-                currentMarketPrice
-            );
-        }
-        else
-        {
-            Debug.LogError("Sell Panel reference not set in FishBigView!");
-        }
+        // No need to update anything here as Setup already handles everything
+        Debug.Log($"Showing details for: {fishName}, Quantity: {currentQuantity}");
     }
 
     public void OnSellButtonClick()
     {
         if (sellPanel != null)
         {
-            Debug.Log($"Attempting to open sell panel with quantity: {quantityText}");
+            Debug.Log($"Attempting to open sell panel with quantity: {currentQuantity}");
             sellPanel.SetupSellPanel(
                 fishName,
-                float.Parse(Weight),
-                quantityText,
+                currentMarketPrice,
+                currentQuantity,
                 currentMarketPrice
             );
         }

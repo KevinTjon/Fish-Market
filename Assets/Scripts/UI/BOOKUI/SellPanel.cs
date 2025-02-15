@@ -170,25 +170,71 @@ public class SellPanel : MonoBehaviour
 
                 using (var command = connection.CreateCommand())
                 {
+                    // Delete specific number of fish entries from inventory
                     command.CommandText = @"
-                        INSERT INTO MarketListings 
-                        (FishName, Weight, ListedPrice, ListedTime, IsSold) 
-                        VALUES 
-                        (@fishName, @weight, @price, @time, 0)";
+                        DELETE FROM Inventory 
+                        WHERE Name = @fishName 
+                        AND rowid IN (
+                            SELECT rowid FROM Inventory 
+                            WHERE Name = @fishName 
+                            LIMIT @deleteCount
+                        )";
 
                     command.Parameters.AddWithValue("@fishName", selectedFishName);
-                    command.Parameters.AddWithValue("@weight", selectedFishWeight);
-                    command.Parameters.AddWithValue("@price", price);
-                    command.Parameters.AddWithValue("@time", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+                    command.Parameters.AddWithValue("@deleteCount", quantity);
 
-                    Debug.Log($"Executing database command for: {selectedFishName}");
-                    command.ExecuteNonQuery();
+                    int rowsAffected = command.ExecuteNonQuery();
+                    
+                    if (rowsAffected != quantity)
+                    {
+                        Debug.LogError($"Failed to delete correct number of fish! Deleted: {rowsAffected}, Expected: {quantity}");
+                        return;
+                    }
+
+                    // Then create the market listings
+                    for(int i = 0; i < quantity; i++)
+                    {
+                        command.CommandText = @"
+                            INSERT INTO MarketListings 
+                            (FishName, ListedPrice, IsSold, SellerID) 
+                            VALUES 
+                            (@fishName, @price, 0, 0)";
+
+                        command.Parameters.Clear();
+                        command.Parameters.AddWithValue("@fishName", selectedFishName);
+                        command.Parameters.AddWithValue("@price", price);
+
+                        Debug.Log($"Executing database command for: {selectedFishName} (#{i+1} of {quantity})");
+                        command.ExecuteNonQuery();
+                    }
+                    
                     Debug.Log($"Successfully listed {quantity}x {selectedFishName} for {price} gold each");
                     
-                    // Close the sell panel
-                    gameObject.SetActive(false);
-                    
-                    // You might want to refresh the inventory display here
+                    // Reset the panel
+                    ResetPanel();
+
+                    // Update the inventory UI
+                    FishInventory fishInventory = FindObjectOfType<FishInventory>();
+                    if (fishInventory != null)
+                    {
+                        Debug.Log("Refreshing inventory display");
+                        fishInventory.LoadFishInventory();
+                        
+                        // Reset BigFishView to default state
+                        FishBigView bigView = FindObjectOfType<FishBigView>();
+                        if (bigView != null)
+                        {
+                            bigView.ShowDefaultState();
+                        }
+                        else
+                        {
+                            Debug.LogError("Could not find FishBigView component!");
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogError("Could not find FishInventory component!");
+                    }
                 }
             }
         }
@@ -196,5 +242,19 @@ public class SellPanel : MonoBehaviour
         {
             Debug.LogError($"Error listing fish in market: {e.Message}\nStack trace: {e.StackTrace}");
         }
+    }
+
+    private void ResetPanel()
+    {
+        // Reset quantity to 1
+        currentQuantity = 1;
+        UpdateQuantityDisplay();
+        UpdateButtonStates();
+        
+        // Reset price input to current market price
+        sellPriceInput.text = currentMarketPrice.ToString("F2");
+        
+        // Optionally show a success message or animation here
+        Debug.Log("Panel reset after successful listing");
     }
 }
