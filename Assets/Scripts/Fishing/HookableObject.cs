@@ -22,7 +22,6 @@ public class HookableObject : MonoBehaviour, IHookable
         pos = hookPos;//
         //throw new System.NotImplementedException();
     }
-    
 
     private void Awake()
     {

@@ -2,18 +2,23 @@ using UnityEngine;
 
 public class HookController : MonoBehaviour
 {
-    private const float Damping = 40f;
-    
+    // Determines if the hook is on the water surface
+    public bool onWaterSurface { get; private set; }
     public bool inSwingbackMode { get; private set; }
     public Rigidbody2D hookRB { get; private set; }
     public GameObject baitObject { get; private set; }
+    
     public float baitOffset;
+    public float waterLevel;
     
     // Start is called before the first frame update
     void Start()
     {
         hookRB = GetComponent<Rigidbody2D>();
         hookRB.AddForce(new Vector2(0, 0));
+
+        onWaterSurface = false;
+        inSwingbackMode = false;
     }
     // Update is called once per frame
     void Update()
@@ -48,4 +53,21 @@ public class HookController : MonoBehaviour
     {
         inSwingbackMode = mode;
     }
+
+    public void AttachHookToSurface(float posY)
+    {
+        // Set to ocean top
+        hookRB.position = new Vector2(hookRB.position.x, posY);
+        // Freeze y movement in ocea
+        hookRB.constraints = RigidbodyConstraints2D.FreezePositionY;
+        onWaterSurface = true;
+    }
+
+    public void DetachHookFromSurface()
+    {
+        hookRB.constraints = RigidbodyConstraints2D.None;
+        hookRB.AddForce(Vector2.down * 10, ForceMode2D.Impulse);
+        onWaterSurface = false;
+    }
+
 }

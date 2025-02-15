@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class BoatController : MonoBehaviour
@@ -7,7 +8,7 @@ public class BoatController : MonoBehaviour
 
 
     // Physical Attribute
-    public Rigidbody2D rb {get; private set;}
+    public Rigidbody2D rb { get; private set; }
     
     private void Awake()
     {
@@ -29,5 +30,12 @@ public class BoatController : MonoBehaviour
     {
         rb.AddForce(new Vector2(rawInput * BoatSpeed, 0));
         // TODO: Add feature to limit boat speed
+    }
+
+    public void Flip()
+    {
+        var newScale = transform.localScale;
+        newScale.x *= -1;
+        transform.localScale = newScale;
     }
 }
