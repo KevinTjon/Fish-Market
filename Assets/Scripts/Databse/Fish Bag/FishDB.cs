@@ -10,7 +10,7 @@ public class FishDB : MonoBehaviour
     private string GetDatabasePath()
     {
         string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
-        Debug.Log("Database Path: " + dbPath);  // Add this debug line
+        //Debug.Log("Database Path: " + dbPath);  // Add this debug line
         return dbPath;
     }
 

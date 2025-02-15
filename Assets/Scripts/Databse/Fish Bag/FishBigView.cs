@@ -13,13 +13,17 @@ public class FishBigView : MonoBehaviour
 
     public int quantityText;
     private float currentMarketPrice;
+    private string Weight;  // Store the weight of the fish
 
-     public void Setup(Sprite img, string name, string rarity, int qty)
+    [SerializeField] private SellPanel sellPanel;
+
+    public void Setup(Sprite img, string name, string rarity, int qty, string weight)
     {
         displayImage = img;
         fishName = name;         // Updated to use fishName
         rarityText = rarity;
         quantityText = qty;
+        Weight = weight;  // Store the weight
         FetchLatestMarketPrice();
     }
 
@@ -50,7 +54,7 @@ public class FishBigView : MonoBehaviour
                     if (result != null && result != DBNull.Value)
                     {
                         currentMarketPrice = float.Parse(result.ToString());
-                        Debug.Log($"Fetched price for {fishName}: {currentMarketPrice}");
+                        //Debug.Log($"Fetched price for {fishName}: {currentMarketPrice}");
                     }
                     else
                     {
@@ -80,7 +84,7 @@ public class FishBigView : MonoBehaviour
                 if (displayImage != null)
                 {
                     childImage.sprite = displayImage; // Set the sprite for the child Image
-                    Debug.Log("Sprite assigned to child Image.");
+                    //Debug.Log("Sprite assigned to child Image.");
                 }
                 else
                 {
@@ -105,7 +109,7 @@ public class FishBigView : MonoBehaviour
             if (qtyTextComponent != null)
             {
                 qtyTextComponent.text = "x" + quantityText; // Set the quantity text
-                Debug.Log("Quantity text assigned.");
+                //Debug.Log("Quantity text assigned.");
             }
             else
             {
@@ -125,7 +129,7 @@ public class FishBigView : MonoBehaviour
             if (nameTextComponent != null)
             {
                 nameTextComponent.text = "Fish: " + (!string.IsNullOrEmpty(fishName) ? fishName : "Unknown Fish");
-                Debug.Log("Fish name assigned.");
+                //Debug.Log("Fish name assigned.");
             }
             else
             {
@@ -166,6 +170,43 @@ public class FishBigView : MonoBehaviour
             {
                 priceTextComponent.text = $"Market Price: {currentMarketPrice:F2} g";
             }
+        }
+
+        // Setup sell panel with current fish data
+        if (sellPanel != null)
+        {
+            // First deactivate and reactivate the sell panel to reset its state
+            sellPanel.gameObject.SetActive(false);
+            
+            Debug.Log($"Setting up sell panel for: {fishName}, Quantity: {quantityText}");
+            sellPanel.SetupSellPanel(
+                fishName,
+                float.Parse(Weight),
+                quantityText,
+                currentMarketPrice
+            );
+        }
+        else
+        {
+            Debug.LogError("Sell Panel reference not set in FishBigView!");
+        }
+    }
+
+    public void OnSellButtonClick()
+    {
+        if (sellPanel != null)
+        {
+            Debug.Log($"Attempting to open sell panel with quantity: {quantityText}");
+            sellPanel.SetupSellPanel(
+                fishName,
+                float.Parse(Weight),
+                quantityText,
+                currentMarketPrice
+            );
+        }
+        else
+        {
+            Debug.LogError("Sell Panel reference not set!");
         }
     }
 }

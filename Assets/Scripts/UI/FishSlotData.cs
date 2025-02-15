@@ -22,7 +22,7 @@ public class FishSlotData : MonoBehaviour
                 if (!string.IsNullOrEmpty(fishName) && !string.IsNullOrEmpty(fishRarity) && fishImage != null)
                 {
                     // Pass the fish name instead of weight
-                    bigViewComponent.Setup(fishImage, fishName, fishRarity, quantity);
+                    bigViewComponent.Setup(fishImage, fishName, fishRarity, quantity, Weight);
                     bigViewComponent.ShowFishDetails(); // Show the details
                     // Debug.Log("Sent info to show BIGUI");
                 }
