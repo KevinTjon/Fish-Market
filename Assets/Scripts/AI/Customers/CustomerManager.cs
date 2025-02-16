@@ -302,7 +302,7 @@ public class CustomerManager : MonoBehaviour
     [ContextMenu("Test Generate Initial Customers")]
     public void TestGenerateInitialCustomers()
     {
-        Debug.Log("Starting customer generation test...");
+        //Debug.Log("Starting customer generation test...");
         
         try
         {
@@ -314,16 +314,16 @@ public class CustomerManager : MonoBehaviour
                 {
                     command.CommandText = "SELECT COUNT(*) FROM Customers WHERE IsActive = 1";
                     int existingCount = Convert.ToInt32(command.ExecuteScalar());
-                    Debug.Log($"Current active customers: {existingCount}");
+                    //Debug.Log($"Current active customers: {existingCount}");
 
                     if (existingCount > 0)
                     {
-                        Debug.Log("Customers already exist. Loading existing customers...");
+                        //Debug.Log("Customers already exist. Loading existing customers...");
                         LoadExistingCustomers(connection);
                     }
                     else
                     {
-                        Debug.Log("No existing customers found. Generating initial customers...");
+                        //Debug.Log("No existing customers found. Generating initial customers...");
                         GenerateInitialCustomers();
                     }
                 }
@@ -331,14 +331,14 @@ public class CustomerManager : MonoBehaviour
 
             if (showDebugInfo)
             {
-                Debug.Log($"Total customers after operation: {allCustomers.Count}");
+                //Debug.Log($"Total customers after operation: {allCustomers.Count}");
                 foreach (var customer in allCustomers.Take(5))
                 {
-                    Debug.Log($"Sample customer: {customer}");
+                    //Debug.Log($"Sample customer: {customer}");
                 }
                 if (allCustomers.Count > 5)
                 {
-                    Debug.Log("... (more customers exist)");
+                    //Debug.Log("... (more customers exist)");
                 }
             }
         }

@@ -48,7 +48,7 @@ public class MarketPriceInitializer : MonoBehaviour
                             
                             // Generate base price for this fish
                             float basePrice = UnityEngine.Random.Range(range.min, range.max + 1);
-                            Debug.Log($"{fishName} ({rarity}) - Base Price: {basePrice:F2} gold");
+                            //Debug.Log($"{fishName} ({rarity}) - Base Price: {basePrice:F2} gold");
 
                             // Generate 5 days of prices with fluctuations
                             for (int day = 1; day <= 5; day++)
@@ -68,7 +68,7 @@ public class MarketPriceInitializer : MonoBehaviour
                                     insertCommand.Parameters.AddWithValue("@price", dailyPrice);
                                     
                                     insertCommand.ExecuteNonQuery();
-                                    Debug.Log($"Set Day {day} price for {fishName} ({rarity}): {dailyPrice:F2}");
+                                    //Debug.Log($"Set Day {day} price for {fishName} ({rarity}): {dailyPrice:F2}");
                                 }
                             }
                         }
@@ -124,11 +124,11 @@ public class MarketPriceInitializer : MonoBehaviour
 
                             if (rarity != currentRarity)
                             {
-                                Debug.Log($"\n=== {rarity} FISH ===");
+                                //Debug.Log($"\n=== {rarity} FISH ===");
                                 currentRarity = rarity;
                             }
 
-                            Debug.Log($"{fishName}: {price:F2} gold");
+                            //Debug.Log($"{fishName}: {price:F2} gold");
                         }
                     }
                 }

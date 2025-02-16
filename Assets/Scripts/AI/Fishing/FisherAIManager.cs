@@ -26,7 +26,7 @@ public class FisherAIManager : MonoBehaviour
         foreach (var fisher in fishers)
         {
             List<string> catch_ = fisher.GenerateFishCatch();
-            Debug.Log($"{fisher.Name} caught {catch_.Count} fish");
+            //Debug.Log($"{fisher.Name} caught {catch_.Count} fish");
             fisher.CreateMarketListings(catch_);
         }
     }

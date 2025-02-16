@@ -17,27 +17,27 @@ public class ClearMarketListings : MonoBehaviour
                     // Clear MarketListings table
                     command.CommandText = "DELETE FROM MarketListings";
                     command.ExecuteNonQuery();
-                    Debug.Log("MarketListings table cleared successfully");
+                    //Debug.Log("MarketListings table cleared successfully");
 
                     // Clear MarketPrices table
                     command.CommandText = "DELETE FROM MarketPrices";
                     command.ExecuteNonQuery();
-                    Debug.Log("MarketPrices table cleared successfully");
+                    //Debug.Log("MarketPrices table cleared successfully");
 
                     // Clear Customers table
                     command.CommandText = "DELETE FROM Customers";
                     command.ExecuteNonQuery();
-                    Debug.Log("Customers table cleared successfully");
+                    //Debug.Log("Customers table cleared successfully");
 
                     // Clear CustomerShoppingLists table
                     command.CommandText = "DELETE FROM CustomerShoppingList";
                     command.ExecuteNonQuery();
-                    Debug.Log("CustomerShoppingLists table cleared successfully");
+                    //Debug.Log("CustomerShoppingLists table cleared successfully");
 
                     // Clear CustomerBiases table
                     command.CommandText = "DELETE FROM CustomerBiases";
                     command.ExecuteNonQuery();
-                    Debug.Log("CustomerBiases table cleared successfully");
+                    //Debug.Log("CustomerBiases table cleared successfully");
                 }
             }
         }

@@ -9,22 +9,25 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
 {
     private string dbPath;
 
+    // Add reference to purchase manager
+    [SerializeField] private CustomerPurchaseManager purchaseManager;
+
     // Result class to hold purchase decision details
     public class PurchaseDecision
     {
         public bool WillPurchase { get; set; }
         public int ListingID { get; set; }
-        public float OfferedPrice { get; set; }
+        public int OfferedPrice { get; set; }
         public string Reason { get; set; }
     }
 
-    // Price threshold multipliers for each customer type
+    // More balanced price threshold multipliers
     private readonly Dictionary<Customer.CUSTOMERTYPE, float> MaxPriceMultipliers = new Dictionary<Customer.CUSTOMERTYPE, float>
     {
-        { Customer.CUSTOMERTYPE.BUDGET, 0.9f },     // Will pay up to 90% of average
-        { Customer.CUSTOMERTYPE.CASUAL, 1.1f },     // Will pay up to 110% of average
+        { Customer.CUSTOMERTYPE.BUDGET, 1.1f },     // Will pay up to 110% of average
+        { Customer.CUSTOMERTYPE.CASUAL, 1.3f },     // Will pay up to 130% of average
         { Customer.CUSTOMERTYPE.COLLECTOR, 1.5f },   // Will pay up to 150% of average
-        { Customer.CUSTOMERTYPE.WEALTHY, 2.0f }      // Will pay up to 200% of average
+        { Customer.CUSTOMERTYPE.WEALTHY, 1.8f }      // Will pay up to 180% of average
     };
 
     private void Awake()
@@ -202,7 +205,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         {
             decision.WillPurchase = true;
             decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = listing.ListedPrice;
+            decision.OfferedPrice = (int)listing.ListedPrice;
             decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
         }
         else
@@ -273,7 +276,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         {
             decision.WillPurchase = true;
             decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = listing.ListedPrice;
+            decision.OfferedPrice = (int)listing.ListedPrice;
             decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
         }
         else
@@ -348,7 +351,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         {
             decision.WillPurchase = true;
             decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = listing.ListedPrice;
+            decision.OfferedPrice = (int)listing.ListedPrice;
             decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
         }
         else
@@ -424,7 +427,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         {
             decision.WillPurchase = true;
             decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = listing.ListedPrice;
+            decision.OfferedPrice = (int)listing.ListedPrice;
             decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
         }
         else
@@ -435,5 +438,32 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         }
 
         return decision;
+    }
+
+    // Add a method to execute the purchase
+    public bool ExecutePurchase(PurchaseDecision decision, Customer customer)
+    {
+        Debug.Log($"Attempting to execute purchase for Customer {customer.CustomerID}...");
+        
+        if (!decision.WillPurchase)
+        {
+            Debug.Log("Purchase execution cancelled - WillPurchase is false");
+            return false;
+        }
+
+        Debug.Log($"Calling MarkListingAsSold for ListingID {decision.ListingID}");
+        bool success = purchaseManager.MarkListingAsSold(decision.ListingID, customer.CustomerID);
+        
+        if (success)
+        {
+            customer.Budget -= decision.OfferedPrice;
+            Debug.Log($"Purchase successful! Customer {customer.CustomerID} bought ListingID {decision.ListingID} for {decision.OfferedPrice} gold. Remaining budget: {customer.Budget:F2}");
+        }
+        else
+        {
+            Debug.LogError($"Failed to mark ListingID {decision.ListingID} as sold!");
+        }
+
+        return success;
     }
 }

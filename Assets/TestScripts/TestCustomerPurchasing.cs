@@ -7,85 +7,71 @@ using System.Linq;
 public class TestCustomerPurchasing : MonoBehaviour
 {
     private CustomerPurchaseManager purchaseManager;
-    private CustomerManager customerManager;
     private CustomerPurchaseEvaluator evaluator;
     [SerializeField] private TextMeshProUGUI outputText;
     private string testOutput = "";
+    [SerializeField] private CustomerManager customerManager;
+    [SerializeField] private CustomerPurchaseManager customerPurchaseManager;
+    [SerializeField] private CustomerPurchaseEvaluator purchaseEvaluator;
 
     private void Awake()
     {
-        purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
         customerManager = FindObjectOfType<CustomerManager>();
-        evaluator = FindObjectOfType<CustomerPurchaseEvaluator>();
+        customerPurchaseManager = FindObjectOfType<CustomerPurchaseManager>();
+        purchaseEvaluator = FindObjectOfType<CustomerPurchaseEvaluator>();
     }
 
     public void RunPurchaseTest()
     {
-        testOutput = "Starting Customer Purchase Test...\n\n";
+        Debug.Log("Starting purchase test...");
 
-        if (evaluator == null || purchaseManager == null)
+        // Get market averages using historical data
+        var marketAverages = customerPurchaseManager.GetHistoricalAveragePrices(Customer.FISHRARITY.COMMON);
+        Debug.Log("\nMarket Average Prices:\n");
+        PrintMarketAverages(marketAverages);
+
+        Debug.Log("\n=== TESTING PURCHASE EVALUATION ===\n");
+
+        // Test each customer type
+        TestCustomerType(Customer.CUSTOMERTYPE.BUDGET);
+        TestCustomerType(Customer.CUSTOMERTYPE.CASUAL);
+        TestCustomerType(Customer.CUSTOMERTYPE.COLLECTOR);
+        TestCustomerType(Customer.CUSTOMERTYPE.WEALTHY);
+
+        // Now process the actual purchases
+        Debug.Log("\n=== PROCESSING PURCHASES ===\n");
+        customerPurchaseManager.ProcessCustomerPurchases();
+
+        Debug.Log("Purchase test complete");
+    }
+
+    private void TestCustomerType(Customer.CUSTOMERTYPE type)
+    {
+        Debug.Log($"Testing {type} Customer");
+        Debug.Log("------------------------");
+
+        // Get existing customer of the desired type
+        var customers = customerManager.GetAllCustomers();
+        var customer = customers.FirstOrDefault(c => c.Type == type);
+        
+        if (customer == null)
         {
-            testOutput = "Error: Required components not found in scene!";
-            outputText.text = testOutput;
+            Debug.LogError($"No {type} customer found!");
             return;
         }
 
-        // Show market prices first
-        evaluator.TestAveragePrices(outputText);
-        testOutput = outputText.text;
-
-        testOutput += "\n=== TESTING PURCHASE EVALUATION ===\n";
+        Debug.Log($"Customer ID: {customer.CustomerID}");
+        Debug.Log($"Budget: {customer.Budget:F2} gold");
         
-        // Test each customer type
-        foreach (Customer.CUSTOMERTYPE type in System.Enum.GetValues(typeof(Customer.CUSTOMERTYPE)))
+        // The evaluator already has access to market prices through the database
+        customerPurchaseManager.ProcessCustomerPurchases();
+    }
+
+    private void PrintMarketAverages(Dictionary<string, float> marketAverages)
+    {
+        foreach (var kvp in marketAverages)
         {
-            testOutput += $"\nTesting {type} Customer\n";
-            testOutput += "------------------------\n";
-
-            // Get a customer of this type
-            var customer = customerManager.GetAllCustomers()
-                .FirstOrDefault(c => c.Type == type);
-
-            if (customer != null)
-            {
-                testOutput += $"Customer ID: {customer.CustomerID}\n";
-                testOutput += $"Budget: {customer.Budget:F2} gold\n";
-                testOutput += "Shopping List:\n";
-
-                foreach (var item in customer.ShoppingList)
-                {
-                    testOutput += $"- Needs {item.Amount} {item.Rarity} fish\n";
-                    
-                    // Get listings for this rarity
-                    var listings = purchaseManager.GetListings(item.Rarity);
-                    if (listings != null && listings.Count > 0)
-                    {
-                        testOutput += "Available listings:\n";
-                        foreach (var listing in listings)
-                        {
-                            testOutput += $"- {listing.FishName}: {listing.ListedPrice:F2} gold\n";
-                        }
-
-                        // Evaluate purchase
-                        var decision = evaluator.EvaluatePurchase(customer, listings, item.Rarity);
-                        testOutput += $"\nDecision: {(decision.WillPurchase ? "WILL BUY" : "WILL NOT BUY")}\n";
-                        testOutput += $"Reason: {decision.Reason}\n";
-                    }
-                    else
-                    {
-                        testOutput += "No listings found for this rarity.\n";
-                    }
-                }
-            }
-            else
-            {
-                testOutput += $"No {type} customer found in database!\n";
-            }
-            
-            testOutput += "------------------------\n";
+            Debug.Log($"{kvp.Key}: {kvp.Value:F2} gold");
         }
-
-        outputText.text = testOutput;
-        Debug.Log("Purchase test completed");
     }
 } 
