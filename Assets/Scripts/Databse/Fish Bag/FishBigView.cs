@@ -66,7 +66,7 @@ public class FishBigView : MonoBehaviour
         if (sellPanel != null)
             sellPanel.gameObject.SetActive(true);
 
-        Debug.Log("FishBigView reset to default state");
+        //Debug.Log("FishBigView reset to default state");
     }
 
     public void Setup(Sprite img, string name, string rarity, int qty, float marketPrice)

@@ -18,7 +18,7 @@ public class SellPanel : MonoBehaviour
     private string selectedFishName;
     private float selectedFishWeight;
     private int availableQuantity;  // The max quantity from inventory
-    private float currentMarketPrice;
+    private int currentMarketPrice;  // Changed to int
     private int currentQuantity = 1;  // The currently selected amount in the UI
 
     public void SetupSellPanel(string fishName, float weight, int quantity, float marketPrice)
@@ -30,10 +30,10 @@ public class SellPanel : MonoBehaviour
         selectedFishName = fishName;
         selectedFishWeight = weight;
         availableQuantity = quantity;
-        currentMarketPrice = marketPrice;
+        currentMarketPrice = Mathf.RoundToInt(marketPrice);  // Convert to int
 
         // Reset UI elements
-        sellPriceInput.text = marketPrice.ToString("F2");
+        sellPriceInput.text = currentMarketPrice.ToString();  // No need for F2 format
         UpdateQuantityDisplay();  // This will show quantity as 1
         UpdateButtonStates();
         
@@ -112,14 +112,13 @@ public class SellPanel : MonoBehaviour
             return;
         }
 
-        float listedPrice = float.Parse(sellPriceInput.text);
+        int listedPrice = int.Parse(sellPriceInput.text);  // Changed to int.Parse
         Debug.Log($"Attempting to list fish: {selectedFishName} x{currentQuantity} at {listedPrice} gold each");
         ListFishInMarket(listedPrice, currentQuantity);
     }
 
     private bool ValidateInputs()
     {
-        // Add debug to see what's in the input field
         Debug.Log($"Attempting to validate price: '{sellPriceInput.text}'");
         
         if (sellPriceInput == null)
@@ -134,7 +133,7 @@ public class SellPanel : MonoBehaviour
             return false;
         }
 
-        if (!float.TryParse(sellPriceInput.text, out float price))
+        if (!int.TryParse(sellPriceInput.text, out int price))  // Changed to int.TryParse
         {
             Debug.LogWarning($"Invalid price format: {sellPriceInput.text}");
             return false;
@@ -156,9 +155,8 @@ public class SellPanel : MonoBehaviour
         return true;
     }
 
-    private void ListFishInMarket(float price, int quantity)
+    private void ListFishInMarket(int price, int quantity)
     {
-        Debug.Log($"Opening database connection to list fish in market");
         string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
         
         try
@@ -166,7 +164,6 @@ public class SellPanel : MonoBehaviour
             using (var connection = new SqliteConnection(dbPath))
             {
                 connection.Open();
-                Debug.Log("Database connection opened");
 
                 using (var command = connection.CreateCommand())
                 {
@@ -191,24 +188,28 @@ public class SellPanel : MonoBehaviour
                         return;
                     }
 
-                    // Then create the market listings
+                    // Get the rarity for this fish
+                    command.CommandText = "SELECT Rarity FROM Fish WHERE Name = @fishName";
+                    command.Parameters.Clear();
+                    command.Parameters.AddWithValue("@fishName", selectedFishName);
+                    string rarity = (string)command.ExecuteScalar();
+
+                    // Create the market listings
                     for(int i = 0; i < quantity; i++)
                     {
                         command.CommandText = @"
                             INSERT INTO MarketListings 
-                            (FishName, ListedPrice, IsSold, SellerID) 
+                            (FishName, Rarity, ListedPrice, SellerID, IsSold) 
                             VALUES 
-                            (@fishName, @price, 0, 0)";
+                            (@fishName, @rarity, @price, 0, 0)";  // SellerID 0 for player
 
                         command.Parameters.Clear();
                         command.Parameters.AddWithValue("@fishName", selectedFishName);
+                        command.Parameters.AddWithValue("@rarity", rarity);
                         command.Parameters.AddWithValue("@price", price);
 
-                        Debug.Log($"Executing database command for: {selectedFishName} (#{i+1} of {quantity})");
                         command.ExecuteNonQuery();
                     }
-                    
-                    Debug.Log($"Successfully listed {quantity}x {selectedFishName} for {price} gold each");
                     
                     // Reset the panel
                     ResetPanel();
@@ -217,7 +218,6 @@ public class SellPanel : MonoBehaviour
                     FishInventory fishInventory = FindObjectOfType<FishInventory>();
                     if (fishInventory != null)
                     {
-                        Debug.Log("Refreshing inventory display");
                         fishInventory.LoadFishInventory();
                         
                         // Reset BigFishView to default state
@@ -226,14 +226,6 @@ public class SellPanel : MonoBehaviour
                         {
                             bigView.ShowDefaultState();
                         }
-                        else
-                        {
-                            Debug.LogError("Could not find FishBigView component!");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError("Could not find FishInventory component!");
                     }
                 }
             }
@@ -252,7 +244,7 @@ public class SellPanel : MonoBehaviour
         UpdateButtonStates();
         
         // Reset price input to current market price
-        sellPriceInput.text = currentMarketPrice.ToString("F2");
+        sellPriceInput.text = currentMarketPrice.ToString();  // No need for F2 format
         
         // Optionally show a success message or animation here
         Debug.Log("Panel reset after successful listing");

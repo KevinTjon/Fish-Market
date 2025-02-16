@@ -158,7 +158,7 @@ public class FishInventory : MonoBehaviour
                             string fishName = reader.GetString(0);
                             float price = (float)reader.GetDouble(1);
                             prices[fishName] = price;
-                            Debug.Log($"Loaded market price for {fishName}: {price}");
+                            //Debug.Log($"Loaded market price for {fishName}: {price}");
                         }
                     }
                 }
