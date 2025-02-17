@@ -10,10 +10,10 @@ public class CustomerManager : MonoBehaviour
     [Header("Customer Generation Settings")]
 
     [SerializeField] private float[] customerDistribution = new float[4] {
-        0.4f,  // Budget
-        0.3f,  // Casual
-        0.2f,  // Collector
-        0.1f   // Wealthy
+        0.35f,  // Budget
+        0.30f,  // Casual
+        0.25f,  // Collector
+        0.10f   // Wealthy
     };
 
     [Header("Debug")]
@@ -24,44 +24,39 @@ public class CustomerManager : MonoBehaviour
 
     private void Awake()
     {
-        dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+        // For Unity, use Application.streamingAssetsPath
+        string dbName = "FishDB.db";
+        string dbPath = System.IO.Path.Combine(Application.streamingAssetsPath, dbName);
+        
+        // For Unity Editor and standalone builds
+        this.dbPath = $"URI=file:{dbPath}";
+        
+        Debug.Log($"Database path: {this.dbPath}");
     }
 
     public void LoadCustomers(TextMeshProUGUI outputText = null)
     {
-        string output = "Loading Customers:\n";
-        using (var connection = new SqliteConnection(dbPath))
+        try
         {
-            connection.Open();
-            output += "Database opened successfully\n";
-
-            LoadExistingCustomers(connection);
-            
-            output += $"\nLoaded {allCustomers.Count} customers:\n";
-            foreach (var customer in allCustomers)
+            string output = "Loading Customers:\n";
+            using (var connection = new SqliteConnection(dbPath))
             {
-                output += $"Customer {customer.CustomerID} (Type: {customer.Type})\n";
-                output += "Shopping List:\n";
-                foreach (var item in customer.ShoppingList)
-                {
-                    output += $"- Needs {item.Amount} {item.Rarity} fish\n";
-                }
-                output += "Seller Biases:\n";
-                foreach (var bias in customer.GetBiases())
-                {
-                    output += $"- Seller {bias.sellerId} for {bias.rarity}: {bias.value:F2}\n";
-                }
-                output += "------------------------\n";
+                connection.Open();
+                LoadExistingCustomers(connection);
+            }
+
+            if (outputText != null)
+            {
+                outputText.text = output;
             }
         }
-
-        if (outputText != null)
+        catch (Exception e)
         {
-            outputText.text = output;
-        }
-        else
-        {
-            Debug.Log(output);
+            Debug.LogError($"Error loading customers: {e.Message}");
+            if (outputText != null)
+            {
+                outputText.text = $"Error loading customers: {e.Message}";
+            }
         }
     }
 
@@ -85,7 +80,6 @@ public class CustomerManager : MonoBehaviour
                     int budget = reader.GetInt32(2);
 
                     Customer customer = new Customer(type, customerId, budget);
-
                     LoadCustomerShoppingList(connection, customer);
                     LoadCustomerBiases(connection, customer);
                     allCustomers.Add(customer);
@@ -109,9 +103,7 @@ public class CustomerManager : MonoBehaviour
             {
                 while (reader.Read())
                 {
-                    int rarityInt = reader.GetInt32(0);
-                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)rarityInt;
-                    
+                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)reader.GetInt32(0);
                     customer.ShoppingList.Add(new Customer.ShoppingListItem
                     {
                         Rarity = rarity,
@@ -138,137 +130,13 @@ public class CustomerManager : MonoBehaviour
                 while (reader.Read())
                 {
                     int sellerId = reader.GetInt32(0);
-                    int rarityInt = reader.GetInt32(1);
-                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)rarityInt;
+                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)reader.GetInt32(1);
                     float biasValue = reader.GetFloat(2);
                     
                     customer.SetBias(sellerId, rarity, biasValue);
                 }
             }
         }
-    }
-
-    private void GenerateInitialCustomers()
-    {
-        int totalCustomers = 10;
-        List<Customer.CUSTOMERTYPE> requiredTypes = new List<Customer.CUSTOMERTYPE> 
-        { 
-            Customer.CUSTOMERTYPE.WEALTHY,
-            Customer.CUSTOMERTYPE.COLLECTOR 
-        };
-
-        using (var connection = new SqliteConnection(dbPath))
-        {
-            connection.Open();
-            using (var transaction = connection.BeginTransaction())
-            {
-                try
-                {
-                    using (var command = connection.CreateCommand())
-                    {
-                        // First, generate required customer types
-                        foreach (var type in requiredTypes)
-                        {
-                            Customer customer = new Customer(type);
-                            
-                            command.CommandText = @"
-                                INSERT INTO Customers (CustomerType, Budget, IsActive) 
-                                VALUES (@type, @budget, 1)";
-                            command.Parameters.Clear();
-                            command.Parameters.AddWithValue("@type", (int)type);
-                            command.Parameters.AddWithValue("@budget", customer.Budget);
-                            command.ExecuteNonQuery();
-
-                            command.CommandText = "SELECT last_insert_rowid()";
-                            long customerId = Convert.ToInt64(command.ExecuteScalar());
-                            customer.CustomerID = (int)customerId;
-
-                            // Insert shopping list and biases
-                            InsertCustomerDetails(command, customer);
-                            allCustomers.Add(customer);
-                        }
-
-                        // Then generate remaining random customers
-                        int remainingCustomers = totalCustomers - requiredTypes.Count;
-                        for (int i = 0; i < remainingCustomers; i++)
-                        {
-                            Customer.CUSTOMERTYPE type = DetermineCustomerType(customerDistribution);
-                            Customer customer = new Customer(type);
-
-                            command.CommandText = @"
-                                INSERT INTO Customers (CustomerType, Budget, IsActive) 
-                                VALUES (@type, @budget, 1)";
-                            command.Parameters.Clear();
-                            command.Parameters.AddWithValue("@type", (int)type);
-                            command.Parameters.AddWithValue("@budget", customer.Budget);
-                            command.ExecuteNonQuery();
-
-                            command.CommandText = "SELECT last_insert_rowid()";
-                            long customerId = Convert.ToInt64(command.ExecuteScalar());
-                            customer.CustomerID = (int)customerId;
-
-                            // Insert shopping list and biases
-                            InsertCustomerDetails(command, customer);
-                            allCustomers.Add(customer);
-                        }
-                    }
-                    transaction.Commit();
-                }
-                catch (Exception e)
-                {
-                    transaction.Rollback();
-                    Debug.LogError($"Error generating initial customers: {e.Message}");
-                }
-            }
-        }
-    }
-
-    private void InsertCustomerDetails(SqliteCommand command, Customer customer)
-    {
-        // Insert shopping list
-        foreach (var item in customer.ShoppingList)
-        {
-            command.CommandText = @"
-                INSERT INTO CustomerShoppingList (CustomerID, Rarity, Amount)
-                VALUES (@customerId, @rarity, @amount)";
-            command.Parameters.Clear();
-            command.Parameters.AddWithValue("@customerId", customer.CustomerID);
-            command.Parameters.AddWithValue("@rarity", (int)item.Rarity);
-            command.Parameters.AddWithValue("@amount", item.Amount);
-            command.ExecuteNonQuery();
-        }
-
-        // Add initial biases for all seller and rarity combinations
-        foreach (Customer.SellerType seller in System.Enum.GetValues(typeof(Customer.SellerType)))
-        {
-            foreach (Customer.FISHRARITY rarity in System.Enum.GetValues(typeof(Customer.FISHRARITY)))
-            {
-                command.CommandText = @"
-                    INSERT INTO CustomerBiases (CustomerID, SellerID, Rarity, BiasValue)
-                    VALUES (@customerId, @sellerId, @rarity, @biasValue)";
-                command.Parameters.Clear();
-                command.Parameters.AddWithValue("@customerId", customer.CustomerID);
-                command.Parameters.AddWithValue("@sellerId", (int)seller);
-                command.Parameters.AddWithValue("@rarity", (int)rarity);
-                command.Parameters.AddWithValue("@biasValue", 0.2f);
-                command.ExecuteNonQuery();
-            }
-        }
-    }
-
-    private Customer.CUSTOMERTYPE DetermineCustomerType(float[] distribution)
-    {
-        float roll = UnityEngine.Random.value;
-        float cumulative = 0f;
-        
-        for (int i = 0; i < distribution.Length; i++)
-        {
-            cumulative += distribution[i];
-            if (roll <= cumulative)
-                return (Customer.CUSTOMERTYPE)i;
-        }
-        
-        return Customer.CUSTOMERTYPE.BUDGET;
     }
 
     public void SaveCustomerBias(Customer customer, int sellerId, Customer.FISHRARITY rarity)
@@ -299,55 +167,6 @@ public class CustomerManager : MonoBehaviour
         }
     }
 
-    [ContextMenu("Test Generate Initial Customers")]
-    public void TestGenerateInitialCustomers()
-    {
-        //Debug.Log("Starting customer generation test...");
-        
-        try
-        {
-            using (var connection = new SqliteConnection(dbPath))
-            {
-                connection.Open();
-                
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT COUNT(*) FROM Customers WHERE IsActive = 1";
-                    int existingCount = Convert.ToInt32(command.ExecuteScalar());
-                    //Debug.Log($"Current active customers: {existingCount}");
-
-                    if (existingCount > 0)
-                    {
-                        //Debug.Log("Customers already exist. Loading existing customers...");
-                        LoadExistingCustomers(connection);
-                    }
-                    else
-                    {
-                        //Debug.Log("No existing customers found. Generating initial customers...");
-                        GenerateInitialCustomers();
-                    }
-                }
-            }
-
-            if (showDebugInfo)
-            {
-                //Debug.Log($"Total customers after operation: {allCustomers.Count}");
-                foreach (var customer in allCustomers.Take(5))
-                {
-                    //Debug.Log($"Sample customer: {customer}");
-                }
-                if (allCustomers.Count > 5)
-                {
-                    //Debug.Log("... (more customers exist)");
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Error during customer generation test: {e.Message}");
-        }
-    }
-
     public List<Customer> GetAllCustomers()
     {
         if (allCustomers.Count == 0)
@@ -359,5 +178,105 @@ public class CustomerManager : MonoBehaviour
             }
         }
         return allCustomers;
+    }
+
+    public void TestGenerateInitialCustomers()
+    {
+        // Clear existing customers
+        allCustomers.Clear();
+
+        // Get reference to PurchaseManager
+        var purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
+        if (purchaseManager != null)
+        {
+            purchaseManager.ClearCustomers();  // Clear existing customers from purchase manager
+        }
+
+        // Generate new customers based on distribution
+        using (var connection = new SqliteConnection(dbPath))
+        {
+            connection.Open();
+            using (var command = connection.CreateCommand())
+            {
+                // First, deactivate all existing customers
+                command.CommandText = "UPDATE Customers SET IsActive = 0";
+                command.ExecuteNonQuery();
+
+                // Generate new customers
+                for (int i = 0; i < customerDistribution.Length; i++)
+                {
+                    int count = Mathf.RoundToInt(20 * customerDistribution[i]); // 20 total customers
+                    for (int j = 0; j < count; j++)
+                    {
+                        Customer.CUSTOMERTYPE type = (Customer.CUSTOMERTYPE)i;
+                        Customer customer = new Customer(type);
+
+                        // Insert customer into database
+                        command.CommandText = @"
+                            INSERT INTO Customers (CustomerType, Budget, IsActive)
+                            VALUES (@type, @budget, 1);
+                            SELECT last_insert_rowid();";
+                        
+                        command.Parameters.Clear();
+                        command.Parameters.AddWithValue("@type", (int)type);
+                        command.Parameters.AddWithValue("@budget", customer.Budget);
+
+                        // Get the new customer ID
+                        customer.CustomerID = Convert.ToInt32(command.ExecuteScalar());
+
+                        // Insert shopping list items
+                        foreach (var item in customer.ShoppingList)
+                        {
+                            command.CommandText = @"
+                                INSERT INTO CustomerShoppingList (CustomerID, Rarity, Amount)
+                                VALUES (@customerId, @rarity, @amount)";
+                            
+                            command.Parameters.Clear();
+                            command.Parameters.AddWithValue("@customerId", customer.CustomerID);
+                            command.Parameters.AddWithValue("@rarity", (int)item.Rarity);
+                            command.Parameters.AddWithValue("@amount", item.Amount);
+                            
+                            command.ExecuteNonQuery();
+                        }
+
+                        // Generate and insert biases for each seller type and fish rarity
+                        foreach (Customer.SellerType seller in System.Enum.GetValues(typeof(Customer.SellerType)))
+                        {
+                            foreach (Customer.FISHRARITY rarity in System.Enum.GetValues(typeof(Customer.FISHRARITY)))
+                            {
+                                // Generate a random bias between 0.2 and 0.8
+                                float bias = UnityEngine.Random.Range(0.2f, 0.8f);
+                                customer.SetBias((int)seller, rarity, bias);
+
+                                command.CommandText = @"
+                                    INSERT INTO CustomerBiases (CustomerID, SellerID, Rarity, BiasValue)
+                                    VALUES (@customerId, @sellerId, @rarity, @biasValue)";
+                                
+                                command.Parameters.Clear();
+                                command.Parameters.AddWithValue("@customerId", customer.CustomerID);
+                                command.Parameters.AddWithValue("@sellerId", (int)seller);
+                                command.Parameters.AddWithValue("@rarity", (int)rarity);
+                                command.Parameters.AddWithValue("@biasValue", bias);
+                                
+                                command.ExecuteNonQuery();
+                            }
+                        }
+
+                        allCustomers.Add(customer);
+                        
+                        // Add customer to purchase manager
+                        if (purchaseManager != null)
+                        {
+                            purchaseManager.AddCustomer(customer);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showDebugInfo)
+        {
+            Debug.Log($"Generated {allCustomers.Count} new customers with biases");
+        }
     }
 }

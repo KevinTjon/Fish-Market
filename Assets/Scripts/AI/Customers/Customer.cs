@@ -24,28 +24,31 @@ public class Customer
     public enum SellerType
     {
         Player = 0,
-        NPC = 1,
-        Market = 2
+        NPC1 = 1,
+        NPC2 = 2,
+        NPC3 = 3,
+        NPC4 = 4
     }
 
     [System.Serializable]
-    public class ShoppingTarget
+    public class ShoppingListItem
     {
-        public FISHRARITY Rarity;
-        public int Amount;
+        public FISHRARITY Rarity { get; set; }
+        public int Amount { get; set; }
     }
 
     [System.Serializable]
     public class SellerBias
     {
-        public FISHRARITY Rarity;
-        public float BiasValue;
+        public FISHRARITY Rarity { get; set; }
+        public float BiasValue { get; set; }
     }
 
-    public class ShoppingListItem
+    public class Purchase
     {
-        public FISHRARITY Rarity { get; set; }
-        public int Amount { get; set; }
+        public string FishName;
+        public float Price;
+        public int SellerID;
     }
 
     // Basic properties
@@ -54,9 +57,13 @@ public class Customer
     public int Budget { get; set; }
     public List<ShoppingListItem> ShoppingList { get; set; }
     public List<SellerBias> SellerPreferences { get; private set; }
+    public List<Purchase> PurchaseHistory { get; private set; } = new List<Purchase>();
 
     private Dictionary<(int sellerId, FISHRARITY rarity), float> biases = 
         new Dictionary<(int sellerId, FISHRARITY rarity), float>();
+
+    // Add to existing properties
+    private HashSet<int> visitedSellers = new HashSet<int>();
 
     // Constructor
     public Customer(CUSTOMERTYPE type, int id = 0, int? predefinedBudget = null)
@@ -90,27 +97,26 @@ public class Customer
         switch (type)
         {
             case CUSTOMERTYPE.BUDGET:
-                Budget = Random.Range(20, 101);
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.COMMON, Amount = Random.Range(1, 4) });
+                Budget = Random.Range(200, 251);    // Was 150-200, now 200-250 to ensure they can buy multiple common fish
+                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.COMMON, Amount = Random.Range(1, 3) });
                 break;
 
             case CUSTOMERTYPE.CASUAL:
-                Budget = Random.Range(100, 301);
+                Budget = Random.Range(300, 501);    // Was 200-400, now 300-500 to ensure they can afford both fish types
                 ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.COMMON, Amount = Random.Range(1, 3) });
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = Random.Range(0, 2) });
+                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = 1 });
                 break;
 
             case CUSTOMERTYPE.COLLECTOR:
-                Budget = Random.Range(300, 801);
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = Random.Range(0, 2) });
+                Budget = Random.Range(800, 1501);   
+                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = 1 });
                 ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.RARE, Amount = Random.Range(1, 3) });
                 break;
 
             case CUSTOMERTYPE.WEALTHY:
-                Budget = Random.Range(500, 2001);
+                Budget = Random.Range(1500, 3001);  
                 ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.RARE, Amount = Random.Range(1, 3) });
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.LEGENDARY, Amount = Random.Range(0, 2) });
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = Random.Range(0, 3) });
+                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.LEGENDARY, Amount = 1 });
                 break;
         }
     }
@@ -171,5 +177,36 @@ public class Customer
         return $"ID={CustomerID}, Type={Type}, Budget={Budget}, " +
                $"Shopping List=[{shoppingListStr}], " +
                $"Biases=[{biasStr}]";
+    }
+
+    public void RecordPurchase(string fishName, float price, int sellerID)
+    {
+        PurchaseHistory.Add(new Purchase 
+        { 
+            FishName = fishName,
+            Price = price,
+            SellerID = sellerID
+        });
+    }
+
+    // Add these methods
+    public void AddVisitedSeller(int sellerId)
+    {
+        visitedSellers.Add(sellerId);
+    }
+
+    public bool HasVisitedSeller(int sellerId)
+    {
+        return visitedSellers.Contains(sellerId);
+    }
+
+    public void ClearVisitedSellers()
+    {
+        visitedSellers.Clear();
+    }
+
+    public bool HasVisitedAllSellers()
+    {
+        return visitedSellers.Count >= System.Enum.GetValues(typeof(SellerType)).Length;
     }
 }

@@ -107,13 +107,12 @@ public abstract class FisherAI
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    // Get the latest market price for this fish
+                    // Get the 5-day average price for this fish
                     command.CommandText = @"
-                        SELECT Price 
+                        SELECT AVG(Price) 
                         FROM MarketPrices 
                         WHERE FishName = @fishName 
-                        ORDER BY Day DESC 
-                        LIMIT 1";
+                        AND Day >= (SELECT MAX(Day) - 4 FROM MarketPrices)";
 
                     command.Parameters.AddWithValue("@fishName", fishName);
                     
@@ -135,22 +134,43 @@ public abstract class FisherAI
 
     protected virtual float DetermineSellPrice(float basePrice)
     {
-        int price = (int)basePrice;  // Convert to int first
+        int price = (int)basePrice;
+        float finalPrice = price;
         
         switch (priceStrategy)
         {
             case PriceStrategy.Aggressive:
-                return Mathf.RoundToInt(price * 0.95f);  // 20% below base price
+                finalPrice = price * 0.80f;   // 20% below base price
+                break;
             
             case PriceStrategy.Conservative:
-                return Mathf.RoundToInt(price * 1.2f);  // 20% above base price
+                finalPrice = price * 1.01f;   // 1% above base price
+                break;
             
             case PriceStrategy.MarketValue:
-                return price;  // Already an int
-            
-            default:
-                return price;
+                finalPrice = price * 0.90f;   // 10% below base price
+                break;
         }
+
+        // Apply rarity-based price caps
+        if (finalPrice > GetMaxPriceForRarity(price))
+        {
+            finalPrice = GetMaxPriceForRarity(price);
+        }
+
+        return Mathf.RoundToInt(finalPrice);
+    }
+
+    private float GetMaxPriceForRarity(float basePrice)
+    {
+        // Estimate rarity based on base price
+        if (basePrice < 100) // Common
+            return 40;
+        if (basePrice < 200) // Uncommon
+            return 100;
+        if (basePrice < 1000) // Rare
+            return 500;
+        return 1000; // Legendary
     }
 
     public void CreateMarketListings(List<string> fishNames)

@@ -6,72 +6,49 @@ using System.Linq;
 
 public class TestCustomerPurchasing : MonoBehaviour
 {
-    private CustomerPurchaseManager purchaseManager;
-    private CustomerPurchaseEvaluator evaluator;
     [SerializeField] private TextMeshProUGUI outputText;
-    private string testOutput = "";
     [SerializeField] private CustomerManager customerManager;
-    [SerializeField] private CustomerPurchaseManager customerPurchaseManager;
-    [SerializeField] private CustomerPurchaseEvaluator purchaseEvaluator;
-
+    [SerializeField] private CustomerPurchaseManager purchaseManager;
+    
     private void Awake()
     {
-        customerManager = FindObjectOfType<CustomerManager>();
-        customerPurchaseManager = FindObjectOfType<CustomerPurchaseManager>();
-        purchaseEvaluator = FindObjectOfType<CustomerPurchaseEvaluator>();
+        // Wait for CustomerManager to initialize first
+        if (customerManager == null)
+        {
+            customerManager = FindObjectOfType<CustomerManager>();
+            if (customerManager == null)
+            {
+                Debug.LogError("Could not find CustomerManager!");
+                return;
+            }
+        }
+
+        // Wait for PurchaseManager to initialize
+        if (purchaseManager == null)
+        {
+            purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
+            if (purchaseManager == null)
+            {
+                Debug.LogError("Could not find CustomerPurchaseManager!");
+                return;
+            }
+        }
     }
 
     public void RunPurchaseTest()
     {
-        Debug.Log("Starting purchase test...");
-
-        // Get market averages using historical data
-        var marketAverages = customerPurchaseManager.GetHistoricalAveragePrices(Customer.FISHRARITY.COMMON);
-        Debug.Log("\nMarket Average Prices:\n");
-        PrintMarketAverages(marketAverages);
-
-        Debug.Log("\n=== TESTING PURCHASE EVALUATION ===\n");
-
-        // Test each customer type
-        TestCustomerType(Customer.CUSTOMERTYPE.BUDGET);
-        TestCustomerType(Customer.CUSTOMERTYPE.CASUAL);
-        TestCustomerType(Customer.CUSTOMERTYPE.COLLECTOR);
-        TestCustomerType(Customer.CUSTOMERTYPE.WEALTHY);
-
-        // Now process the actual purchases
-        Debug.Log("\n=== PROCESSING PURCHASES ===\n");
-        customerPurchaseManager.ProcessCustomerPurchases();
-
-        Debug.Log("Purchase test complete");
-    }
-
-    private void TestCustomerType(Customer.CUSTOMERTYPE type)
-    {
-        Debug.Log($"Testing {type} Customer");
-        Debug.Log("------------------------");
-
-        // Get existing customer of the desired type
-        var customers = customerManager.GetAllCustomers();
-        var customer = customers.FirstOrDefault(c => c.Type == type);
+        // Process purchases and display results
+        purchaseManager.ProcessCustomerPurchases();
         
-        if (customer == null)
+        // Get the debug output and display it in the UI
+        var debugOutput = purchaseManager.DebugRemainingShoppingLists();
+        if (outputText != null)
         {
-            Debug.LogError($"No {type} customer found!");
-            return;
+            outputText.text = debugOutput;
         }
-
-        Debug.Log($"Customer ID: {customer.CustomerID}");
-        Debug.Log($"Budget: {customer.Budget:F2} gold");
-        
-        // The evaluator already has access to market prices through the database
-        customerPurchaseManager.ProcessCustomerPurchases();
-    }
-
-    private void PrintMarketAverages(Dictionary<string, float> marketAverages)
-    {
-        foreach (var kvp in marketAverages)
+        else
         {
-            Debug.Log($"{kvp.Key}: {kvp.Value:F2} gold");
+            Debug.Log(debugOutput);
         }
     }
 } 

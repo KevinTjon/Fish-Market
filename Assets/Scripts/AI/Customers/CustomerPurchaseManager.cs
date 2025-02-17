@@ -3,6 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Mono.Data.Sqlite;
+using TMPro;
+using System.Collections;
+using System.Text;
 
 public class CustomerPurchaseManager : MonoBehaviour
 {
@@ -11,19 +14,31 @@ public class CustomerPurchaseManager : MonoBehaviour
     private string dbPath;
     private List<Customer> waitingCustomers = new List<Customer>();
     private List<Customer> activeCustomers = new List<Customer>();
+    private Dictionary<int, List<Customer.SellerType>> customerTriedSellers = new Dictionary<int, List<Customer.SellerType>>();
+    [SerializeField] private TextMeshProUGUI debugText;
+    [SerializeField] private int maxWaitingCustomers = 20; // Maximum number of waiting customers
+
+    // Add at class level
+    private static List<string> purchaseHistory = new List<string>();
 
     private void Awake()
     {
-        customerManager = GetComponent<CustomerManager>();
+        customerManager = FindObjectOfType<CustomerManager>();
         if (customerManager == null)
         {
-            Debug.LogError("CustomerManager not found on the same GameObject!");
+            Debug.LogError("CustomerManager not found!");
         }
         if (purchaseEvaluator == null)
         {
-            Debug.LogError("CustomerPurchaseEvaluator not found on the same GameObject!");
+            Debug.LogError("CustomerPurchaseEvaluator not found!");
         }
-        dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+
+        // Use the same path format as CustomerManager
+        string dbName = "FishDB.db";
+        string dbPath = System.IO.Path.Combine(Application.streamingAssetsPath, dbName);
+        this.dbPath = $"URI=file:{dbPath}";
+        
+        Debug.Log($"Purchase Manager Database path: {this.dbPath}");
     }
 
     public float GetSellerBias(int customerId, Customer.SellerType seller, Customer.FISHRARITY rarity)
@@ -48,33 +63,6 @@ public class CustomerPurchaseManager : MonoBehaviour
                 return result != null ? Convert.ToSingle(result) : 0.2f;
             }
         }
-    }
-
-    public Customer.SellerType SelectSellerForRarity(Customer customer, Customer.FISHRARITY rarity)
-    {
-        Dictionary<Customer.SellerType, float> sellerBiases = new Dictionary<Customer.SellerType, float>();
-        float totalBias = 0f;
-
-        foreach (Customer.SellerType seller in System.Enum.GetValues(typeof(Customer.SellerType)))
-        {
-            float bias = GetSellerBias(customer.CustomerID, seller, rarity);
-            sellerBiases.Add(seller, bias);
-            totalBias += bias;
-        }
-
-        float randomRoll = UnityEngine.Random.Range(0f, totalBias);
-        float currentSum = 0f;
-
-        foreach (var sellerBias in sellerBiases)
-        {
-            currentSum += sellerBias.Value;
-            if (randomRoll <= currentSum)
-            {
-                return sellerBias.Key;
-            }
-        }
-
-        return Customer.SellerType.Player;
     }
 
     public bool CheckSellerListings(Customer.SellerType seller, Customer.FISHRARITY rarity)
@@ -102,90 +90,115 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     public void ProcessCustomerPurchases()
     {
-        Debug.Log("Starting ProcessCustomerPurchases...");
-        
-        // Get fresh list of customers each time
-        activeCustomers = new List<Customer>(customerManager.GetAllCustomers());
-        waitingCustomers.Clear();
-
-        // Keep track of which sellers each customer has tried
-        Dictionary<int, List<Customer.SellerType>> customerTriedSellers = new Dictionary<int, List<Customer.SellerType>>();
-
-        bool customersStillShopping = true;
-        while (customersStillShopping)
+        if (waitingCustomers.Count == 0)
         {
-            customersStillShopping = false;
+            Debug.Log("No customers waiting to make purchases.");
+            return;
+        }
 
-            foreach (var customer in activeCustomers.ToList())
+        Debug.Log($"Processing purchases for {waitingCustomers.Count} customers...");
+        purchaseHistory.Clear();
+
+        for (int i = waitingCustomers.Count - 1; i >= 0; i--)
+        {
+            var customer = waitingCustomers[i];
+            bool madeAnyPurchase = false;
+            StringBuilder customerHistory = new StringBuilder();
+
+            // Keep trying until we've visited all sellers or bought everything
+            while (!customer.HasVisitedAllSellers() && customer.ShoppingList.Any())
             {
-                if (!customerTriedSellers.ContainsKey(customer.CustomerID))
-                {
-                    customerTriedSellers[customer.CustomerID] = new List<Customer.SellerType>();
-                }
+                int selectedSellerId = SelectSeller(customer, customer.ShoppingList[0].Rarity);
+                if (selectedSellerId == -1) break; // No more unvisited sellers
 
-                foreach (var shoppingItem in customer.ShoppingList)
+                bool boughtAnything;
+                do
                 {
-                    var availableSellers = System.Enum.GetValues(typeof(Customer.SellerType))
-                        .Cast<Customer.SellerType>()
-                        .Except(customerTriedSellers[customer.CustomerID])
-                        .ToList();
-
-                    if (availableSellers.Count > 0)
+                    boughtAnything = false;
+                    bool shouldContinueWithSeller = true;
+                    
+                    while (shouldContinueWithSeller && customer.ShoppingList.Any())
                     {
-                        customersStillShopping = true;
-                        Customer.SellerType selectedSeller = SelectSellerForRarity(customer, shoppingItem.Rarity);
-                        
-                        Debug.Log($"Customer {customer.CustomerID} trying seller {selectedSeller} for {shoppingItem.Rarity}");
-                        
-                        if (CheckSellerListings(selectedSeller, shoppingItem.Rarity))
+                        shouldContinueWithSeller = false;
+                        // Look at each item in shopping list
+                        for (int itemIndex = 0; itemIndex < customer.ShoppingList.Count; itemIndex++)
                         {
+                            var shoppingItem = customer.ShoppingList[itemIndex];
                             var listings = GetListings(shoppingItem.Rarity)
-                                .Where(l => l.SellerID == (int)selectedSeller)
+                                .Where(l => !l.IsSold && l.SellerID == selectedSellerId)
                                 .ToList();
 
-                            var decision = purchaseEvaluator.EvaluatePurchase(customer, listings, shoppingItem.Rarity);
-
-                            if (decision.WillPurchase)
+                            if (listings.Any())
                             {
-                                Debug.Log($"Customer {customer.CustomerID} decided to purchase ListingID {decision.ListingID}");
-                                
-                                // Execute the purchase
-                                if (purchaseEvaluator.ExecutePurchase(decision, customer))
+                                var decision = purchaseEvaluator.EvaluatePurchase(
+                                    customer,
+                                    listings,
+                                    shoppingItem.Rarity
+                                );
+
+                                if (decision.WillPurchase)
                                 {
-                                    Debug.Log($"Purchase successful! Listing {decision.ListingID} marked as sold to customer {customer.CustomerID}");
-                                    customerTriedSellers[customer.CustomerID].Add(selectedSeller);
-                                    break;
+                                    customer.Budget -= (int)decision.SelectedListing.ListedPrice;
+                                    if (MarkListingAsSold(decision.SelectedListing.ListingID, customer.CustomerID))
+                                    {
+                                        madeAnyPurchase = true;
+                                        boughtAnything = true;
+                                        shouldContinueWithSeller = true;
+                                        
+                                        customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
+                                            $"Bought {decision.SelectedListing.FishName} for {decision.SelectedListing.ListedPrice} gold from Seller {selectedSellerId} (Bias: {customer.GetBias(selectedSellerId, shoppingItem.Rarity):F2})");
+                                        
+                                        customer.RecordPurchase(
+                                            decision.SelectedListing.FishName,
+                                            decision.SelectedListing.ListedPrice,
+                                            decision.SelectedListing.SellerID
+                                        );
+                                        
+                                        shoppingItem.Amount--;
+                                        if (shoppingItem.Amount <= 0)
+                                        {
+                                            customer.ShoppingList.RemoveAt(itemIndex);
+                                            itemIndex--; // Adjust index since we removed an item
+                                        }
+                                    }
                                 }
                                 else
                                 {
-                                    Debug.LogWarning($"Purchase failed for listing {decision.ListingID}");
-                                    customerTriedSellers[customer.CustomerID].Add(selectedSeller);
+                                    customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
+                                        $"Rolled Seller {selectedSellerId} (Bias: {customer.GetBias(selectedSellerId, shoppingItem.Rarity):F2}) but {listings[0].FishName} at {listings[0].ListedPrice} gold was too expensive");
                                 }
                             }
                             else
                             {
-                                Debug.Log($"Customer {customer.CustomerID} rejected purchase: {decision.Reason}");
-                                customerTriedSellers[customer.CustomerID].Add(selectedSeller);
+                                customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
+                                    $"Rolled Seller {selectedSellerId} (Bias: {customer.GetBias(selectedSellerId, shoppingItem.Rarity):F2}) but no {shoppingItem.Rarity} fish available");
                             }
                         }
-                        else
-                        {
-                            Debug.Log($"Customer {customer.CustomerID} found no matching fish at {selectedSeller}");
-                            customerTriedSellers[customer.CustomerID].Add(selectedSeller);
-                        }
                     }
-                    else
-                    {
-                        Debug.Log($"Customer {customer.CustomerID} has tried all sellers, moving to waiting list");
-                        waitingCustomers.Add(customer);
-                        activeCustomers.Remove(customer);
-                        break;
-                    }
-                }
+                } while (boughtAnything && customer.ShoppingList.Any());
+
+                customer.AddVisitedSeller(selectedSellerId);
             }
+
+            // Always remove customer after processing
+            if (madeAnyPurchase)
+            {
+                customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
+                    $"Finished shopping with {customer.Budget:F0} gold remaining. Items remaining on list: {customer.ShoppingList.Count}");
+            }
+            else
+            {
+                var remainingItems = string.Join(", ", customer.ShoppingList.Select(item => 
+                    $"{item.Amount}x {item.Rarity}"));
+                customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
+                    $"Left without buying - Budget was {customer.Budget:F0} gold. Wanted to buy: {remainingItems}");
+            }
+            waitingCustomers.RemoveAt(i);
+
+            purchaseHistory.Add(customerHistory.ToString().TrimEnd());
         }
 
-        Debug.Log($"Shopping round complete. Active customers: {activeCustomers.Count}, Waiting customers: {waitingCustomers.Count}");
+        Debug.Log($"After processing: {waitingCustomers.Count} customers still shopping");
     }
 
     public List<Customer> GetWaitingCustomers()
@@ -313,8 +326,9 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     public void AddCustomer(Customer customer)
     {
-        Debug.Log($"Adding customer {customer.CustomerID} to active customers");
+        Debug.Log($"Adding customer {customer.CustomerID} to active and waiting customers");
         activeCustomers.Add(customer);
+        waitingCustomers.Add(customer);  // Add to waiting customers as well
     }
 
     public Dictionary<string, float> GetHistoricalAveragePrices(Customer.FISHRARITY rarity)
@@ -348,5 +362,127 @@ public class CustomerPurchaseManager : MonoBehaviour
             }
         }
         return averages;
+    }
+
+    public string DebugRemainingShoppingLists()
+    {
+        StringBuilder sb = new StringBuilder();
+        
+        // Purchase History
+        sb.AppendLine("=== PURCHASE HISTORY ===");
+        foreach (string purchase in purchaseHistory)
+        {
+            sb.AppendLine(purchase);
+        }
+        sb.AppendLine();
+
+        // Waiting Customers
+        sb.AppendLine($"\n=== WAITING CUSTOMERS ({waitingCustomers.Count}) ===");
+        foreach (var customer in waitingCustomers)
+        {
+            sb.AppendLine($"\nCustomer {customer.CustomerID} ({customer.Type})");
+            sb.AppendLine($"Budget: {customer.Budget:F2} gold");
+            sb.AppendLine("Shopping List:");
+            foreach (var need in customer.ShoppingList)
+            {
+                sb.AppendLine($"- Needs {need.Amount}x {need.Rarity}");
+            }
+            
+            // Add seller biases
+            sb.AppendLine("Seller Biases:");
+            foreach (var (sellerId, rarity, value) in customer.GetBiases())
+            {
+                sb.AppendLine($"- Seller {sellerId} for {rarity}: {value:F2}");
+            }
+            
+            // Add visited sellers
+            sb.AppendLine("Visited Sellers:");
+            foreach (Customer.SellerType seller in Enum.GetValues(typeof(Customer.SellerType)))
+            {
+                bool visited = customer.HasVisitedSeller((int)seller);
+                sb.AppendLine($"- Seller {(int)seller}: {(visited ? "Visited" : "Not visited")}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private bool TryPurchase(Customer customer, MarketListing listing)
+    {
+        if (listing.IsSold || listing.ListedPrice > customer.Budget)
+            return false;
+
+        // ... existing purchase logic ...
+
+        // After successful purchase, record it
+        customer.RecordPurchase(listing.FishName, listing.ListedPrice, listing.SellerID);
+        
+        return true;
+    }
+
+    // Remove or comment out the Update method since we don't need continuous processing
+    /*
+    void Update()
+    {
+        if (waitingCustomers.Count > 0)
+        {
+            ProcessCustomerPurchases();
+        }
+        DebugRemainingShoppingLists();
+    }
+    */
+
+    public bool HasAnyListings()
+    {
+        foreach (Customer.FISHRARITY rarity in System.Enum.GetValues(typeof(Customer.FISHRARITY)))
+        {
+            var listings = GetListings(rarity);
+            if (listings != null && listings.Count > 0)
+                return true;
+        }
+        return false;
+    }
+
+    private int SelectSeller(Customer customer, Customer.FISHRARITY rarity)
+    {
+        // Get all biases for this rarity
+        var biases = new List<(int sellerId, float bias)>();
+        
+        // Consider all sellers (0 for player, 1-4 for bots)
+        for (int sellerId = 0; sellerId <= 4; sellerId++)
+        {
+            if (!customer.HasVisitedSeller(sellerId))
+            {
+                float bias = customer.GetBias(sellerId, rarity);
+                biases.Add((sellerId, bias));
+            }
+        }
+
+        if (biases.Count == 0)
+            return -1;  // No unvisited sellers left
+
+        // Calculate total bias
+        float totalBias = biases.Sum(b => b.bias);
+        
+        // Roll a random number between 0 and total bias
+        float roll = UnityEngine.Random.Range(0f, totalBias);
+        
+        // Select seller based on roll
+        float currentSum = 0f;
+        foreach (var (sellerId, bias) in biases)
+        {
+            currentSum += bias;
+            if (roll <= currentSum)
+                return sellerId;
+        }
+
+        // Fallback to first available seller if something goes wrong
+        return biases[0].sellerId;
+    }
+
+    public void ClearCustomers()
+    {
+        waitingCustomers.Clear();
+        activeCustomers.Clear();
     }
 }

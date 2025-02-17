@@ -5,24 +5,32 @@ public class FisherAIManager : MonoBehaviour
 {
     private List<FisherAI> fishers;
 
-    private void Start()
+    private void Awake()
     {
         InitializeFishers();
     }
 
     private void InitializeFishers()
     {
-        fishers = new List<FisherAI>
+        if (fishers == null)
         {
-            new CommonFisherAI(1),
-            new RareFisherAI(2),
-            new BalancedFisherAI(3),
-            new ExpertFisherAI(4)
-        };
+            fishers = new List<FisherAI>
+            {
+                new CommonFisherAI(1),
+                new RareFisherAI(2),
+                new BalancedFisherAI(3),
+                new ExpertFisherAI(4)
+            };
+        }
     }
 
     public void GenerateAllFishersCatch()
     {
+        if (fishers == null)
+        {
+            InitializeFishers();
+        }
+
         foreach (var fisher in fishers)
         {
             List<string> catch_ = fisher.GenerateFishCatch();

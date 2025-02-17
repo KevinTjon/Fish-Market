@@ -1,14 +1,11 @@
 using UnityEngine;
-using System;
+using System;  // Add this for Convert
 using System.Collections.Generic;
-using System.Linq;
-using Mono.Data.Sqlite;
-using TMPro;
+using TMPro;  // Add this for TextMeshProUGUI
+using System.Linq;  // Add this for Sum and other LINQ methods
 
 public class CustomerPurchaseEvaluator : MonoBehaviour
 {
-    private string dbPath;
-
     // Add reference to purchase manager
     [SerializeField] private CustomerPurchaseManager purchaseManager;
 
@@ -19,6 +16,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         public int ListingID { get; set; }
         public int OfferedPrice { get; set; }
         public string Reason { get; set; }
+        public CustomerPurchaseManager.MarketListing SelectedListing { get; set; }
     }
 
     // More balanced price threshold multipliers
@@ -32,84 +30,79 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
 
     private void Awake()
     {
-        dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+        if (purchaseManager == null)
+        {
+            purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
+            if (purchaseManager == null)
+            {
+                Debug.LogError("CustomerPurchaseManager not found!");
+            }
+        }
     }
 
-    // Main evaluation method (to be implemented)
-    public PurchaseDecision EvaluatePurchase(
-        Customer customer,
-        List<CustomerPurchaseManager.MarketListing> listings,
-        Customer.FISHRARITY targetRarity)
+    // Main evaluation method
+    public PurchaseDecision EvaluatePurchase(Customer customer, List<CustomerPurchaseManager.MarketListing> listings, Customer.FISHRARITY rarity)
     {
-        var marketAverages = GetMarketAveragePrices(targetRarity);
-        
-        if (listings == null || listings.Count == 0)
+        // For testing: Always buy the first available listing
+        if (listings != null && listings.Any())
         {
-            return new PurchaseDecision 
-            { 
-                WillPurchase = false, 
-                Reason = "No listings available" 
+            return new PurchaseDecision
+            {
+                WillPurchase = true,
+                SelectedListing = listings[0],
+                Reason = "Test mode: Always purchasing"
             };
         }
 
+        // If no listings available, return cannot purchase
+        return new PurchaseDecision
+        {
+            WillPurchase = false,
+            SelectedListing = null,
+            Reason = "No listings available"
+        };
+
+        /* Future implementation:
+        if (listings == null || !listings.Any())
+        {
+            return new PurchaseDecision
+            {
+                WillPurchase = false,
+                SelectedListing = null,
+                Reason = "No listings available"
+            };
+        }
+
+        // Get market averages for this rarity
+        var marketAverages = purchaseManager.GetHistoricalAveragePrices(rarity);
+
+        // Evaluate based on customer type
         switch (customer.Type)
         {
             case Customer.CUSTOMERTYPE.BUDGET:
-                return EvaluateAsBudgetCustomer(customer, listings, marketAverages, targetRarity);
-            
+                return EvaluateAsBudgetCustomer(customer, listings, marketAverages, rarity);
+                
             case Customer.CUSTOMERTYPE.CASUAL:
-                return EvaluateAsCasualCustomer(customer, listings, marketAverages, targetRarity);
-            
+                return EvaluateAsCasualCustomer(customer, listings, marketAverages, rarity);
+                
             case Customer.CUSTOMERTYPE.COLLECTOR:
-                return EvaluateAsCollectorCustomer(customer, listings, marketAverages, targetRarity);
-            
+                return EvaluateAsCollectorCustomer(customer, listings, marketAverages, rarity);
+                
             case Customer.CUSTOMERTYPE.WEALTHY:
-                return EvaluateAsWealthyCustomer(customer, listings, marketAverages, targetRarity);
-            
+                return EvaluateAsWealthyCustomer(customer, listings, marketAverages, rarity);
+                
             default:
-                return new PurchaseDecision 
-                { 
-                    WillPurchase = false, 
-                    Reason = "Unknown customer type" 
+                return new PurchaseDecision
+                {
+                    WillPurchase = false,
+                    SelectedListing = null,
+                    Reason = "Unknown customer type"
                 };
         }
+        */
     }
 
-    // Method to get market average price for a specific rarity
-    private Dictionary<string, float> GetMarketAveragePrices(Customer.FISHRARITY rarity)
-    {
-        Dictionary<string, float> fishPrices = new Dictionary<string, float>();
-        
-        using (var connection = new SqliteConnection(dbPath))
-        {
-            connection.Open();
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = @"
-                    SELECT mp.FishName, AVG(mp.Price) as AvgPrice
-                    FROM MarketPrices mp
-                    JOIN Fish f ON mp.FishName = f.Name
-                    WHERE f.Rarity = @rarity
-                    AND mp.Day >= (SELECT MAX(Day) - 4 FROM MarketPrices)
-                    GROUP BY mp.FishName";
-                
-                command.Parameters.AddWithValue("@rarity", rarity.ToString());
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        string fishName = reader.GetString(0);
-                        float avgPrice = Convert.ToSingle(reader.GetDouble(1));
-                        fishPrices[fishName] = avgPrice;
-                    }
-                }
-            }
-        }
-        return fishPrices;
-    }
-
-    // Test method to show average prices
+    // Update TestAveragePrices to use CustomerPurchaseManager
     public void TestAveragePrices(TextMeshProUGUI outputText)
     {
         string output = "Market Average Prices:\n";
@@ -117,7 +110,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         foreach (Customer.FISHRARITY rarity in System.Enum.GetValues(typeof(Customer.FISHRARITY)))
         {
             output += $"\n=== {rarity} FISH ===\n";
-            var fishPrices = GetMarketAveragePrices(rarity);
+            var fishPrices = purchaseManager.GetHistoricalAveragePrices(rarity);
             foreach (var fish in fishPrices)
             {
                 output += $"{fish.Key}: {fish.Value:F2} gold\n";
@@ -142,6 +135,37 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
 
         float maxAcceptablePrice = averagePrice * MaxPriceMultipliers[customerType];
         return price <= maxAcceptablePrice;
+    }
+
+    public int RollForSeller(Customer customer, Customer.FISHRARITY rarity)
+    {
+        // Get biases for each seller type for this rarity
+        var sellerBiases = new List<(int sellerId, float bias)>();
+        foreach (Customer.SellerType seller in System.Enum.GetValues(typeof(Customer.SellerType)))
+        {
+            float bias = customer.GetBias((int)seller, rarity);
+            sellerBiases.Add(((int)seller, bias));
+        }
+        
+        // Calculate total bias value
+        float totalBias = sellerBiases.Sum(b => b.bias);
+        
+        // Roll a random number between 0 and total bias
+        float roll = UnityEngine.Random.Range(0f, totalBias);
+        
+        // Find which seller was selected
+        float currentSum = 0f;
+        foreach (var (sellerId, bias) in sellerBiases)
+        {
+            currentSum += bias;
+            if (roll <= currentSum)
+            {
+                return sellerId;
+            }
+        }
+        
+        // Fallback to first seller if something goes wrong
+        return 0;
     }
 
     private PurchaseDecision EvaluateAsBudgetCustomer(
@@ -438,32 +462,5 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         }
 
         return decision;
-    }
-
-    // Add a method to execute the purchase
-    public bool ExecutePurchase(PurchaseDecision decision, Customer customer)
-    {
-        Debug.Log($"Attempting to execute purchase for Customer {customer.CustomerID}...");
-        
-        if (!decision.WillPurchase)
-        {
-            Debug.Log("Purchase execution cancelled - WillPurchase is false");
-            return false;
-        }
-
-        Debug.Log($"Calling MarkListingAsSold for ListingID {decision.ListingID}");
-        bool success = purchaseManager.MarkListingAsSold(decision.ListingID, customer.CustomerID);
-        
-        if (success)
-        {
-            customer.Budget -= decision.OfferedPrice;
-            Debug.Log($"Purchase successful! Customer {customer.CustomerID} bought ListingID {decision.ListingID} for {decision.OfferedPrice} gold. Remaining budget: {customer.Budget:F2}");
-        }
-        else
-        {
-            Debug.LogError($"Failed to mark ListingID {decision.ListingID} as sold!");
-        }
-
-        return success;
     }
 }
