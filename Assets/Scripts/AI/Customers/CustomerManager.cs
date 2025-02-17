@@ -10,10 +10,10 @@ public class CustomerManager : MonoBehaviour
     [Header("Customer Generation Settings")]
 
     [SerializeField] private float[] customerDistribution = new float[4] {
-        0.35f,  // Budget
-        0.30f,  // Casual
-        0.25f,  // Collector
-        0.10f   // Wealthy
+        0.40f,  // Budget - Increased from 0.35f
+        0.35f,  // Casual - Increased from 0.30f
+        0.15f,  // Collector - Decreased from 0.25f
+        0.10f   // Wealthy - Unchanged
     };
 
     [Header("Debug")]
@@ -202,10 +202,10 @@ public class CustomerManager : MonoBehaviour
                 command.CommandText = "UPDATE Customers SET IsActive = 0";
                 command.ExecuteNonQuery();
 
-                // Generate new customers
+                // Generate new customers with more varied initial biases
                 for (int i = 0; i < customerDistribution.Length; i++)
                 {
-                    int count = Mathf.RoundToInt(20 * customerDistribution[i]); // 20 total customers
+                    int count = Mathf.RoundToInt(30 * customerDistribution[i]); // Increased from 20 to 30 total customers
                     for (int j = 0; j < count; j++)
                     {
                         Customer.CUSTOMERTYPE type = (Customer.CUSTOMERTYPE)i;

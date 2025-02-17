@@ -19,13 +19,56 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         public CustomerPurchaseManager.MarketListing SelectedListing { get; set; }
     }
 
-    // More balanced price threshold multipliers
-    private readonly Dictionary<Customer.CUSTOMERTYPE, float> MaxPriceMultipliers = new Dictionary<Customer.CUSTOMERTYPE, float>
+    // Updated price threshold multipliers based on your specifications
+    private readonly Dictionary<Customer.CUSTOMERTYPE, (float min, float max)> PriceThresholds = 
+        new Dictionary<Customer.CUSTOMERTYPE, (float min, float max)>
     {
-        { Customer.CUSTOMERTYPE.BUDGET, 1.1f },     // Will pay up to 110% of average
-        { Customer.CUSTOMERTYPE.CASUAL, 1.3f },     // Will pay up to 130% of average
-        { Customer.CUSTOMERTYPE.COLLECTOR, 1.5f },   // Will pay up to 150% of average
-        { Customer.CUSTOMERTYPE.WEALTHY, 1.8f }      // Will pay up to 180% of average
+        { Customer.CUSTOMERTYPE.BUDGET, (0.6f, 1.0f) },      // Lowered min from 0.8f to 0.6f
+        { Customer.CUSTOMERTYPE.CASUAL, (0.9f, 1.1f) },      // Unchanged
+        { Customer.CUSTOMERTYPE.COLLECTOR, (1.0f, 1.5f) },   // Unchanged
+        { Customer.CUSTOMERTYPE.WEALTHY, (1.2f, 2.0f) }      // Unchanged
+    };
+
+    // Rarity preferences for each customer type
+    private readonly Dictionary<Customer.CUSTOMERTYPE, Dictionary<Customer.FISHRARITY, float>> RarityPreferences =
+        new Dictionary<Customer.CUSTOMERTYPE, Dictionary<Customer.FISHRARITY, float>>
+    {
+        {
+            Customer.CUSTOMERTYPE.BUDGET, new Dictionary<Customer.FISHRARITY, float> {
+                { Customer.FISHRARITY.COMMON, 0.5f },
+                { Customer.FISHRARITY.UNCOMMON, 0.3f },
+                { Customer.FISHRARITY.RARE, 0.15f },
+                { Customer.FISHRARITY.EPIC, 0.04f },
+                { Customer.FISHRARITY.LEGENDARY, 0.01f }
+            }
+        },
+        {
+            Customer.CUSTOMERTYPE.CASUAL, new Dictionary<Customer.FISHRARITY, float> {
+                { Customer.FISHRARITY.COMMON, 0.2f },
+                { Customer.FISHRARITY.UNCOMMON, 0.4f },
+                { Customer.FISHRARITY.RARE, 0.3f },
+                { Customer.FISHRARITY.EPIC, 0.08f },
+                { Customer.FISHRARITY.LEGENDARY, 0.02f }
+            }
+        },
+        {
+            Customer.CUSTOMERTYPE.COLLECTOR, new Dictionary<Customer.FISHRARITY, float> {
+                { Customer.FISHRARITY.COMMON, 0.1f },
+                { Customer.FISHRARITY.UNCOMMON, 0.2f },
+                { Customer.FISHRARITY.RARE, 0.4f },
+                { Customer.FISHRARITY.EPIC, 0.2f },
+                { Customer.FISHRARITY.LEGENDARY, 0.1f }
+            }
+        },
+        {
+            Customer.CUSTOMERTYPE.WEALTHY, new Dictionary<Customer.FISHRARITY, float> {
+                { Customer.FISHRARITY.COMMON, 0.2f },
+                { Customer.FISHRARITY.UNCOMMON, 0.2f },
+                { Customer.FISHRARITY.RARE, 0.3f },
+                { Customer.FISHRARITY.EPIC, 0.15f },
+                { Customer.FISHRARITY.LEGENDARY, 0.15f }
+            }
+        }
     };
 
     private void Awake()
@@ -43,63 +86,72 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
     // Main evaluation method
     public PurchaseDecision EvaluatePurchase(Customer customer, List<CustomerPurchaseManager.MarketListing> listings, Customer.FISHRARITY rarity)
     {
-        // For testing: Always buy the first available listing
-        if (listings != null && listings.Any())
-        {
-            return new PurchaseDecision
-            {
-                WillPurchase = true,
-                SelectedListing = listings[0],
-                Reason = "Test mode: Always purchasing"
-            };
-        }
-
-        // If no listings available, return cannot purchase
-        return new PurchaseDecision
-        {
-            WillPurchase = false,
-            SelectedListing = null,
-            Reason = "No listings available"
-        };
-
-        /* Future implementation:
         if (listings == null || !listings.Any())
         {
             return new PurchaseDecision
             {
                 WillPurchase = false,
-                SelectedListing = null,
                 Reason = "No listings available"
             };
         }
 
-        // Get market averages for this rarity
         var marketAverages = purchaseManager.GetHistoricalAveragePrices(rarity);
+        
+        // Sort listings by price and seller bias
+        var sortedListings = listings
+            .OrderBy(l => l.ListedPrice)
+            .ThenByDescending(l => customer.GetBias(l.SellerID, rarity))
+            .ToList();
 
-        // Evaluate based on customer type
-        switch (customer.Type)
+        foreach (var listing in sortedListings)
         {
-            case Customer.CUSTOMERTYPE.BUDGET:
-                return EvaluateAsBudgetCustomer(customer, listings, marketAverages, rarity);
-                
-            case Customer.CUSTOMERTYPE.CASUAL:
-                return EvaluateAsCasualCustomer(customer, listings, marketAverages, rarity);
-                
-            case Customer.CUSTOMERTYPE.COLLECTOR:
-                return EvaluateAsCollectorCustomer(customer, listings, marketAverages, rarity);
-                
-            case Customer.CUSTOMERTYPE.WEALTHY:
-                return EvaluateAsWealthyCustomer(customer, listings, marketAverages, rarity);
-                
-            default:
+            // Skip if already sold
+            if (listing.IsSold)
+                continue;
+
+            // For wealthy customers, only check against budget
+            if (customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
+            {
+                if (listing.ListedPrice <= customer.Budget)
+                {
+                    return new PurchaseDecision
+                    {
+                        WillPurchase = true,
+                        SelectedListing = listing,
+                        Reason = $"Wealthy customer accepting purchase within budget: {listing.ListedPrice} <= {customer.Budget}"
+                    };
+                }
+                continue;
+            }
+
+            float marketAverage = marketAverages.GetValueOrDefault(listing.FishName, listing.ListedPrice);
+            var (minWTP, maxWTP) = PriceThresholds[customer.Type];
+            float rarityPreference = RarityPreferences[customer.Type][listing.Rarity];
+            float sellerBias = customer.GetBias(listing.SellerID, listing.Rarity);
+
+            // Adjust WTP based on rarity preference and seller bias
+            float adjustedMaxWTP = maxWTP * (1 + rarityPreference) * (1 + sellerBias * 0.2f);
+            float adjustedMinWTP = minWTP * (1 - (1 - rarityPreference) * 0.2f);
+
+            float priceRatio = listing.ListedPrice / marketAverage;
+
+            if (priceRatio >= adjustedMinWTP && priceRatio <= adjustedMaxWTP)
+            {
                 return new PurchaseDecision
                 {
-                    WillPurchase = false,
-                    SelectedListing = null,
-                    Reason = "Unknown customer type"
+                    WillPurchase = true,
+                    SelectedListing = listing,
+                    Reason = $"Accepting purchase: Price ratio {priceRatio:F2} within range [{adjustedMinWTP:F2}-{adjustedMaxWTP:F2}]. " +
+                            $"Rarity preference: {rarityPreference:F2}, Seller bias: {sellerBias:F2}"
                 };
+            }
         }
-        */
+
+        return new PurchaseDecision
+        {
+            WillPurchase = false,
+            Reason = "No acceptable listings found within price range and preferences"
+        };
     }
 
     // Update TestAveragePrices to use CustomerPurchaseManager
@@ -128,13 +180,25 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
     }
 
     // Method to check if price is within customer's threshold
-    private bool IsPriceAcceptable(float price, float averagePrice, Customer.CUSTOMERTYPE customerType)
+    private bool IsWithinPriceThreshold(Customer.CUSTOMERTYPE customerType, float price, float marketValue)
     {
-        if (!MaxPriceMultipliers.ContainsKey(customerType))
-            return false;
+        var (minWTP, maxWTP) = PriceThresholds[customerType];
+        float minAcceptablePrice = marketValue * minWTP;
+        float maxAcceptablePrice = marketValue * maxWTP;
 
-        float maxAcceptablePrice = averagePrice * MaxPriceMultipliers[customerType];
-        return price <= maxAcceptablePrice;
+        // Add budget consideration
+        if (customerType == Customer.CUSTOMERTYPE.WEALTHY)
+        {
+            // Wealthy customers are less price sensitive
+            maxAcceptablePrice *= 2f;
+        }
+        else if (customerType == Customer.CUSTOMERTYPE.COLLECTOR)
+        {
+            // Collectors are willing to pay more for rare/legendary
+            maxAcceptablePrice *= 1.5f;
+        }
+
+        return price >= minAcceptablePrice && price <= maxAcceptablePrice;
     }
 
     public int RollForSeller(Customer customer, Customer.FISHRARITY rarity)
@@ -166,301 +230,5 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         
         // Fallback to first seller if something goes wrong
         return 0;
-    }
-
-    private PurchaseDecision EvaluateAsBudgetCustomer(
-        Customer customer,
-        List<CustomerPurchaseManager.MarketListing> listings,
-        Dictionary<string, float> marketAverages,
-        Customer.FISHRARITY targetRarity)
-    {
-        var decision = new PurchaseDecision();
-        
-        // Get first listing since we evaluate one at a time
-        var listing = listings[0];
-        float marketAverage = marketAverages[listing.FishName];
-
-        // First check if this is the rarity we're looking for
-        if (listing.Rarity != targetRarity)
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Not the target rarity. Looking for {targetRarity}, found {listing.Rarity}";
-            return decision;
-        }
-
-        // Check budget first
-        if (listing.ListedPrice > customer.Budget)
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Cannot afford. Price: {listing.ListedPrice:F2} gold, Budget: {customer.Budget:F2} gold";
-            return decision;
-        }
-
-        // Set price threshold based on rarity
-        float priceThreshold;
-        string reason;
-        
-        switch (targetRarity)
-        {
-            case Customer.FISHRARITY.COMMON:
-                priceThreshold = marketAverage;
-                reason = "Common fish at market price";
-                break;
-                
-            case Customer.FISHRARITY.UNCOMMON:
-                priceThreshold = marketAverage * 0.8f;
-                reason = "Uncommon fish at 80% market price";
-                break;
-                
-            case Customer.FISHRARITY.RARE:
-            case Customer.FISHRARITY.LEGENDARY:
-                priceThreshold = marketAverage * 0.6f;
-                reason = $"{listing.Rarity} fish at 60% market price";
-                break;
-                
-            default:
-                decision.WillPurchase = false;
-                decision.Reason = "Unknown rarity";
-                return decision;
-        }
-
-        // Check if price is acceptable (budget already checked)
-        if (listing.ListedPrice <= priceThreshold)
-        {
-            decision.WillPurchase = true;
-            decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = (int)listing.ListedPrice;
-            decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
-        }
-        else
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Price too high for {listing.Rarity}. Listed: {listing.ListedPrice:F2} gold, Maximum: {priceThreshold:F2}";
-        }
-
-        return decision;
-    }
-
-    private PurchaseDecision EvaluateAsCasualCustomer(
-        Customer customer,
-        List<CustomerPurchaseManager.MarketListing> listings,
-        Dictionary<string, float> marketAverages,
-        Customer.FISHRARITY targetRarity)
-    {
-        var decision = new PurchaseDecision();
-        
-        // Get first listing since we evaluate one at a time
-        var listing = listings[0];
-        float marketAverage = marketAverages[listing.FishName];
-
-        // First check if this is the rarity we're looking for
-        if (listing.Rarity != targetRarity)
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Not the target rarity. Looking for {targetRarity}, found {listing.Rarity}";
-            return decision;
-        }
-
-        // Casual customers are more flexible with prices than budget customers
-        // They care more about getting the fish they want at a reasonable price
-        float priceThreshold;
-        string reason;
-        
-        switch (targetRarity)
-        {
-            case Customer.FISHRARITY.COMMON:
-                priceThreshold = marketAverage * 1.1f;  // Will pay up to 110% of market price
-                reason = "Common fish at market price +10%";
-                break;
-                
-            case Customer.FISHRARITY.UNCOMMON:
-                priceThreshold = marketAverage * 1.0f;  // Will pay market price
-                reason = "Uncommon fish at market price";
-                break;
-                
-            case Customer.FISHRARITY.RARE:
-                priceThreshold = marketAverage * 0.9f;  // Want a 10% discount
-                reason = "Rare fish at 90% market price";
-                break;
-                
-            case Customer.FISHRARITY.EPIC:
-            case Customer.FISHRARITY.LEGENDARY:
-                priceThreshold = marketAverage * 0.8f;  // Want a 20% discount on expensive fish
-                reason = $"{listing.Rarity} fish at 80% market price";
-                break;
-                
-            default:
-                decision.WillPurchase = false;
-                decision.Reason = "Unknown rarity";
-                return decision;
-        }
-
-        // Check if price is acceptable and within budget
-        if (listing.ListedPrice <= priceThreshold && listing.ListedPrice <= customer.Budget)
-        {
-            decision.WillPurchase = true;
-            decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = (int)listing.ListedPrice;
-            decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
-        }
-        else
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Price too high for {listing.Rarity}. Listed: {listing.ListedPrice:F2} gold, Maximum: {priceThreshold:F2}";
-        }
-
-        return decision;
-    }
-
-    private PurchaseDecision EvaluateAsCollectorCustomer(
-        Customer customer,
-        List<CustomerPurchaseManager.MarketListing> listings,
-        Dictionary<string, float> marketAverages,
-        Customer.FISHRARITY targetRarity)
-    {
-        var decision = new PurchaseDecision();
-        
-        // Get first listing since we evaluate one at a time
-        var listing = listings[0];
-        float marketAverage = marketAverages[listing.FishName];
-
-        // First check if this is the rarity we're looking for
-        if (listing.Rarity != targetRarity)
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Not the target rarity. Looking for {targetRarity}, found {listing.Rarity}";
-            return decision;
-        }
-
-        // Collectors are most interested in rare and above fish
-        // They're willing to pay more for higher rarity fish
-        float priceThreshold;
-        string reason;
-        
-        switch (targetRarity)
-        {
-            case Customer.FISHRARITY.LEGENDARY:
-                priceThreshold = marketAverage * 1.5f;  // Will pay up to 150% for legendary
-                reason = "Legendary fish at 150% market price";
-                break;
-                
-            case Customer.FISHRARITY.EPIC:
-                priceThreshold = marketAverage * 1.3f;  // Will pay up to 130% for epic
-                reason = "Epic fish at 130% market price";
-                break;
-                
-            case Customer.FISHRARITY.RARE:
-                priceThreshold = marketAverage * 1.2f;  // Will pay up to 120% for rare
-                reason = "Rare fish at 120% market price";
-                break;
-                
-            case Customer.FISHRARITY.UNCOMMON:
-                priceThreshold = marketAverage * 1.0f;  // Market price for uncommon
-                reason = "Uncommon fish at market price";
-                break;
-                
-            case Customer.FISHRARITY.COMMON:
-                priceThreshold = marketAverage * 0.8f;  // Want discount on common
-                reason = "Common fish at 80% market price";
-                break;
-                
-            default:
-                decision.WillPurchase = false;
-                decision.Reason = "Unknown rarity";
-                return decision;
-        }
-
-        // Check if price is acceptable and within budget
-        if (listing.ListedPrice <= priceThreshold && listing.ListedPrice <= customer.Budget)
-        {
-            decision.WillPurchase = true;
-            decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = (int)listing.ListedPrice;
-            decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
-        }
-        else
-        {
-            decision.WillPurchase = false;
-            string budgetReason = listing.ListedPrice > customer.Budget ? " (Exceeds budget)" : "";
-            decision.Reason = $"Price too high for {listing.Rarity}. Listed: {listing.ListedPrice:F2} gold, Maximum: {priceThreshold:F2}{budgetReason}";
-        }
-
-        return decision;
-    }
-
-    private PurchaseDecision EvaluateAsWealthyCustomer(
-        Customer customer,
-        List<CustomerPurchaseManager.MarketListing> listings,
-        Dictionary<string, float> marketAverages,
-        Customer.FISHRARITY targetRarity)
-    {
-        var decision = new PurchaseDecision();
-        
-        // Get first listing since we evaluate one at a time
-        var listing = listings[0];
-        float marketAverage = marketAverages[listing.FishName];
-
-        // First check if this is the rarity we're looking for
-        if (listing.Rarity != targetRarity)
-        {
-            decision.WillPurchase = false;
-            decision.Reason = $"Not the target rarity. Looking for {targetRarity}, found {listing.Rarity}";
-            return decision;
-        }
-
-        // Wealthy customers are willing to pay premium prices, especially for rare fish
-        // They care more about quality and rarity than price
-        float priceThreshold;
-        string reason;
-        
-        switch (targetRarity)
-        {
-            case Customer.FISHRARITY.LEGENDARY:
-                priceThreshold = marketAverage * 2.0f;  // Will pay up to 200% for legendary
-                reason = "Legendary fish at 200% market price";
-                break;
-                
-            case Customer.FISHRARITY.EPIC:
-                priceThreshold = marketAverage * 1.8f;  // Will pay up to 180% for epic
-                reason = "Epic fish at 180% market price";
-                break;
-                
-            case Customer.FISHRARITY.RARE:
-                priceThreshold = marketAverage * 1.5f;  // Will pay up to 150% for rare
-                reason = "Rare fish at 150% market price";
-                break;
-                
-            case Customer.FISHRARITY.UNCOMMON:
-                priceThreshold = marketAverage * 1.3f;  // Will pay 130% for uncommon
-                reason = "Uncommon fish at 130% market price";
-                break;
-                
-            case Customer.FISHRARITY.COMMON:
-                priceThreshold = marketAverage * 1.2f;  // Even willing to pay above market for common
-                reason = "Common fish at 120% market price";
-                break;
-                
-            default:
-                decision.WillPurchase = false;
-                decision.Reason = "Unknown rarity";
-                return decision;
-        }
-
-        // Wealthy customers still have a budget, but they're more likely to spend it
-        if (listing.ListedPrice <= priceThreshold && listing.ListedPrice <= customer.Budget)
-        {
-            decision.WillPurchase = true;
-            decision.ListingID = listing.ListingID;
-            decision.OfferedPrice = (int)listing.ListedPrice;
-            decision.Reason = $"Accepting {reason}. Price: {listing.ListedPrice:F2} gold (Market: {marketAverage:F2})";
-        }
-        else
-        {
-            decision.WillPurchase = false;
-            string budgetReason = listing.ListedPrice > customer.Budget ? " (Exceeds budget)" : " (Above acceptable markup)";
-            decision.Reason = $"Price too high for {listing.Rarity}. Listed: {listing.ListedPrice:F2} gold, Maximum: {priceThreshold:F2}{budgetReason}";
-        }
-
-        return decision;
     }
 }
