@@ -148,9 +148,8 @@ public class Customer
 
     private void AddFishPreferencesForRarity(FISHRARITY rarity, float minPreference, float maxPreference)
     {
-        // This method would need to get fish names from the database
-        // For now, we'll assume it's passed in or handled elsewhere
-        using (var connection = new Mono.Data.Sqlite.SqliteConnection(dbPath))
+        // Query the database for all fish of this rarity
+        using (var connection = new SqliteConnection(dbPath))
         {
             connection.Open();
             using (var command = connection.CreateCommand())
@@ -158,21 +157,76 @@ public class Customer
                 command.CommandText = "SELECT Name FROM Fish WHERE Rarity = @rarity";
                 command.Parameters.AddWithValue("@rarity", rarity.ToString());
 
+                List<string> fishNames = new List<string>();
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        string fishName = reader.GetString(0);
-                        FishPreferences.Add(new FishPreference
-                        {
-                            FishName = fishName,
-                            PreferenceScore = Random.Range(minPreference, maxPreference),
-                            Rarity = rarity,
-                            HasPurchased = false
-                        });
+                        fishNames.Add(reader.GetString(0));
                     }
                 }
+
+                if (fishNames.Count == 0) return;
+
+                // Calculate how many fish should be high preference (above 0.5)
+                int highPrefCount = Mathf.CeilToInt(fishNames.Count * GetHighPreferenceRatio(rarity));
+                int lowPrefCount = fishNames.Count - highPrefCount;
+
+                // Shuffle the fish names
+                for (int i = fishNames.Count - 1; i > 0; i--)
+                {
+                    int j = Random.Range(0, i + 1);
+                    var temp = fishNames[i];
+                    fishNames[i] = fishNames[j];
+                    fishNames[j] = temp;
+                }
+
+                // Assign high preferences to the first portion
+                for (int i = 0; i < highPrefCount; i++)
+                {
+                    float prefScore = Random.Range(0.5f, maxPreference);
+                    FishPreferences.Add(new FishPreference
+                    {
+                        FishName = fishNames[i],
+                        PreferenceScore = prefScore,
+                        Rarity = rarity,
+                        HasPurchased = false
+                    });
+                }
+
+                // Assign low preferences to the remainder
+                for (int i = highPrefCount; i < fishNames.Count; i++)
+                {
+                    float prefScore = Random.Range(minPreference, 0.5f);
+                    FishPreferences.Add(new FishPreference
+                    {
+                        FishName = fishNames[i],
+                        PreferenceScore = prefScore,
+                        Rarity = rarity,
+                        HasPurchased = false
+                    });
+                }
             }
+        }
+    }
+
+    private float GetHighPreferenceRatio(FISHRARITY rarity)
+    {
+        // Higher rarities get more high preferences
+        switch (rarity)
+        {
+            case FISHRARITY.COMMON:
+                return 0.5f;     // 50% high preference
+            case FISHRARITY.UNCOMMON:
+                return 0.55f;    // 55% high preference
+            case FISHRARITY.RARE:
+                return 0.6f;     // 60% high preference
+            case FISHRARITY.EPIC:
+                return 0.65f;    // 65% high preference
+            case FISHRARITY.LEGENDARY:
+                return 0.7f;     // 70% high preference
+            default:
+                return 0.5f;
         }
     }
 
@@ -229,21 +283,17 @@ public class Customer
                $"Biases=[{biasStr}]";
     }
 
-    public void RecordPurchase(string fishName, float price, int sellerID)
+    public void RecordPurchase(string fishName, float price, int sellerId)
     {
-        PurchaseHistory.Add(new Purchase 
-        { 
+        PurchaseHistory.Add(new Purchase
+        {
             FishName = fishName,
             Price = price,
-            SellerID = sellerID
+            SellerID = sellerId
         });
 
-        // Mark the fish as purchased in preferences
-        var preference = FishPreferences.FirstOrDefault(fp => fp.FishName == fishName);
-        if (preference != null)
-        {
-            preference.HasPurchased = true;
-        }
+        // Update preferences after purchase
+        UpdatePreferences(fishName);
     }
 
     // Add these methods
@@ -278,5 +328,67 @@ public class Customer
             .Where(fp => !fp.HasPurchased)
             .OrderByDescending(fp => fp.PreferenceScore)
             .ToList();
+    }
+
+    public void UpdatePreferences(string purchasedFishName)
+    {
+        // Find the purchased fish preference
+        var purchasedPref = FishPreferences.Find(p => p.FishName == purchasedFishName);
+        if (purchasedPref == null) return;
+
+        // Get all fish of the same rarity
+        var sameFishRarity = FishPreferences.Where(p => p.Rarity == purchasedPref.Rarity).ToList();
+        
+        // Calculate target number of high preferences based on rarity ratio
+        float targetRatio = GetHighPreferenceRatio(purchasedPref.Rarity);
+        int targetHighCount = Mathf.RoundToInt(sameFishRarity.Count * targetRatio);
+        
+        // Decrease preference for purchased fish
+        float oldScore = purchasedPref.PreferenceScore;
+        purchasedPref.PreferenceScore = Mathf.Max(0.1f, oldScore - 0.15f);
+
+        // Count current high preferences after decrease
+        int currentHighCount = sameFishRarity.Count(p => p.PreferenceScore >= 0.5f);
+
+        // Get all low-preference fish of the same rarity
+        var lowPreferences = sameFishRarity
+            .Where(p => p.PreferenceScore < 0.5f && p.FishName != purchasedFishName)
+            .ToList();
+
+        if (lowPreferences.Any() && currentHighCount < targetHighCount)
+        {
+            // Randomly select one low-preference fish to increase
+            var randomLowPref = lowPreferences[Random.Range(0, lowPreferences.Count)];
+            float increase = 0.15f;
+            
+            randomLowPref.PreferenceScore = Mathf.Min(1.0f, randomLowPref.PreferenceScore + increase);
+            
+            // Save both preference changes to the database
+            using (var connection = new SqliteConnection(dbPath))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        UPDATE CustomerPreferences 
+                        SET PreferenceScore = @score
+                        WHERE CustomerID = @customerId 
+                        AND FishName = @fishName";
+                    
+                    // Update decreased preference
+                    command.Parameters.AddWithValue("@customerId", CustomerID);
+                    command.Parameters.AddWithValue("@fishName", purchasedFishName);
+                    command.Parameters.AddWithValue("@score", purchasedPref.PreferenceScore);
+                    command.ExecuteNonQuery();
+
+                    // Update increased preference
+                    command.Parameters.Clear();
+                    command.Parameters.AddWithValue("@customerId", CustomerID);
+                    command.Parameters.AddWithValue("@fishName", randomLowPref.FishName);
+                    command.Parameters.AddWithValue("@score", randomLowPref.PreferenceScore);
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
     }
 }

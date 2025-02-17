@@ -69,6 +69,16 @@ CREATE TABLE IF NOT EXISTS CustomerPreferences (
     FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
 );
 
+CREATE TABLE IF NOT EXISTS ListingRejections (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    ListingID INTEGER NOT NULL,
+    CustomerID INTEGER NOT NULL,
+    Reason TEXT NOT NULL,
+    RejectionTime DATETIME NOT NULL,
+    FOREIGN KEY (ListingID) REFERENCES MarketListings(ListingID),
+    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);
+
 -- Populate Fish table with enhanced test data
 INSERT OR REPLACE INTO Fish (Name, Description, Rarity, AssetPath, MinWeight, MaxWeight, TopSpeed, HookedFuncNum, IsDiscovered) VALUES
 ('Golden Trout', 'The Golden Trout is a rare fish known for its vibrant golden scales. It thrives in cold, clear waters and is a favorite among anglers.', 'RARE', 'Art/Sprites/Fish/FoundFish', 0.5, 1.5, 4.0, 1, 0),

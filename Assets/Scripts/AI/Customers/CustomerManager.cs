@@ -355,4 +355,26 @@ public class CustomerManager : MonoBehaviour
             }
         }
     }
+
+    public void UpdateCustomerPreference(Customer customer, string fishName, bool hasPurchased)
+    {
+        using (var connection = new SqliteConnection(dbPath))
+        {
+            connection.Open();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = @"
+                    UPDATE CustomerPreferences 
+                    SET HasPurchased = @hasPurchased
+                    WHERE CustomerID = @customerId 
+                    AND FishName = @fishName";
+                
+                command.Parameters.AddWithValue("@customerId", customer.CustomerID);
+                command.Parameters.AddWithValue("@fishName", fishName);
+                command.Parameters.AddWithValue("@hasPurchased", hasPurchased);
+                
+                command.ExecuteNonQuery();
+            }
+        }
+    }
 }

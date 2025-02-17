@@ -11,9 +11,10 @@ public class BalancedFisherAI : FisherAI
         
         rarityWeights = new Dictionary<string, float>
         {
-            { "COMMON", 0.50f },
+            { "COMMON", 0.40f },
             { "UNCOMMON", 0.30f },
             { "RARE", 0.15f },
+            { "EPIC", 0.10f },
             { "LEGENDARY", 0.05f }
         };
 

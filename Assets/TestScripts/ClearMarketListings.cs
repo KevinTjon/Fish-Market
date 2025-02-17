@@ -38,6 +38,14 @@ public class ClearMarketListings : MonoBehaviour
                     command.CommandText = "DELETE FROM CustomerBiases";
                     command.ExecuteNonQuery();
                     //Debug.Log("CustomerBiases table cleared successfully");
+
+                    // Clear ListingRejections table
+                    command.CommandText = "DELETE FROM ListingRejections";
+                    command.ExecuteNonQuery();
+                    
+                    // Clear CustomerPreferences table
+                    command.CommandText = "DELETE FROM CustomerPreferences";
+                    command.ExecuteNonQuery();
                 }
             }
         }

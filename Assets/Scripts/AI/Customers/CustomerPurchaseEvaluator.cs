@@ -99,6 +99,10 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         var preferences = customer.GetUnpurchasedPreferences();
         if (!preferences.Any())
         {
+            foreach (var listing in listings)
+            {
+                purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.ReachedPurchaseLimit);
+            }
             return new PurchaseDecision
             {
                 WillPurchase = false,
@@ -135,6 +139,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
                             Reason = $"Wealthy customer accepting preferred fish ({preference.FishName}) within budget"
                         };
                     }
+                    purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.OutOfBudget);
                     continue;
                 }
 
@@ -156,6 +161,20 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
                         Reason = $"Accepting purchase of {preference.FishName} (preference score: {preference.PreferenceScore:F2})" +
                                 $" Price ratio {priceRatio:F2} within range [{adjustedMinWTP:F2}-{adjustedMaxWTP:F2}]"
                     };
+                }
+                
+                // Record rejection reason
+                if (listing.ListedPrice > customer.Budget)
+                {
+                    purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.OutOfBudget);
+                }
+                else if (priceRatio > adjustedMaxWTP)
+                {
+                    purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.TooExpensive);
+                }
+                else if (preference.PreferenceScore < 0.3f)
+                {
+                    purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.LowPreference);
                 }
             }
         }

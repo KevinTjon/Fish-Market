@@ -157,7 +157,7 @@ public class CustomerPurchaseManager : MonoBehaviour
                                     listings
                                 );
 
-                                if (decision.WillPurchase)
+                                if (decision.WillPurchase && CanMakeMorePurchases(customer))
                                 {
                                     customer.Budget -= (int)decision.SelectedListing.ListedPrice;
                                     if (MarkListingAsSold(decision.SelectedListing.ListingID, customer.CustomerID))
@@ -167,6 +167,9 @@ public class CustomerPurchaseManager : MonoBehaviour
                                         shouldContinueWithSeller = true;
 
                                         AdjustSellerBias(customer, selectedSellerId, preference);
+                                        
+                                        // Update the HasPurchased status in the database
+                                        customerManager.UpdateCustomerPreference(customer, decision.SelectedListing.FishName, true);
                                         
                                         customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
                                             $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) " +
@@ -605,5 +608,135 @@ public class CustomerPurchaseManager : MonoBehaviour
 
         // Save the updated bias to the database
         customerManager.SaveCustomerBias(customer, sellerId, rarity);
+    }
+
+    private bool CanMakeMorePurchases(Customer customer)
+    {
+        int maxPurchases = customer.Type switch
+        {
+            Customer.CUSTOMERTYPE.BUDGET => 2,
+            Customer.CUSTOMERTYPE.CASUAL => 3,
+            Customer.CUSTOMERTYPE.COLLECTOR => 2,
+            Customer.CUSTOMERTYPE.WEALTHY => 3,
+            _ => 2
+        };
+
+        return customer.PurchaseHistory.Count < maxPurchases;
+    }
+
+    public enum RejectionReason
+    {
+        TooExpensive,
+        LowPreference,
+        OutOfBudget,
+        ReachedPurchaseLimit,
+        BetterOptionAvailable,
+        None
+    }
+
+    public void RecordRejectionReason(int listingId, int customerId, RejectionReason reason)
+    {
+        using (var connection = new SqliteConnection(dbPath))
+        {
+            try
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        INSERT INTO ListingRejections (
+                            ListingID, 
+                            CustomerID, 
+                            Reason, 
+                            RejectionTime
+                        ) VALUES (
+                            @listingId, 
+                            @customerId, 
+                            @reason,
+                            DATETIME('now')
+                        )";
+
+                        command.Parameters.AddWithValue("@listingId", listingId);
+                        command.Parameters.AddWithValue("@customerId", customerId);
+                        command.Parameters.AddWithValue("@reason", reason.ToString());
+                        
+                        command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Error recording rejection reason: {e.Message}");
+            }
+        }
+    }
+
+    private bool ShouldPurchase(Customer customer, MarketListing listing)
+    {
+        var preference = customer.FishPreferences.Find(p => p.FishName == listing.FishName);
+        if (preference == null)
+        {
+            RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.LowPreference);
+            return false;
+        }
+
+        if (listing.ListedPrice > customer.Budget)
+        {
+            RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.OutOfBudget);
+            return false;
+        }
+
+        float maxPriceWilling = CalculateMaxPrice(customer.Type, listing.ListedPrice);
+        if (listing.ListedPrice > maxPriceWilling)
+        {
+            RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.TooExpensive);
+            return false;
+        }
+
+        // ... rest of purchase decision logic ...
+        
+        return true;
+    }
+
+    public bool ProcessCustomerPurchases(Customer customer, List<MarketListing> availableListings)
+    {
+        bool madeAnyPurchase = false;
+        
+        int maxPurchases = 2; // Default value
+        
+        // Use proper enum comparison
+        if (customer.Type == Customer.CUSTOMERTYPE.CASUAL || 
+            customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
+        {
+            maxPurchases = 3;
+        }
+
+        if (customer.PurchaseHistory.Count >= maxPurchases)
+        {
+            foreach (var listing in availableListings.Where(l => !l.IsSold))
+            {
+                RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.ReachedPurchaseLimit);
+            }
+            return false;
+        }
+
+        // ... rest of existing code ...
+        return madeAnyPurchase;
+    }
+
+    private float CalculateMaxPrice(Customer.CUSTOMERTYPE customerType, float marketAverage)
+    {
+        switch (customerType)
+        {
+            case Customer.CUSTOMERTYPE.WEALTHY:
+                return marketAverage * 2.0f;
+            case Customer.CUSTOMERTYPE.COLLECTOR:
+                return marketAverage * 1.5f;
+            case Customer.CUSTOMERTYPE.CASUAL:
+                return marketAverage * 1.1f;
+            case Customer.CUSTOMERTYPE.BUDGET:
+                return marketAverage;
+            default:
+                return marketAverage;
+        }
     }
 }
