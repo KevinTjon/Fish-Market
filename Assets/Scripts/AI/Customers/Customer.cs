@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Mono.Data.Sqlite;
 
 public class Customer
 {
@@ -51,11 +52,20 @@ public class Customer
         public int SellerID;
     }
 
+    [System.Serializable]
+    public class FishPreference
+    {
+        public string FishName { get; set; }
+        public float PreferenceScore { get; set; }  // 0.0 to 1.0
+        public FISHRARITY Rarity { get; set; }
+        public bool HasPurchased { get; set; }
+    }
+
     // Basic properties
     public int CustomerID { get; set; }
     public CUSTOMERTYPE Type { get; set; }
     public int Budget { get; set; }
-    public List<ShoppingListItem> ShoppingList { get; set; }
+    public List<FishPreference> FishPreferences { get; private set; } = new List<FishPreference>();
     public List<SellerBias> SellerPreferences { get; private set; }
     public List<Purchase> PurchaseHistory { get; private set; } = new List<Purchase>();
 
@@ -65,12 +75,18 @@ public class Customer
     // Add to existing properties
     private HashSet<int> visitedSellers = new HashSet<int>();
 
+    // Add a maximum purchases property
+    public int MaxPurchases { get; private set; }
+
+    private string dbPath;  // Add this field
+
     // Constructor
-    public Customer(CUSTOMERTYPE type, int id = 0, int? predefinedBudget = null)
+    public Customer(CUSTOMERTYPE type, string dbPath, int id = 0, int? predefinedBudget = null)
     {
+        this.dbPath = dbPath;  // Store the dbPath
         CustomerID = id;
         Type = type;
-        ShoppingList = new List<ShoppingListItem>();
+        FishPreferences = new List<FishPreference>();
         SellerPreferences = new List<SellerBias>();
         
         if (predefinedBudget.HasValue)
@@ -78,7 +94,6 @@ public class Customer
         else
             SetCustomerProperties(type);
 
-        // Initialize equal biases for all sellers and rarities
         InitializeSellerBiases();
     }
 
@@ -97,27 +112,67 @@ public class Customer
         switch (type)
         {
             case CUSTOMERTYPE.BUDGET:
-                Budget = Random.Range(200, 251);    // Was 150-200, now 200-250 to ensure they can buy multiple common fish
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.COMMON, Amount = Random.Range(1, 3) });
+                Budget = Random.Range(200, 251);
+                MaxPurchases = 2;
+                // Increase preference ranges for common fish
+                AddFishPreferencesForRarity(FISHRARITY.COMMON, 0.5f, 1.0f);      // Was (0.7f, 1.0f)
+                AddFishPreferencesForRarity(FISHRARITY.UNCOMMON, 0.3f, 0.6f);    // Was (0.1f, 0.3f)
                 break;
 
             case CUSTOMERTYPE.CASUAL:
-                Budget = Random.Range(300, 501);    // Was 200-400, now 300-500 to ensure they can afford both fish types
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.COMMON, Amount = Random.Range(1, 3) });
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = 1 });
+                Budget = Random.Range(300, 501);
+                MaxPurchases = 3;
+                // Increase preference ranges for common/uncommon
+                AddFishPreferencesForRarity(FISHRARITY.COMMON, 0.4f, 0.9f);      // Was (0.4f, 0.8f)
+                AddFishPreferencesForRarity(FISHRARITY.UNCOMMON, 0.4f, 0.9f);    // Was (0.5f, 0.9f)
+                AddFishPreferencesForRarity(FISHRARITY.RARE, 0.2f, 0.4f);
                 break;
 
             case CUSTOMERTYPE.COLLECTOR:
-                Budget = Random.Range(800, 1501);   
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.UNCOMMON, Amount = 1 });
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.RARE, Amount = Random.Range(1, 3) });
+                Budget = Random.Range(800, 1501);
+                MaxPurchases = 2;
+                AddFishPreferencesForRarity(FISHRARITY.RARE, 0.6f, 1.0f);
+                AddFishPreferencesForRarity(FISHRARITY.EPIC, 0.7f, 1.0f);
+                AddFishPreferencesForRarity(FISHRARITY.LEGENDARY, 0.4f, 0.8f);
                 break;
 
             case CUSTOMERTYPE.WEALTHY:
-                Budget = Random.Range(1500, 3001);  
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.RARE, Amount = Random.Range(1, 3) });
-                ShoppingList.Add(new ShoppingListItem { Rarity = FISHRARITY.LEGENDARY, Amount = 1 });
+                Budget = Random.Range(1500, 3001);
+                MaxPurchases = 3;
+                AddFishPreferencesForRarity(FISHRARITY.LEGENDARY, 0.8f, 1.0f);
+                AddFishPreferencesForRarity(FISHRARITY.EPIC, 0.6f, 0.9f);
+                AddFishPreferencesForRarity(FISHRARITY.RARE, 0.3f, 0.7f);
                 break;
+        }
+    }
+
+    private void AddFishPreferencesForRarity(FISHRARITY rarity, float minPreference, float maxPreference)
+    {
+        // This method would need to get fish names from the database
+        // For now, we'll assume it's passed in or handled elsewhere
+        using (var connection = new Mono.Data.Sqlite.SqliteConnection(dbPath))
+        {
+            connection.Open();
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT Name FROM Fish WHERE Rarity = @rarity";
+                command.Parameters.AddWithValue("@rarity", rarity.ToString());
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string fishName = reader.GetString(0);
+                        FishPreferences.Add(new FishPreference
+                        {
+                            FishName = fishName,
+                            PreferenceScore = Random.Range(minPreference, maxPreference),
+                            Rarity = rarity,
+                            HasPurchased = false
+                        });
+                    }
+                }
+            }
         }
     }
 
@@ -148,11 +203,6 @@ public class Customer
         }
     }
 
-    public void AddToShoppingList(FISHRARITY rarity, int amount)
-    {
-        ShoppingList.Add(new ShoppingListItem { Rarity = rarity, Amount = amount });
-    }
-
     public void SetBias(int sellerId, FISHRARITY rarity, float value)
     {
         biases[(sellerId, rarity)] = value;
@@ -168,14 +218,14 @@ public class Customer
 
     public override string ToString()
     {
-        string shoppingListStr = string.Join(", ", ShoppingList.Select(item => 
-            $"{item.Amount} {item.Rarity}"));
+        string preferencesStr = string.Join(", ", FishPreferences.Select(pref => 
+            $"{pref.FishName} (Score: {pref.PreferenceScore:F2})"));
         
         string biasStr = string.Join(", ", SellerPreferences.Select(bias =>
             $"{bias.Rarity}: {bias.BiasValue:F2}"));
         
         return $"ID={CustomerID}, Type={Type}, Budget={Budget}, " +
-               $"Shopping List=[{shoppingListStr}], " +
+               $"Preferences=[{preferencesStr}], " +
                $"Biases=[{biasStr}]";
     }
 
@@ -187,6 +237,13 @@ public class Customer
             Price = price,
             SellerID = sellerID
         });
+
+        // Mark the fish as purchased in preferences
+        var preference = FishPreferences.FirstOrDefault(fp => fp.FishName == fishName);
+        if (preference != null)
+        {
+            preference.HasPurchased = true;
+        }
     }
 
     // Add these methods
@@ -208,5 +265,18 @@ public class Customer
     public bool HasVisitedAllSellers()
     {
         return visitedSellers.Count >= System.Enum.GetValues(typeof(SellerType)).Length;
+    }
+
+    public bool HasReachedMaxPurchases()
+    {
+        return PurchaseHistory.Count >= MaxPurchases;
+    }
+
+    public List<FishPreference> GetUnpurchasedPreferences()
+    {
+        return FishPreferences
+            .Where(fp => !fp.HasPurchased)
+            .OrderByDescending(fp => fp.PreferenceScore)
+            .ToList();
     }
 }

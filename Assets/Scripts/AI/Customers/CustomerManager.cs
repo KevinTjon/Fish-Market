@@ -34,6 +34,13 @@ public class CustomerManager : MonoBehaviour
         Debug.Log($"Database path: {this.dbPath}");
     }
 
+    void Start()
+    {
+        // ... existing code ...
+        CleanupAndInitializeBiases();
+        // ... rest of initialization ...
+    }
+
     public void LoadCustomers(TextMeshProUGUI outputText = null)
     {
         try
@@ -79,8 +86,8 @@ public class CustomerManager : MonoBehaviour
                     Customer.CUSTOMERTYPE type = (Customer.CUSTOMERTYPE)reader.GetInt32(1);
                     int budget = reader.GetInt32(2);
 
-                    Customer customer = new Customer(type, customerId, budget);
-                    LoadCustomerShoppingList(connection, customer);
+                    Customer customer = new Customer(type, dbPath, customerId, budget);
+                    LoadCustomerPreferences(connection, customer);
                     LoadCustomerBiases(connection, customer);
                     allCustomers.Add(customer);
                 }
@@ -88,13 +95,13 @@ public class CustomerManager : MonoBehaviour
         }
     }
 
-    private void LoadCustomerShoppingList(SqliteConnection connection, Customer customer)
+    private void LoadCustomerPreferences(SqliteConnection connection, Customer customer)
     {
         using (var command = connection.CreateCommand())
         {
             command.CommandText = @"
-                SELECT Rarity, Amount 
-                FROM CustomerShoppingList 
+                SELECT FishName, PreferenceScore, Rarity, HasPurchased 
+                FROM CustomerPreferences 
                 WHERE CustomerID = @customerId";
             
             command.Parameters.AddWithValue("@customerId", customer.CustomerID);
@@ -103,11 +110,12 @@ public class CustomerManager : MonoBehaviour
             {
                 while (reader.Read())
                 {
-                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)reader.GetInt32(0);
-                    customer.ShoppingList.Add(new Customer.ShoppingListItem
+                    customer.FishPreferences.Add(new Customer.FishPreference
                     {
-                        Rarity = rarity,
-                        Amount = reader.GetInt32(1)
+                        FishName = reader.GetString(0),
+                        PreferenceScore = reader.GetFloat(1),
+                        Rarity = (Customer.FISHRARITY)reader.GetInt32(2),
+                        HasPurchased = reader.GetBoolean(3)
                     });
                 }
             }
@@ -130,7 +138,7 @@ public class CustomerManager : MonoBehaviour
                 while (reader.Read())
                 {
                     int sellerId = reader.GetInt32(0);
-                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)reader.GetInt32(1);
+                    Customer.FISHRARITY rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), reader.GetString(1));
                     float biasValue = reader.GetFloat(2);
                     
                     customer.SetBias(sellerId, rarity, biasValue);
@@ -141,29 +149,25 @@ public class CustomerManager : MonoBehaviour
 
     public void SaveCustomerBias(Customer customer, int sellerId, Customer.FISHRARITY rarity)
     {
-        try
+        using (var connection = new SqliteConnection(dbPath))
         {
-            using (var connection = new SqliteConnection(dbPath))
+            connection.Open();
+            using (var command = connection.CreateCommand())
             {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
-                        INSERT OR REPLACE INTO CustomerBiases (CustomerID, SellerID, Rarity, BiasValue)
-                        VALUES (@customerId, @sellerId, @rarity, @biasValue)";
-                    
-                    command.Parameters.AddWithValue("@customerId", customer.CustomerID);
-                    command.Parameters.AddWithValue("@sellerId", sellerId);
-                    command.Parameters.AddWithValue("@rarity", rarity.ToString());
-                    command.Parameters.AddWithValue("@biasValue", customer.GetBias(sellerId, rarity));
-                    
-                    command.ExecuteNonQuery();
-                }
+                command.CommandText = @"
+                    UPDATE CustomerBiases 
+                    SET BiasValue = @biasValue
+                    WHERE CustomerID = @customerId 
+                    AND SellerID = @sellerId 
+                    AND Rarity = @rarity";
+                
+                command.Parameters.AddWithValue("@customerId", customer.CustomerID);
+                command.Parameters.AddWithValue("@sellerId", sellerId);
+                command.Parameters.AddWithValue("@rarity", rarity.ToString());
+                command.Parameters.AddWithValue("@biasValue", customer.GetBias(sellerId, rarity));
+                
+                command.ExecuteNonQuery();
             }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Error saving customer bias: {e.Message}");
         }
     }
 
@@ -202,14 +206,28 @@ public class CustomerManager : MonoBehaviour
                 command.CommandText = "UPDATE Customers SET IsActive = 0";
                 command.ExecuteNonQuery();
 
-                // Generate new customers with more varied initial biases
+                // Create new CustomerPreferences table
+                command.CommandText = @"
+                    DROP TABLE IF EXISTS CustomerPreferences;
+                    CREATE TABLE CustomerPreferences (
+                        CustomerID INTEGER,
+                        FishName TEXT,
+                        PreferenceScore REAL,
+                        Rarity INTEGER,
+                        HasPurchased BOOLEAN,
+                        PRIMARY KEY (CustomerID, FishName),
+                        FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+                    );";
+                command.ExecuteNonQuery();
+
+                // Generate new customers with preferences
                 for (int i = 0; i < customerDistribution.Length; i++)
                 {
-                    int count = Mathf.RoundToInt(30 * customerDistribution[i]); // Increased from 20 to 30 total customers
+                    int count = Mathf.RoundToInt(30 * customerDistribution[i]); // 30 total customers
                     for (int j = 0; j < count; j++)
                     {
                         Customer.CUSTOMERTYPE type = (Customer.CUSTOMERTYPE)i;
-                        Customer customer = new Customer(type);
+                        Customer customer = new Customer(type, dbPath);
 
                         // Insert customer into database
                         command.CommandText = @"
@@ -224,17 +242,21 @@ public class CustomerManager : MonoBehaviour
                         // Get the new customer ID
                         customer.CustomerID = Convert.ToInt32(command.ExecuteScalar());
 
-                        // Insert shopping list items
-                        foreach (var item in customer.ShoppingList)
+                        // Insert preferences
+                        foreach (var preference in customer.FishPreferences)
                         {
                             command.CommandText = @"
-                                INSERT INTO CustomerShoppingList (CustomerID, Rarity, Amount)
-                                VALUES (@customerId, @rarity, @amount)";
+                                INSERT INTO CustomerPreferences 
+                                (CustomerID, FishName, PreferenceScore, Rarity, HasPurchased)
+                                VALUES 
+                                (@customerId, @fishName, @preferenceScore, @rarity, @hasPurchased)";
                             
                             command.Parameters.Clear();
                             command.Parameters.AddWithValue("@customerId", customer.CustomerID);
-                            command.Parameters.AddWithValue("@rarity", (int)item.Rarity);
-                            command.Parameters.AddWithValue("@amount", item.Amount);
+                            command.Parameters.AddWithValue("@fishName", preference.FishName);
+                            command.Parameters.AddWithValue("@preferenceScore", preference.PreferenceScore);
+                            command.Parameters.AddWithValue("@rarity", (int)preference.Rarity);
+                            command.Parameters.AddWithValue("@hasPurchased", preference.HasPurchased);
                             
                             command.ExecuteNonQuery();
                         }
@@ -244,18 +266,19 @@ public class CustomerManager : MonoBehaviour
                         {
                             foreach (Customer.FISHRARITY rarity in System.Enum.GetValues(typeof(Customer.FISHRARITY)))
                             {
-                                // Generate a random bias between 0.2 and 0.8
-                                float bias = UnityEngine.Random.Range(0.2f, 0.8f);
+                                float bias = 0.2f; // Equal initial bias
                                 customer.SetBias((int)seller, rarity, bias);
 
                                 command.CommandText = @"
-                                    INSERT INTO CustomerBiases (CustomerID, SellerID, Rarity, BiasValue)
-                                    VALUES (@customerId, @sellerId, @rarity, @biasValue)";
+                                    INSERT INTO CustomerBiases 
+                                    (CustomerID, SellerID, Rarity, BiasValue)
+                                    VALUES 
+                                    (@customerId, @sellerId, @rarity, @biasValue)";
                                 
                                 command.Parameters.Clear();
                                 command.Parameters.AddWithValue("@customerId", customer.CustomerID);
                                 command.Parameters.AddWithValue("@sellerId", (int)seller);
-                                command.Parameters.AddWithValue("@rarity", (int)rarity);
+                                command.Parameters.AddWithValue("@rarity", rarity.ToString());
                                 command.Parameters.AddWithValue("@biasValue", bias);
                                 
                                 command.ExecuteNonQuery();
@@ -276,7 +299,60 @@ public class CustomerManager : MonoBehaviour
 
         if (showDebugInfo)
         {
-            Debug.Log($"Generated {allCustomers.Count} new customers with biases");
+            Debug.Log($"Generated {allCustomers.Count} new customers with preferences and biases");
+        }
+    }
+
+    public void CleanupAndInitializeBiases()
+    {
+        using (var connection = new SqliteConnection(dbPath))
+        {
+            connection.Open();
+            using (var command = connection.CreateCommand())
+            {
+                // Drop and recreate the table
+                command.CommandText = @"
+                    DROP TABLE IF EXISTS CustomerBiases;
+                    CREATE TABLE CustomerBiases (
+                        CustomerID INTEGER,
+                        SellerID INTEGER,
+                        Rarity TEXT NOT NULL,  -- Make it NOT NULL to prevent empty entries
+                        BiasValue REAL,
+                        PRIMARY KEY (CustomerID, SellerID, Rarity)
+                    );";
+                command.ExecuteNonQuery();
+            }
+        }
+    }
+
+    private void InitializeCustomerBiases(Customer customer)
+    {
+        using (var connection = new SqliteConnection(dbPath))
+        {
+            connection.Open();
+            using (var command = connection.CreateCommand())
+            {
+                // Initialize biases for each seller and rarity combination
+                foreach (Customer.SellerType seller in Enum.GetValues(typeof(Customer.SellerType)))
+                {
+                    foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+                    {
+                        command.CommandText = @"
+                            INSERT INTO CustomerBiases 
+                            (CustomerID, SellerID, Rarity, BiasValue)
+                            VALUES 
+                            (@customerId, @sellerId, @rarity, @biasValue)";
+                        
+                        command.Parameters.Clear();
+                        command.Parameters.AddWithValue("@customerId", customer.CustomerID);
+                        command.Parameters.AddWithValue("@sellerId", (int)seller);
+                        command.Parameters.AddWithValue("@rarity", rarity.ToString());  // Store as string
+                        command.Parameters.AddWithValue("@biasValue", 0.2f);  // Initial equal bias
+                        
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
         }
     }
 }

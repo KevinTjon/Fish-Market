@@ -83,8 +83,8 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         }
     }
 
-    // Main evaluation method
-    public PurchaseDecision EvaluatePurchase(Customer customer, List<CustomerPurchaseManager.MarketListing> listings, Customer.FISHRARITY rarity)
+    // Main evaluation method - updated to use fish preferences
+    public PurchaseDecision EvaluatePurchase(Customer customer, List<CustomerPurchaseManager.MarketListing> listings)
     {
         if (listings == null || !listings.Any())
         {
@@ -95,62 +95,75 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
             };
         }
 
-        var marketAverages = purchaseManager.GetHistoricalAveragePrices(rarity);
-        
-        // Sort listings by price and seller bias
-        var sortedListings = listings
-            .OrderBy(l => l.ListedPrice)
-            .ThenByDescending(l => customer.GetBias(l.SellerID, rarity))
-            .ToList();
-
-        foreach (var listing in sortedListings)
+        // Get customer's unpurchased preferences in order of preference
+        var preferences = customer.GetUnpurchasedPreferences();
+        if (!preferences.Any())
         {
-            // Skip if already sold
-            if (listing.IsSold)
+            return new PurchaseDecision
+            {
+                WillPurchase = false,
+                Reason = "Customer has no remaining unpurchased preferences"
+            };
+        }
+
+        // For each preference, try to find a suitable listing
+        foreach (var preference in preferences)
+        {
+            var matchingListings = listings
+                .Where(l => l.FishName == preference.FishName && !l.IsSold)
+                .OrderBy(l => l.ListedPrice)
+                .ThenByDescending(l => customer.GetBias(l.SellerID, preference.Rarity))
+                .ToList();
+
+            if (!matchingListings.Any())
                 continue;
 
-            // For wealthy customers, only check against budget
-            if (customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
+            foreach (var listing in matchingListings)
             {
-                if (listing.ListedPrice <= customer.Budget)
+                var marketAverage = purchaseManager.GetHistoricalAveragePrices(preference.Rarity)
+                    .GetValueOrDefault(listing.FishName, listing.ListedPrice);
+
+                // For wealthy customers, only check against budget
+                if (customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
+                {
+                    if (listing.ListedPrice <= customer.Budget)
+                    {
+                        return new PurchaseDecision
+                        {
+                            WillPurchase = true,
+                            SelectedListing = listing,
+                            Reason = $"Wealthy customer accepting preferred fish ({preference.FishName}) within budget"
+                        };
+                    }
+                    continue;
+                }
+
+                var (minWTP, maxWTP) = PriceThresholds[customer.Type];
+                float sellerBias = customer.GetBias(listing.SellerID, preference.Rarity);
+
+                // Adjust WTP based on preference score and seller bias
+                float adjustedMaxWTP = maxWTP * (1 + preference.PreferenceScore) * (1 + sellerBias * 0.2f);
+                float adjustedMinWTP = minWTP * (1 - (1 - preference.PreferenceScore) * 0.2f);
+
+                float priceRatio = listing.ListedPrice / marketAverage;
+
+                if (priceRatio >= adjustedMinWTP && priceRatio <= adjustedMaxWTP && listing.ListedPrice <= customer.Budget)
                 {
                     return new PurchaseDecision
                     {
                         WillPurchase = true,
                         SelectedListing = listing,
-                        Reason = $"Wealthy customer accepting purchase within budget: {listing.ListedPrice} <= {customer.Budget}"
+                        Reason = $"Accepting purchase of {preference.FishName} (preference score: {preference.PreferenceScore:F2})" +
+                                $" Price ratio {priceRatio:F2} within range [{adjustedMinWTP:F2}-{adjustedMaxWTP:F2}]"
                     };
                 }
-                continue;
-            }
-
-            float marketAverage = marketAverages.GetValueOrDefault(listing.FishName, listing.ListedPrice);
-            var (minWTP, maxWTP) = PriceThresholds[customer.Type];
-            float rarityPreference = RarityPreferences[customer.Type][listing.Rarity];
-            float sellerBias = customer.GetBias(listing.SellerID, listing.Rarity);
-
-            // Adjust WTP based on rarity preference and seller bias
-            float adjustedMaxWTP = maxWTP * (1 + rarityPreference) * (1 + sellerBias * 0.2f);
-            float adjustedMinWTP = minWTP * (1 - (1 - rarityPreference) * 0.2f);
-
-            float priceRatio = listing.ListedPrice / marketAverage;
-
-            if (priceRatio >= adjustedMinWTP && priceRatio <= adjustedMaxWTP)
-            {
-                return new PurchaseDecision
-                {
-                    WillPurchase = true,
-                    SelectedListing = listing,
-                    Reason = $"Accepting purchase: Price ratio {priceRatio:F2} within range [{adjustedMinWTP:F2}-{adjustedMaxWTP:F2}]. " +
-                            $"Rarity preference: {rarityPreference:F2}, Seller bias: {sellerBias:F2}"
-                };
             }
         }
 
         return new PurchaseDecision
         {
             WillPurchase = false,
-            Reason = "No acceptable listings found within price range and preferences"
+            Reason = "No acceptable listings found matching preferences and price criteria"
         };
     }
 

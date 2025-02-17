@@ -17,7 +17,7 @@ public class MarketPriceInitializer : MonoBehaviour
         }
     }
 
-    public void Generate5DayPrices()
+    public void GenerateDayPrices()
     {
         string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
 
@@ -48,28 +48,19 @@ public class MarketPriceInitializer : MonoBehaviour
                             
                             // Generate base price for this fish
                             float basePrice = UnityEngine.Random.Range(range.min, range.max + 1);
-                            //Debug.Log($"{fishName} ({rarity}) - Base Price: {basePrice:F2} gold");
 
-                            // Generate 5 days of prices with fluctuations
-                            for (int day = 1; day <= 5; day++)
+                            // Generate just one day of prices
+                            using (var insertCommand = connection.CreateCommand())
                             {
-                                // Add random fluctuation (-20% to +20%)
-                                float fluctuation = UnityEngine.Random.Range(-0.2f, 0.2f);
-                                float dailyPrice = basePrice * (1 + fluctuation);
+                                insertCommand.CommandText = @"
+                                    INSERT INTO MarketPrices (FishName, Day, Price) 
+                                    VALUES (@fishName, @day, @price)";
                                 
-                                using (var insertCommand = connection.CreateCommand())
-                                {
-                                    insertCommand.CommandText = @"
-                                        INSERT INTO MarketPrices (FishName, Day, Price) 
-                                        VALUES (@fishName, @day, @price)";
-                                    
-                                    insertCommand.Parameters.AddWithValue("@fishName", fishName);
-                                    insertCommand.Parameters.AddWithValue("@day", day);
-                                    insertCommand.Parameters.AddWithValue("@price", dailyPrice);
-                                    
-                                    insertCommand.ExecuteNonQuery();
-                                    //Debug.Log($"Set Day {day} price for {fishName} ({rarity}): {dailyPrice:F2}");
-                                }
+                                insertCommand.Parameters.AddWithValue("@fishName", fishName);
+                                insertCommand.Parameters.AddWithValue("@day", 1);
+                                insertCommand.Parameters.AddWithValue("@price", basePrice);
+                                
+                                insertCommand.ExecuteNonQuery();
                             }
                         }
                     }
@@ -140,11 +131,11 @@ public class MarketPriceInitializer : MonoBehaviour
         }
     }
 
-    // For testing in Unity Editor
-    [ContextMenu("Generate 5 Days of Prices")]
+    // Update the test menu item name
+    [ContextMenu("Generate Day 1 Prices")]
     public void TestInitialization()
     {
-        Generate5DayPrices();
+        GenerateDayPrices();
         ShowCurrentMarketPrices();
     }
 }

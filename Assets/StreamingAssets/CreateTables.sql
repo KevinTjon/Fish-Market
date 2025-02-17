@@ -59,12 +59,14 @@ CREATE TABLE IF NOT EXISTS CustomerBiases (
     PRIMARY KEY(CustomerID, SellerID, Rarity)
 );
 
-CREATE TABLE IF NOT EXISTS CustomerShoppingList (
+CREATE TABLE IF NOT EXISTS CustomerPreferences (
     CustomerID INTEGER,
+    FishName TEXT,
+    PreferenceScore REAL,
     Rarity INTEGER,
-    Amount INTEGER,
-    FOREIGN KEY(CustomerID) REFERENCES Customers(CustomerID),
-    PRIMARY KEY(CustomerID, Rarity)
+    HasPurchased BOOLEAN,
+    PRIMARY KEY (CustomerID, FishName),
+    FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
 );
 
 -- Populate Fish table with enhanced test data
