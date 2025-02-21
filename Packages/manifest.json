@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.monitor1394.xcharts": "file:C:/Users/kevin/Downloads/XCharts-master/XCharts-master",
     "com.unity.collab-proxy": "2.5.2",
     "com.unity.feature.2d": "2.0.1",
     "com.unity.ide.rider": "3.0.31",
