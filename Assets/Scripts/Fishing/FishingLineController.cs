@@ -1,10 +1,12 @@
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class FishingLineController : MonoBehaviour
 {    
     // Add to FishingLine class
-    private Color _lineColor = Color.black;
-    private const float Width = .03f;
+    private Color lineColor = Color.black;
+    private float width;
     private const float PullConstant = 100f;
     private const float PushConstant = 120f;
     private const float ReelSpeed = 3f;
@@ -12,6 +14,7 @@ public class FishingLineController : MonoBehaviour
     private const float Damping = 25f;
     // --------------------------------------------
     
+
     // Length of the rod
     public Vector2 currVector { get; private set; }
     public float baseLength { get; private set; }
@@ -20,32 +23,29 @@ public class FishingLineController : MonoBehaviour
     // --------------------------------------------
 
     // Replace with manual calculation based on player position and boat size
-    private const float TurnTriggerLength = 1.75f;
+    private const float TurnTriggerLength = 1.5f;
     // --------------------------------------------
 
 
     
-    private LineRenderer line;
-
-    [SerializeField] private Transform rod;
-    //private Vector2 rodPos;
-    [SerializeField] private Transform hook;
+    private LineRenderer lineRenderer;
+    private Transform rod;
+    private Transform hook;
     
-
-    private void Awake()
+    public void InstantiateLine(Transform rod, Transform hook, float width)
     {
-        line = GetComponent<LineRenderer>();
-        line.startColor = _lineColor;
-        line.endColor = _lineColor;
-    }
+        lineRenderer = GetComponent<LineRenderer>();
+        lineRenderer.startColor = lineColor;
+        lineRenderer.endColor = lineColor;
+        lineRenderer.startWidth = width;
+        lineRenderer.positionCount = 2;
+        
+        this.rod = rod; this.hook = hook;
 
-    private void Start()
-    {
-        line.positionCount = 2;
+        
         var lineBounds = hook.position - rod.position;
         currLength = baseLength = lineBounds.magnitude;
         
-        line.startWidth = Width;
     }
 
     /**
@@ -54,10 +54,21 @@ public class FishingLineController : MonoBehaviour
     private void Update()
     {
         // Line visuals
-        line.SetPosition(0, rod.position);
-        line.SetPosition(1, hook.position);
+        lineRenderer.SetPosition(0, rod.position);
+        lineRenderer.SetPosition(1, hook.position);
     }
 
+    private void FixedUpdate()
+    {
+        
+    }
+
+    public void SetLength(float length)
+    {
+        baseLength = length;
+        //currLength = length;
+    }
+    
     public void AlterLength(float input)
     {
         var dLength = input * ReelSpeed * Time.fixedDeltaTime;
@@ -65,39 +76,44 @@ public class FishingLineController : MonoBehaviour
         {
             dLength *= ReelDownConstant;
         }
-        baseLength -= dLength;
+        SetLength(baseLength-dLength);
         if (baseLength < 0f)
         {
-            baseLength = 0f;
+            SetLength(0f);
         }
     }
+
+
 
     // Calculates the force vector when simulating tension
     // 
     // Uses Hooke's law
-    public Vector2 CalculateHookForce()
+    private void UpdateLine(Vector2 newVector,float newLength)
+    {
+        currLength = newLength;
+        currVector = newVector;
+    }
+    public Vector2 CalculateHookForce(bool hasTension)
     {
         var newVector = hook.position - rod.position;
-        //currVector = hook.position - rod.position;
-        var newNormalVector = newVector.normalized;
-        var newBaseVector = newNormalVector * baseLength;
         var newLength = newVector.magnitude;
 
+        if (!hasTension)
+        {
+            UpdateLine(newVector, newLength);
+            return Vector2.zero;
+        }
+
+        var newNormalVector = newVector.normalized;
+        var newBaseVector = newNormalVector * baseLength;
         var dVector = newBaseVector - newVector;        
         var dMagnitude = newLength - currLength;
         var dampForce = Damping * dMagnitude * newNormalVector / Time.fixedDeltaTime;
+        UpdateLine(newVector, newLength);
 
-        currLength = newLength;
-        currVector = newVector;
-
-        if (IsOppositeDirection(currVector.x, dVector.x))
-        {
-            return (PullConstant * dVector) - dampForce;
-        }
-        else
-        {
-            return (PushConstant * dVector) - dampForce;
-        }
+        return IsOppositeDirection(currVector.x, dVector.x)
+            ? (PullConstant * dVector) - dampForce
+            : (PushConstant * dVector) - dampForce;
     }
 
     private bool IsOppositeDirection(float x, float y)
@@ -121,11 +137,4 @@ public class FishingLineController : MonoBehaviour
     {
         baseLength = currLength;
     } 
-    /*
-    public void MoveRod(Vector2 newPos)
-    {
-        rod.position = newPos;
-    }
-    */
-
 }

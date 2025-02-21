@@ -5,26 +5,21 @@ public class HookController : MonoBehaviour
     // Determines if the hook is on the water surface
     public bool onWaterSurface { get; private set; }
     public bool inSwingbackMode { get; private set; }
+
     public Rigidbody2D hookRB { get; private set; }
     public GameObject baitObject { get; private set; }
     
     public float baitOffset;
-    public float waterLevel;
+    public float waterLevel { get; private set; }
     
-    // Start is called before the first frame update
-    void Start()
+    public void InstantiateHook(Rigidbody2D rb)
     {
-        hookRB = GetComponent<Rigidbody2D>();
+        hookRB = rb;
         hookRB.AddForce(new Vector2(0, 0));
-
+        
         onWaterSurface = false;
         inSwingbackMode = false;
-    }
-    // Update is called once per frame
-    void Update()
-    {
-        // Change color of line based on strength
-    }
+    } 
 
     // Determines if the hook collides with an IHookable object
     public void OnCollisionEnter2D(Collision2D collision2D)
@@ -49,17 +44,18 @@ public class HookController : MonoBehaviour
         hookRB.AddForce(force);
     }
 
-    public void SetSwingbackMode(bool mode)
+    public void SetWaterLevel(float level)
     {
-        inSwingbackMode = mode;
+        waterLevel = level;
     }
 
-    public void AttachHookToSurface(float posY)
+    public void AttachHookToSurface()
     {
         // Set to ocean top
-        hookRB.position = new Vector2(hookRB.position.x, posY);
+        
         // Freeze y movement in ocea
         hookRB.constraints = RigidbodyConstraints2D.FreezePositionY;
+        hookRB.position = new Vector2(hookRB.position.x, waterLevel);
         onWaterSurface = true;
     }
 
