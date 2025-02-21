@@ -46,7 +46,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": true
                 },
                 {
-                    ""name"": ""UseHook"",
+                    ""name"": ""CastRod"",
                     ""type"": ""Button"",
                     ""id"": ""8e5585f2-4ace-4e58-91fe-01d00e0eaf34"",
                     ""expectedControlType"": """",
@@ -151,7 +151,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""UseHook"",
+                    ""action"": ""CastRod"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -162,7 +162,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Gamepad"",
-                    ""action"": ""UseHook"",
+                    ""action"": ""CastRod"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -719,7 +719,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
         m_Player_MoveBoat = m_Player.FindAction("MoveBoat", throwIfNotFound: true);
         m_Player_ReelLine = m_Player.FindAction("ReelLine", throwIfNotFound: true);
-        m_Player_UseHook = m_Player.FindAction("UseHook", throwIfNotFound: true);
+        m_Player_CastRod = m_Player.FindAction("CastRod", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -801,14 +801,14 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
     private List<IPlayerActions> m_PlayerActionsCallbackInterfaces = new List<IPlayerActions>();
     private readonly InputAction m_Player_MoveBoat;
     private readonly InputAction m_Player_ReelLine;
-    private readonly InputAction m_Player_UseHook;
+    private readonly InputAction m_Player_CastRod;
     public struct PlayerActions
     {
         private @FishingControls m_Wrapper;
         public PlayerActions(@FishingControls wrapper) { m_Wrapper = wrapper; }
         public InputAction @MoveBoat => m_Wrapper.m_Player_MoveBoat;
         public InputAction @ReelLine => m_Wrapper.m_Player_ReelLine;
-        public InputAction @UseHook => m_Wrapper.m_Player_UseHook;
+        public InputAction @CastRod => m_Wrapper.m_Player_CastRod;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -824,9 +824,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @ReelLine.started += instance.OnReelLine;
             @ReelLine.performed += instance.OnReelLine;
             @ReelLine.canceled += instance.OnReelLine;
-            @UseHook.started += instance.OnUseHook;
-            @UseHook.performed += instance.OnUseHook;
-            @UseHook.canceled += instance.OnUseHook;
+            @CastRod.started += instance.OnCastRod;
+            @CastRod.performed += instance.OnCastRod;
+            @CastRod.canceled += instance.OnCastRod;
         }
 
         private void UnregisterCallbacks(IPlayerActions instance)
@@ -837,9 +837,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @ReelLine.started -= instance.OnReelLine;
             @ReelLine.performed -= instance.OnReelLine;
             @ReelLine.canceled -= instance.OnReelLine;
-            @UseHook.started -= instance.OnUseHook;
-            @UseHook.performed -= instance.OnUseHook;
-            @UseHook.canceled -= instance.OnUseHook;
+            @CastRod.started -= instance.OnCastRod;
+            @CastRod.performed -= instance.OnCastRod;
+            @CastRod.canceled -= instance.OnCastRod;
         }
 
         public void RemoveCallbacks(IPlayerActions instance)
@@ -997,7 +997,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
     {
         void OnMoveBoat(InputAction.CallbackContext context);
         void OnReelLine(InputAction.CallbackContext context);
-        void OnUseHook(InputAction.CallbackContext context);
+        void OnCastRod(InputAction.CallbackContext context);
     }
     public interface IUIActions
     {

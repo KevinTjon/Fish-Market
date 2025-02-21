@@ -24,7 +24,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "UseHook",
+                    "name": "CastRod",
                     "type": "Button",
                     "id": "8e5585f2-4ace-4e58-91fe-01d00e0eaf34",
                     "expectedControlType": "",
@@ -129,7 +129,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "UseHook",
+                    "action": "CastRod",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -140,7 +140,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Gamepad",
-                    "action": "UseHook",
+                    "action": "CastRod",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
