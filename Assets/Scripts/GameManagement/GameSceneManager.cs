@@ -201,41 +201,37 @@ public class GameSceneManager : MonoBehaviour
     private void SaveFishData(CaughtFishData fish)
     {
         string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
-        
-        using (IDbConnection connection = new SqliteConnection(dbPath))
+
+        using IDbConnection connection = new SqliteConnection(dbPath);
+        connection.Open();
+        using IDbCommand command = connection.CreateCommand();
+        // Insert into Inventory table
+        command.CommandText = @"
+            INSERT INTO Inventory (Name, Weight, Rarity, AssetPath)
+            SELECT @Name, @Weight, Rarity, AssetPath
+            FROM Fish
+            WHERE Name = @Name";
+
+        // Add parameters
+        var nameParam = command.CreateParameter();
+        nameParam.ParameterName = "@Name";
+        nameParam.Value = fish.Name;
+        command.Parameters.Add(nameParam);
+
+        var weightParam = command.CreateParameter();
+        weightParam.ParameterName = "@Weight";
+        weightParam.Value = fish.Weight.ToString(); // Convert to string as Weight is TEXT in DB
+
+        command.Parameters.Add(weightParam);
+
+        try
         {
-            connection.Open();
-            using (IDbCommand command = connection.CreateCommand())
-            {
-                // Insert into Inventory table
-                command.CommandText = @"
-                    INSERT INTO Inventory (Name, Weight, Rarity, AssetPath)
-                    SELECT @Name, @Weight, Rarity, AssetPath
-                    FROM Fish
-                    WHERE Name = @Name";
-
-                // Add parameters
-                var nameParam = command.CreateParameter();
-                nameParam.ParameterName = "@Name";
-                nameParam.Value = fish.Name;
-                command.Parameters.Add(nameParam);
-
-                var weightParam = command.CreateParameter();
-                weightParam.ParameterName = "@Weight";
-                weightParam.Value = fish.Weight.ToString(); // Convert to string as Weight is TEXT in DB
-
-                command.Parameters.Add(weightParam);
-
-                try
-                {
-                    command.ExecuteNonQuery();
-                    Debug.Log($"Saved to inventory: {fish.Name}, Weight: {fish.Weight}");
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"Error saving fish to inventory: {e.Message}");
-                }
-            }
+            command.ExecuteNonQuery();
+            Debug.Log($"Saved to inventory: {fish.Name}, Weight: {fish.Weight}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error saving fish to inventory: {e.Message}");
         }
     }
 

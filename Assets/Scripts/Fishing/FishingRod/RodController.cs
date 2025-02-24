@@ -34,8 +34,8 @@ public class RodController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        line.InstantiateLine(rodConnection, hook.transform, LineWidth);
-        hook.InstantiateHook(hook.GetComponent<Rigidbody2D>());
+        line.InitializeLine(rodConnection, hook.transform, LineWidth);
+        hook.InitializeHook(hook.GetComponent<Rigidbody2D>());
     }
 
     public void SetWaterLevel(float waterLevel)

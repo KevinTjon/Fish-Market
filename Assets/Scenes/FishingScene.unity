@@ -1349,6 +1349,58 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!1 &1912969495
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1912969497}
+  - component: {fileID: 1912969496}
+  m_Layer: 0
+  m_Name: Flock
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1912969496
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1912969495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f217075d07ae0ed4c903f1e2d31f909a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agentPrefab: {fileID: 5317058714821455866, guid: 6b09fd19084158d4caf2b8405db81612, type: 3}
+  behaviour: {fileID: 11400000, guid: 178e9fced6d3a6f4a9f8f2789d3f141b, type: 2}
+  startingCount: 250
+  driveFactor: 10
+  maxSpeed: 5
+  neighbourRadius: 1.5
+  avoidanceRadiusMultiplier: 0.5
+  avoidancePredatorMultiplier: 2
+--- !u!4 &1912969497
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1912969495}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.0154455, y: -1.9376099, z: 0.027884994}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2054457668
 GameObject:
   m_ObjectHideFlags: 0
@@ -1564,3 +1616,4 @@ SceneRoots:
   - {fileID: 1329876968}
   - {fileID: 401307499}
   - {fileID: 2054457670}
+  - {fileID: 1912969497}

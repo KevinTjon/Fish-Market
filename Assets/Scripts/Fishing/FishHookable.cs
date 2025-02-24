@@ -1,14 +1,17 @@
 using System.Collections;
 using UnityEngine;
-
-//Requires a collider to see neighbours
-[RequireComponent(typeof(Collider2D))]
-
-public class FlockAgent : ObjectHookable, IFish
+//us
+public class FishHookable : ObjectHookable, IFish
 {
     private bool isStunned;
     public bool IsStunned { get {return isStunned;}}
     public bool HasBoidMovement { get {return !isStunned && !isHooked;} }
+    /*public bool IsRagdoll
+    {
+        get {return rb.isKinematic;}
+        private set {rb.isKinematic = value;}
+    }
+    */
     
     private Flock flock;
     public Flock Flock { get {return flock;} }

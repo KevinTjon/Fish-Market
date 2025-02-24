@@ -12,7 +12,7 @@ public class HookController : MonoBehaviour
     public float baitOffset;
     public float waterLevel { get; private set; }
     
-    public void InstantiateHook(Rigidbody2D rb)
+    public void InitializeHook(Rigidbody2D rb)
     {
         hookRB = rb;
         hookRB.AddForce(new Vector2(0, 0));
@@ -22,19 +22,23 @@ public class HookController : MonoBehaviour
     } 
 
     // Determines if the hook collides with an IHookable object
-    public void OnCollisionEnter2D(Collision2D collision2D)
+    public void OnCollisionEnter2D(Collision2D col)
     {
         if (baitObject == null)
         {
-            if (collision2D.rigidbody != null &&
-                collision2D.gameObject.layer == LayerMask.NameToLayer("Hookable"))
+            if (col.rigidbody != null &&
+                col.gameObject.layer == LayerMask.NameToLayer("Hookable"))
             {
+                
                 var offset = -transform.up * baitOffset;
                 var newPos = offset + transform.position;
-                collision2D.gameObject.GetComponent<HookableObject>().HookObject(newPos);
+                
+
+                // set posistion of recently hooked object
+                col.gameObject.GetComponent<ObjectHookable>().Hook(newPos);
 
                 gameObject.AddComponent<FixedJoint2D>();
-                gameObject.GetComponent<FixedJoint2D>().connectedBody = collision2D.rigidbody;
+                gameObject.GetComponent<FixedJoint2D>().connectedBody = col.rigidbody;
             }
         }
     }

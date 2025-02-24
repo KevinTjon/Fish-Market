@@ -32,7 +32,7 @@ public class FishingLineController : MonoBehaviour
     private Transform rod;
     private Transform hook;
     
-    public void InstantiateLine(Transform rod, Transform hook, float width)
+    public void InitializeLine(Transform rod, Transform hook, float width)
     {
         lineRenderer = GetComponent<LineRenderer>();
         lineRenderer.startColor = lineColor;

@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -28,10 +27,10 @@ public class Flock : MonoBehaviour
     [Range(1f, 10f)] // multiplier for avoidance from predator
     public float avoidancePredatorMultiplier = 2f;
 
-    float sqaureMaxSpeed;
-    float squareNeighbourRadius;
-    float squareAvoidanceRadius;
-    public float SquareAvoidanceRadius {get {return squareAvoidanceRadius;}}
+    private float sqaureMaxSpeed;
+    private float squareNeighbourRadius;
+    private float squareAvoidanceRadius;
+    public float SquareAvoidanceRadius { get {return squareAvoidanceRadius;} }
 
     // Start is called before the first frame update
     void Start()
@@ -60,16 +59,20 @@ public class Flock : MonoBehaviour
     {
         foreach (FlockAgent agent in agents)
         {
-            List<Transform> context = GetNearbyObjects(agent); //What things exists in our neighbour radius
+            Vector2 move = Vector2.zero;
+            if (agent.IsStunned)
+            {
+                List<Transform> context = GetNearbyObjects(agent); //What things exists in our neighbour radius
 
-            //For demo, not intended for production. INEFFICIENT, REALLY BAD WILL LAG AND EXPLODE IF TOO MUCH!!
-            //agent.GetComponentInChildren<SpriteRenderer>().color = Color.Lerp(Color.white, Color.red, context.Count / 6f); //if 0 neighbours white, if 6 red, between a hue betwwen
+                //For demo, not intended for production. INEFFICIENT, REALLY BAD WILL LAG AND EXPLODE IF TOO MUCH!!
+                //agent.GetComponentInChildren<SpriteRenderer>().color = Color.Lerp(Color.white, Color.red, context.Count / 6f); //if 0 neighbours white, if 6 red, between a hue betwwen
 
 
-            Vector2 move = behaviour.CalculateMove(agent, context, this);
-            move *= driveFactor;
-            if (move.sqrMagnitude > sqaureMaxSpeed){ //checks if move is greater than our set maxspeed
-                move = move.normalized * maxSpeed; //reset the move speed back to 1 and then set it to max speed
+                move = behaviour.CalculateMove(agent, context, this);
+                move *= driveFactor;
+                if (move.sqrMagnitude > sqaureMaxSpeed){ //checks if move is greater than our set maxspeed
+                    move = move.normalized * maxSpeed; //reset the move speed back to 1 and then set it to max speed
+                }
             }
             //Debug.Log("Move: "+ move);
             agent.Move(move);
@@ -79,12 +82,15 @@ public class Flock : MonoBehaviour
 
     //Rather than iterating through all the agents and find the distance compared to the radius to find our neighbours
     //using Unity physics engine, we can run a physics overlap check and just check which agent gets hit by a casted circle
-    List<Transform> GetNearbyObjects(FlockAgent agent){
+    List<Transform> GetNearbyObjects(FlockAgent agent)
+    {
         List<Transform> context = new List<Transform>();
         Collider2D[] contextColliders = Physics2D.OverlapCircleAll(agent.transform.position, neighbourRadius); //creates an imaginary circle in space
         
-        foreach (Collider2D c in contextColliders){
-            if (c != agent.AgentCollider){ // if not iself
+        foreach (Collider2D c in contextColliders)
+        {
+            if (c != agent.Collider)
+            { // if not iself
                 context.Add(c.transform); // add to the context list
             }
         }

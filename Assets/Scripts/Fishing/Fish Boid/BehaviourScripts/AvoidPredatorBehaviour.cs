@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -13,7 +12,9 @@ public class AvoidPredatorBehaviour : FlockBehaviour
         foreach (Transform item in context)
         {
             FlockAgent flockAgent = item.GetComponent<FlockAgent>();
-            if (flockAgent != null && flockAgent.isPredator){ // Check if the agent is a predator
+            // Check if the agent is a predator
+            if (flockAgent != null && (flockAgent.isPredator || flockAgent.IsHooked))
+            { 
                 predatorCount++;
                 move += (Vector2)(agent.transform.position - item.position); // Move away from predator
             }
