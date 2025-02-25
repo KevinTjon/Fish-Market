@@ -78,10 +78,11 @@ public class MarketPriceInitializer : MonoBehaviour
         switch (rarity)
         {
             case "LEGENDARY": return new PriceRange(800, 1200);
-            case "RARE": return new PriceRange(400, 600);
+            case "EPIC": return new PriceRange(400, 600);
+            case "RARE": return new PriceRange(200, 300);
             case "UNCOMMON": return new PriceRange(80, 120);
             case "COMMON": return new PriceRange(40, 60);
-            default: return new PriceRange(5, 15);
+            default: return new PriceRange(20, 30);
         }
     }
 

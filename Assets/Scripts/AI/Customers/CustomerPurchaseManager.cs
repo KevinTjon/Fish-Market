@@ -24,6 +24,10 @@ public class CustomerPurchaseManager : MonoBehaviour
     // Add new fields for tracking market balance
     [SerializeField] private float listingToCustomerRatio = 3f; // Threshold for generating new customers
     [SerializeField] private int maxNewCustomersPerBatch = 5;
+    
+    // Add cache for listings
+    private Dictionary<Customer.FISHRARITY, List<MarketListing>> listingsCache = new Dictionary<Customer.FISHRARITY, List<MarketListing>>();
+    private bool listingsCacheNeedsRefresh = true;
 
     private void Awake()
     {
@@ -36,74 +40,100 @@ public class CustomerPurchaseManager : MonoBehaviour
         {
             Debug.LogError("CustomerPurchaseEvaluator not found!");
         }
-
-        // Use the same path format as CustomerManager
-        string dbName = "FishDB.db";
-        string dbPath = System.IO.Path.Combine(Application.streamingAssetsPath, dbName);
-        this.dbPath = $"URI=file:{dbPath}";
-        
-        Debug.Log($"Purchase Manager Database path: {this.dbPath}");
     }
 
     public float GetSellerBias(int customerId, Customer.SellerType seller, Customer.FISHRARITY rarity)
     {
-        using (var connection = new SqliteConnection(dbPath))
-        {
-            connection.Open();
-            using (var command = connection.CreateCommand())
+        var result = DatabaseManager.Instance.ExecuteScalar(
+            @"SELECT BiasValue 
+              FROM CustomerBiases 
+              WHERE CustomerID = @customerId 
+              AND SellerID = @sellerId 
+              AND Rarity = @rarity",
+            new Dictionary<string, object>
             {
-                command.CommandText = @"
-                    SELECT BiasValue 
-                    FROM CustomerBiases 
-                    WHERE CustomerID = @customerId 
-                    AND SellerID = @sellerId 
-                    AND Rarity = @rarity";
-                
-                command.Parameters.AddWithValue("@customerId", customerId);
-                command.Parameters.AddWithValue("@sellerId", (int)seller);
-                command.Parameters.AddWithValue("@rarity", (int)rarity);
-
-                var result = command.ExecuteScalar();
-                return result != null ? Convert.ToSingle(result) : 0.2f;
-            }
-        }
+                { "@customerId", customerId },
+                { "@sellerId", (int)seller },
+                { "@rarity", rarity.ToString() }
+            });
+            
+        return result != null ? Convert.ToSingle(result) : 0.2f;
     }
 
     public bool CheckSellerListings(Customer.SellerType seller, Customer.FISHRARITY rarity)
     {
-        using (var connection = new SqliteConnection(dbPath))
-        {
-            connection.Open();
-            using (var command = connection.CreateCommand())
+        var result = DatabaseManager.Instance.ExecuteScalar(
+            @"SELECT COUNT(*) 
+              FROM MarketListings 
+              WHERE SellerID = @sellerId 
+              AND Rarity = @rarity 
+              AND IsSold = 0",
+            new Dictionary<string, object>
             {
-                command.CommandText = @"
-                    SELECT COUNT(*) 
-                    FROM MarketListings 
-                    WHERE SellerID = @sellerId 
-                    AND Rarity = @rarity 
-                    AND IsSold = 0";
-                
-                command.Parameters.AddWithValue("@sellerId", (int)seller);
-                command.Parameters.AddWithValue("@rarity", rarity.ToString());
-
-                int count = Convert.ToInt32(command.ExecuteScalar());
-                return count > 0;
-            }
-        }
+                { "@sellerId", (int)seller },
+                { "@rarity", rarity.ToString() }
+            });
+            
+        return Convert.ToInt32(result) > 0;
     }
 
     public void ProcessCustomerPurchases()
     {
-        if (waitingCustomers.Count == 0)
-        {
-            CheckAndGenerateMoreCustomers();
-            Debug.Log("No customers waiting to make purchases.");
-            return;
-        }
+        bool shouldGenerateMore;
+        int maxGenerationCycles = 3; // Limit how many times we generate new customers
+        int generationCycle = 0;
 
-        Debug.Log($"Processing purchases for {waitingCustomers.Count} customers...");
-        purchaseHistory.Clear();
+        do {
+            shouldGenerateMore = false;
+            
+            // First check if we need to generate more customers
+            if (waitingCustomers.Count == 0)
+            {
+                CheckAndGenerateMoreCustomers();
+                // If we still have no customers after generation, then we can return
+                if (waitingCustomers.Count == 0)
+                {
+                    Debug.Log("No customers waiting to make purchases.");
+                    return;
+                }
+            }
 
+            Debug.Log($"Processing purchases for {waitingCustomers.Count} customers...");
+            purchaseHistory.Clear();
+            
+            // Refresh the listings cache once before processing all customers
+            listingsCacheNeedsRefresh = true;
+            
+            // Pre-load all rarities into cache
+            foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+            {
+                GetListings(rarity);
+            }
+
+            // Process all current waiting customers
+            ProcessCurrentWaitingCustomers();
+
+            Debug.Log($"After processing: {waitingCustomers.Count} customers still shopping");
+            
+            // Check if we should generate more customers
+            if (generationCycle < maxGenerationCycles)
+            {
+                int unsoldListings = GetTotalUnsoldListings();
+                if (unsoldListings > 0)
+                {
+                    generationCycle++;
+                    CheckAndGenerateMoreCustomers();
+                    if (waitingCustomers.Count > 0)
+                    {
+                        shouldGenerateMore = true;
+                    }
+                }
+            }
+        } while (shouldGenerateMore);
+    }
+
+    private void ProcessCurrentWaitingCustomers()
+    {
         for (int i = waitingCustomers.Count - 1; i >= 0; i--)
         {
             var customer = waitingCustomers[i];
@@ -157,7 +187,7 @@ public class CustomerPurchaseManager : MonoBehaviour
                                     listings
                                 );
 
-                                if (decision.WillPurchase && CanMakeMorePurchases(customer))
+                                if (decision.WillPurchase && !customer.HasReachedMaxPurchases())
                                 {
                                     customer.Budget -= (int)decision.SelectedListing.ListedPrice;
                                     if (MarkListingAsSold(decision.SelectedListing.ListingID, customer.CustomerID))
@@ -166,10 +196,20 @@ public class CustomerPurchaseManager : MonoBehaviour
                                         boughtAnything = true;
                                         shouldContinueWithSeller = true;
 
-                                        AdjustSellerBias(customer, selectedSellerId, preference);
+                                        // Calculate bias change based on preference score
+                                        float biasChange = preference.PreferenceScore < 0.5f ? -0.1f : 0.1f;
+                                        // Scale bias change based on how far from neutral (0.5) the preference was
+                                        biasChange *= Mathf.Abs(preference.PreferenceScore - 0.5f) * 2f;
+                                        
+                                        AdjustSellerBias(customer, selectedSellerId, preference.Rarity, biasChange, 
+                                            $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) for {decision.SelectedListing.ListedPrice} gold from Seller {selectedSellerId}");
                                         
                                         // Update the HasPurchased status in the database
-                                        customerManager.UpdateCustomerPreference(customer, decision.SelectedListing.FishName, true);
+                                        DatabaseManager.Instance.UpdateCustomerPreference(
+                                            customer.CustomerID, 
+                                            decision.SelectedListing.FishName, 
+                                            true
+                                        );
                                         
                                         customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
                                             $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) " +
@@ -190,7 +230,7 @@ public class CustomerPurchaseManager : MonoBehaviour
 
                 if (!foundDesiredFish)
                 {
-                    AdjustSellerBiasForNoDesiredFish(customer, selectedSellerId, preferences[0].Rarity);
+                    AdjustSellerBias(customer, selectedSellerId, preferences[0].Rarity, -0.15f, $"No desired fish available");
                     customerHistory.AppendLine($"Customer {customer.CustomerID}: Decreased bias for Seller {selectedSellerId} " +
                         $"(New Bias: {customer.GetBias(selectedSellerId, preferences[0].Rarity):F2}) - No desired fish available");
                 }
@@ -217,18 +257,30 @@ public class CustomerPurchaseManager : MonoBehaviour
 
             purchaseHistory.Add(customerHistory.ToString().TrimEnd());
         }
+    }
 
-        Debug.Log($"After processing: {waitingCustomers.Count} customers still shopping");
+    private int GetTotalUnsoldListings()
+    {
+        int total = 0;
+        foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+        {
+            total += GetListings(rarity).Count(l => !l.IsSold);
+        }
+        return total;
     }
 
     private void CheckAndGenerateMoreCustomers()
     {
         // Count total unsold listings across all rarities
         int totalUnsoldListings = 0;
+        Dictionary<Customer.FISHRARITY, int> unsoldCountByRarity = new Dictionary<Customer.FISHRARITY, int>();
+        
         foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
         {
             var listings = GetListings(rarity);
-            totalUnsoldListings += listings.Count(l => !l.IsSold);
+            int unsoldCount = listings.Count(l => !l.IsSold);
+            unsoldCountByRarity[rarity] = unsoldCount;
+            totalUnsoldListings += unsoldCount;
         }
 
         // Count total unpurchased preferences
@@ -239,15 +291,40 @@ public class CustomerPurchaseManager : MonoBehaviour
             (float)totalUnsoldListings / totalUnpurchasedPreferences : 
             float.MaxValue;
 
+        Debug.Log($"Market analysis - Unsold listings: {totalUnsoldListings}, Unfulfilled preferences: {totalUnpurchasedPreferences}, Ratio: {ratio:F2}");
+
         // If we have many unsold listings compared to unfulfilled preferences
         if (ratio > listingToCustomerRatio && waitingCustomers.Count < maxWaitingCustomers)
         {
+            // Calculate how many customers to add based on the ratio
             int customersToAdd = Mathf.Min(maxNewCustomersPerBatch, (int)(totalUnsoldListings / listingToCustomerRatio));
             
-            // Tell CustomerManager to generate more customers
-            customerManager.TestGenerateInitialCustomers();
+            // Convert counts to weights
+            Dictionary<Customer.FISHRARITY, float> rarityWeights = new Dictionary<Customer.FISHRARITY, float>();
+            if (totalUnsoldListings > 0)
+            {
+                foreach (var kvp in unsoldCountByRarity)
+                {
+                    rarityWeights[kvp.Key] = (float)kvp.Value / totalUnsoldListings;
+                }
+            }
+            else
+            {
+                // Default even distribution if no unsold listings
+                foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+                {
+                    rarityWeights[rarity] = 1.0f / Enum.GetValues(typeof(Customer.FISHRARITY)).Length;
+                }
+            }
             
-            Debug.Log($"Requested generation of new customers. Unsold listings: {totalUnsoldListings}, Unfulfilled preferences: {totalUnpurchasedPreferences}");
+            // Generate new customers with appropriate preferences
+            customerManager.GenerateCustomersForCurrentDay(customersToAdd, rarityWeights);
+            
+            Debug.Log($"Generated {customersToAdd} new customers based on market conditions.");
+            
+            // Log the rarity distribution
+            string rarityDistribution = string.Join(", ", rarityWeights.Select(kv => $"{kv.Key}: {kv.Value:P0}"));
+            Debug.Log($"Rarity distribution for new customers: {rarityDistribution}");
         }
     }
 
@@ -276,101 +353,63 @@ public class CustomerPurchaseManager : MonoBehaviour
     {
         Debug.Log($"Starting MarkListingAsSold for ListingID {listingID}");
         
-        using (var connection = new SqliteConnection(dbPath))
+        bool success = DatabaseManager.Instance.MarkListingAsSold(listingID);
+        
+        if (success)
         {
-            try
-            {
-                connection.Open();
-                Debug.Log("Database connection opened");
-                
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
-                        UPDATE MarketListings 
-                        SET IsSold = 1 
-                        WHERE ListingID = @listingID AND IsSold = 0";
-                    
-                    command.Parameters.AddWithValue("@listingID", listingID);
-                    
-                    Debug.Log($"Executing UPDATE query for ListingID {listingID}");
-                    Debug.Log($"Query: {command.CommandText}");
-                    
-                    int rowsAffected = command.ExecuteNonQuery();
-                    Debug.Log($"Query executed. Rows affected: {rowsAffected}");
-                    
-                    if (rowsAffected > 0)
-                    {
-                        Debug.Log($"Successfully marked listing {listingID} as sold");
-                        return true;
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"Failed to mark listing {listingID} as sold - listing might not exist or already be sold");
-                        
-                        // Let's check why it failed
-                        using (var checkCommand = connection.CreateCommand())
-                        {
-                            checkCommand.CommandText = "SELECT ListingID, IsSold FROM MarketListings WHERE ListingID = @listingID";
-                            checkCommand.Parameters.AddWithValue("@listingID", listingID);
-                            
-                            using (var reader = checkCommand.ExecuteReader())
-                            {
-                                if (reader.Read())
-                                {
-                                    Debug.LogWarning($"Listing {listingID} exists with IsSold = {reader.GetInt32(1)}");
-                                }
-                                else
-                                {
-                                    Debug.LogWarning($"Listing {listingID} does not exist in database");
-                                }
-                            }
-                        }
-                        return false;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Database error in MarkListingAsSold: {e.Message}");
-                return false;
-            }
+            Debug.Log($"Successfully marked listing {listingID} as sold");
+            // Invalidate the cache since a listing was sold
+            listingsCacheNeedsRefresh = true;
         }
+        else
+        {
+            Debug.LogWarning($"Failed to mark listing {listingID} as sold");
+        }
+        
+        return success;
     }
 
     public List<MarketListing> GetListings(Customer.FISHRARITY rarity)
     {
+        // If we have a cached result and it doesn't need refreshing, return it
+        if (!listingsCacheNeedsRefresh && listingsCache.ContainsKey(rarity))
+        {
+            return listingsCache[rarity];
+        }
+        
+        // If we need to refresh the entire cache
+        if (listingsCacheNeedsRefresh)
+        {
+            listingsCache.Clear();
+        }
+        
         List<MarketListing> listings = new List<MarketListing>();
         
-        using (var connection = new SqliteConnection(dbPath))
+        var results = DatabaseManager.Instance.GetUnsoldListings(rarity.ToString());
+        
+        foreach (var row in results)
         {
-            connection.Open();
-            using (var command = connection.CreateCommand())
+            listings.Add(new MarketListing
             {
-                command.CommandText = @"
-                    SELECT ListingID, FishName, ListedPrice, Rarity, SellerID 
-                    FROM MarketListings
-                    WHERE Rarity = @rarity 
-                    AND IsSold = 0";  // Simplified query with correct column names
-                
-                command.Parameters.AddWithValue("@rarity", rarity.ToString());
-                
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        listings.Add(new MarketListing
-                        {
-                            ListingID = reader.GetInt32(0),
-                            FishName = reader.GetString(1),
-                            ListedPrice = reader.GetFloat(2),
-                            Rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), reader.GetString(3)),
-                            SellerID = reader.GetInt32(4),
-                            IsSold = false
-                        });
-                    }
-                }
-            }
+                ListingID = Convert.ToInt32(row["ListingID"]),
+                FishName = row["FishName"].ToString(),
+                ListedPrice = Convert.ToSingle(row["ListedPrice"]),
+                Rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), row["Rarity"].ToString()),
+                SellerID = Convert.ToInt32(row["SellerID"]),
+                IsSold = false
+            });
         }
+        
+        // Cache the result
+        listingsCache[rarity] = listings;
+        
+        // If we just refreshed one rarity, we might still need to refresh others
+        // But if we're refreshing all rarities at once, we can mark the cache as valid
+        if (listingsCacheNeedsRefresh && listingsCache.Count == Enum.GetValues(typeof(Customer.FISHRARITY)).Length)
+        {
+            listingsCacheNeedsRefresh = false;
+        }
+        
         return listings;
     }
 
@@ -383,35 +422,7 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     public Dictionary<string, float> GetHistoricalAveragePrices(Customer.FISHRARITY rarity)
     {
-        Dictionary<string, float> averages = new Dictionary<string, float>();
-        
-        using (var connection = new SqliteConnection(dbPath))
-        {
-            connection.Open();
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = @"
-                    SELECT mp.FishName, AVG(mp.Price) as AvgPrice
-                    FROM MarketPrices mp
-                    JOIN Fish f ON mp.FishName = f.Name
-                    WHERE f.Rarity = @rarity
-                    AND mp.Day >= (SELECT MAX(Day) - 4 FROM MarketPrices)
-                    GROUP BY mp.FishName";
-                
-                command.Parameters.AddWithValue("@rarity", rarity.ToString());
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        string fishName = reader.GetString(0);
-                        float avgPrice = Convert.ToSingle(reader.GetDouble(1));
-                        averages[fishName] = avgPrice;
-                    }
-                }
-            }
-        }
-        return averages;
+        return DatabaseManager.Instance.GetHistoricalAveragePrices(rarity.ToString());
     }
 
     public string DebugRemainingShoppingLists()
@@ -453,66 +464,59 @@ public class CustomerPurchaseManager : MonoBehaviour
         }
     }
 
-    private void AdjustBiasesForSuccess(Customer customer, int successfulSellerId, Customer.FISHRARITY rarity)
+    // New unified bias adjustment method
+    private void AdjustSellerBias(Customer customer, int sellerId, Customer.FISHRARITY rarity, float adjustmentAmount, string reason = "")
     {
-        // Increase successful seller's bias by 8%
-        float currentBias = customer.GetBias(successfulSellerId, rarity);
-        float newBias = currentBias + 0.08f;
-        customer.SetBias(successfulSellerId, rarity, newBias);
+        float currentBias = customer.GetBias(sellerId, rarity);
+        float newBias = Mathf.Clamp(currentBias + adjustmentAmount, 0.1f, 1.0f);
+        customer.SetBias(sellerId, rarity, newBias);
 
-        // Decrease other sellers' biases by 2% each
-        for (int sellerId = 0; sellerId <= 4; sellerId++)
+        // If this is a positive adjustment, slightly decrease other sellers' biases
+        if (adjustmentAmount > 0)
         {
-            if (sellerId != successfulSellerId)
+            // Decrease other sellers' biases by a small amount
+            for (int otherSellerId = 0; otherSellerId <= 4; otherSellerId++)
             {
-                float otherBias = customer.GetBias(sellerId, rarity);
-                float reducedBias = Mathf.Max(otherBias - 0.02f, 0.1f); // Don't go below 0.1
-                customer.SetBias(sellerId, rarity, reducedBias);
+                if (otherSellerId != sellerId)
+                {
+                    float otherBias = customer.GetBias(otherSellerId, rarity);
+                    float reducedBias = Mathf.Max(otherBias - (adjustmentAmount * 0.25f), 0.1f); // Don't go below 0.1
+                    customer.SetBias(otherSellerId, rarity, reducedBias);
+                }
             }
         }
 
-        // Normalize after adjustments
+        // Normalize all biases after adjustment
         NormalizeBiases(customer, rarity);
+
+        // Save the updated bias to the database
+        DatabaseManager.Instance.UpdateCustomerBias(
+            customer.CustomerID, 
+            sellerId, 
+            rarity.ToString(), 
+            customer.GetBias(sellerId, rarity)
+        );
+
+        if (!string.IsNullOrEmpty(reason))
+        {
+            Debug.Log($"Customer {customer.CustomerID}: Adjusted bias for Seller {sellerId} by {adjustmentAmount:F2} " +
+                $"(New Bias: {customer.GetBias(sellerId, rarity):F2}) - {reason}");
+        }
     }
 
-    private bool TryPurchase(Customer customer, MarketListing listing)
+    private void TryPurchase(Customer customer, MarketListing listing)
     {
         if (listing.IsSold || listing.ListedPrice > customer.Budget)
-            return false;
+            return;
 
         // ... existing purchase logic ...
 
         // After successful purchase, record it and adjust biases
         customer.RecordPurchase(listing.FishName, listing.ListedPrice, listing.SellerID);
-        AdjustBiasesForSuccess(customer, listing.SellerID, listing.Rarity);
+        AdjustSellerBias(customer, listing.SellerID, listing.Rarity, 0.1f, $"Bought {listing.FishName} at {listing.ListedPrice} gold");
         
-        return true;
+        return;
     }
-
-    private void HandleFailedPurchase(Customer customer, MarketListing listing, string reason)
-    {
-        // Record failed attempt and adjust bias negatively
-        float currentBias = customer.GetBias(listing.SellerID, listing.Rarity);
-        float newBias = Mathf.Max(currentBias - 0.05f, 0.1f);
-        customer.SetBias(listing.SellerID, listing.Rarity, newBias);
-
-        // Normalize biases after adjustment
-        NormalizeBiases(customer, listing.Rarity);
-
-        purchaseHistory.Add($"Customer {customer.CustomerID} ({customer.Type}): Rolled Seller {listing.SellerID} (Bias: {currentBias:F2}) but {listing.FishName} at {listing.ListedPrice} gold was {reason}");
-    }
-
-    // Remove or comment out the Update method since we don't need continuous processing
-    /*
-    void Update()
-    {
-        if (waitingCustomers.Count > 0)
-        {
-            ProcessCustomerPurchases();
-        }
-        DebugRemainingShoppingLists();
-    }
-    */
 
     public bool HasAnyListings()
     {
@@ -568,62 +572,6 @@ public class CustomerPurchaseManager : MonoBehaviour
         activeCustomers.Clear();
     }
 
-    private void AdjustSellerBias(Customer customer, int sellerId, Customer.FishPreference preference)
-    {
-        float currentBias = customer.GetBias(sellerId, preference.Rarity);
-        float biasChange;
-
-        if (preference.PreferenceScore < 0.5f)
-        {
-            // Negative experience - decrease bias
-            biasChange = -0.1f;
-        }
-        else
-        {
-            // Positive experience - increase bias
-            biasChange = 0.1f;
-        }
-
-        // Scale bias change based on how far from neutral (0.5) the preference was
-        biasChange *= Mathf.Abs(preference.PreferenceScore - 0.5f) * 2f;
-
-        float newBias = Mathf.Clamp(currentBias + biasChange, 0.1f, 1.0f);
-        customer.SetBias(sellerId, preference.Rarity, newBias);
-
-        // Normalize all biases after adjustment
-        NormalizeBiases(customer, preference.Rarity);
-
-        // Save the updated bias to the database
-        customerManager.SaveCustomerBias(customer, sellerId, preference.Rarity);
-    }
-
-    private void AdjustSellerBiasForNoDesiredFish(Customer customer, int sellerId, Customer.FISHRARITY rarity)
-    {
-        float currentBias = customer.GetBias(sellerId, rarity);
-        float newBias = Mathf.Clamp(currentBias - 0.15f, 0.1f, 1.0f);
-        customer.SetBias(sellerId, rarity, newBias);
-
-        // Normalize all biases after adjustment
-        NormalizeBiases(customer, rarity);
-
-        // Save the updated bias to the database
-        customerManager.SaveCustomerBias(customer, sellerId, rarity);
-    }
-
-    private bool CanMakeMorePurchases(Customer customer)
-    {
-        int maxPurchases = customer.Type switch
-        {
-            Customer.CUSTOMERTYPE.BUDGET => 2,
-            Customer.CUSTOMERTYPE.CASUAL => 3,
-            Customer.CUSTOMERTYPE.COLLECTOR => 2,
-            Customer.CUSTOMERTYPE.WEALTHY => 3,
-            _ => 2
-        };
-
-        return customer.PurchaseHistory.Count < maxPurchases;
-    }
-
     public enum RejectionReason
     {
         TooExpensive,
@@ -636,81 +584,18 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     public void RecordRejectionReason(int listingId, int customerId, RejectionReason reason)
     {
-        using (var connection = new SqliteConnection(dbPath))
-        {
-            try
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
-                        INSERT INTO ListingRejections (
-                            ListingID, 
-                            CustomerID, 
-                            Reason, 
-                            RejectionTime
-                        ) VALUES (
-                            @listingId, 
-                            @customerId, 
-                            @reason,
-                            DATETIME('now')
-                        )";
-
-                        command.Parameters.AddWithValue("@listingId", listingId);
-                        command.Parameters.AddWithValue("@customerId", customerId);
-                        command.Parameters.AddWithValue("@reason", reason.ToString());
-                        
-                        command.ExecuteNonQuery();
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Error recording rejection reason: {e.Message}");
-            }
-        }
-    }
-
-    private bool ShouldPurchase(Customer customer, MarketListing listing)
-    {
-        var preference = customer.FishPreferences.Find(p => p.FishName == listing.FishName);
-        if (preference == null)
-        {
-            RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.LowPreference);
-            return false;
-        }
-
-        if (listing.ListedPrice > customer.Budget)
-        {
-            RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.OutOfBudget);
-            return false;
-        }
-
-        float maxPriceWilling = CalculateMaxPrice(customer.Type, listing.ListedPrice);
-        if (listing.ListedPrice > maxPriceWilling)
-        {
-            RecordRejectionReason(listing.ListingID, customer.CustomerID, RejectionReason.TooExpensive);
-            return false;
-        }
-
-        // ... rest of purchase decision logic ...
-        
-        return true;
+        DatabaseManager.Instance.RecordRejectionReason(
+            listingId,
+            customerId,
+            reason.ToString()
+        );
     }
 
     public bool ProcessCustomerPurchases(Customer customer, List<MarketListing> availableListings)
     {
         bool madeAnyPurchase = false;
         
-        int maxPurchases = 2; // Default value
-        
-        // Use proper enum comparison
-        if (customer.Type == Customer.CUSTOMERTYPE.CASUAL || 
-            customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
-        {
-            maxPurchases = 3;
-        }
-
-        if (customer.PurchaseHistory.Count >= maxPurchases)
+        if (customer.HasReachedMaxPurchases())
         {
             foreach (var listing in availableListings.Where(l => !l.IsSold))
             {
@@ -723,20 +608,10 @@ public class CustomerPurchaseManager : MonoBehaviour
         return madeAnyPurchase;
     }
 
-    private float CalculateMaxPrice(Customer.CUSTOMERTYPE customerType, float marketAverage)
+    // Add method to clear the cache
+    public void ClearListingsCache()
     {
-        switch (customerType)
-        {
-            case Customer.CUSTOMERTYPE.WEALTHY:
-                return marketAverage * 2.0f;
-            case Customer.CUSTOMERTYPE.COLLECTOR:
-                return marketAverage * 1.5f;
-            case Customer.CUSTOMERTYPE.CASUAL:
-                return marketAverage * 1.1f;
-            case Customer.CUSTOMERTYPE.BUDGET:
-                return marketAverage;
-            default:
-                return marketAverage;
-        }
+        listingsCache.Clear();
+        listingsCacheNeedsRefresh = true;
     }
 }

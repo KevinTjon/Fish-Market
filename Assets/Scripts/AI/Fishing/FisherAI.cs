@@ -111,15 +111,15 @@ public abstract class FisherAI
                     command.CommandText = "SELECT MAX(Day) FROM MarketPrices";
                     var maxDay = Convert.ToInt32(command.ExecuteScalar());
                     
-                    // Get average of available days (up to last 5)
+                    // First try to get the current day's price
                     command.CommandText = @"
-                        SELECT AVG(Price) 
+                        SELECT Price 
                         FROM MarketPrices 
                         WHERE FishName = @fishName 
-                        AND Day > @startDay";
+                        AND Day = @currentDay";
 
                     command.Parameters.AddWithValue("@fishName", fishName);
-                    command.Parameters.AddWithValue("@startDay", Math.Max(0, maxDay - 5));  // Get up to 5 days of history
+                    command.Parameters.AddWithValue("@currentDay", maxDay);
                     
                     var result = command.ExecuteScalar();
                     if (result != null && result != DBNull.Value)
@@ -128,21 +128,24 @@ public abstract class FisherAI
                     }
                     else
                     {
-                        // If no prices found, use rarity-based fallback
+                        // If no current day price found, this shouldn't happen if MarketPriceInitializer ran correctly
+                        Debug.LogWarning($"No price found for {fishName} on day {maxDay}. This shouldn't happen!");
+                        
+                        // Get rarity-based price as last resort
                         command.CommandText = "SELECT Rarity FROM Fish WHERE Name = @fishName";
                         var rarity = command.ExecuteScalar()?.ToString();
                         
                         basePrice = rarity switch
                         {
-                            "COMMON" => 40f,
-                            "UNCOMMON" => 100f,
-                            "RARE" => 400f,
-                            "EPIC" => 800f,
-                            "LEGENDARY" => 1500f,
-                            _ => 50f
+                            "COMMON" => 10f,
+                            "UNCOMMON" => 30f,
+                            "RARE" => 50f,
+                            "EPIC" => 80f,
+                            "LEGENDARY" => 150f,
+                            _ => 10f
                         };
 
-                        Debug.LogWarning($"No price history found for {fishName}, using fallback price: {basePrice}");
+                        Debug.LogWarning($"Using emergency fallback price for {fishName}: {basePrice}");
                     }
                 }
             }
@@ -161,16 +164,16 @@ public abstract class FisherAI
         float finalPrice;
         
         // Set minimum prices by rarity to prevent underpricing
-        if (basePrice < 100) // Common
-            minPrice = 30;
-        else if (basePrice < 300) // Uncommon
-            minPrice = 80;
-        else if (basePrice < 1000) // Rare
-            minPrice = 300;
-        else if (basePrice < 2000) // Epic
-            minPrice = 600;
+        if (basePrice < 20) // Common
+            minPrice = 5;
+        else if (basePrice < 40) // Uncommon
+            minPrice = 20;
+        else if (basePrice < 60) // Rare
+            minPrice = 40;
+        else if (basePrice < 100) // Epic
+            minPrice = 60;
         else // Legendary
-            minPrice = 800;
+            minPrice = 100;
         
         switch (priceStrategy)
         {
@@ -202,16 +205,16 @@ public abstract class FisherAI
 
     private float GetMaxPriceForRarity(float basePrice)
     {
-        // Adjust price ranges to be more distinct
-        if (basePrice < 100) // Common
-            return 50;
-        if (basePrice < 300) // Uncommon
-            return 150;
-        if (basePrice < 1000) // Rare
-            return 500;
-        if (basePrice < 2000) // Epic
-            return 1000;
-        return 2000; // Legendary
+        // Match price ranges with MarketPriceInitializer
+        if (basePrice < 60) // Common
+            return 60;
+        if (basePrice < 120) // Uncommon
+            return 120;
+        if (basePrice < 300) // Rare
+            return 300;
+        if (basePrice < 600) // Epic
+            return 600;
+        return 1200; // Legendary
     }
 
     public void CreateMarketListings(List<string> fishNames)

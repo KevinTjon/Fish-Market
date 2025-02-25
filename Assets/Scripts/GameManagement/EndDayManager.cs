@@ -26,6 +26,11 @@ public class EndDayManager : MonoBehaviour
             Debug.Log("Day 1: Clearing all tables...");
             clearMarketListings.ClearTables();
             yield return new WaitForSeconds(0.1f); // Give database time to process
+            
+            // Generate initial customers only on day 1
+            Debug.Log("Day 1: Generating initial customers...");
+            customerManager.GenerateInitialCustomers(5);
+            yield return new WaitForSeconds(0.1f);
         }
 
         // Generate market prices
@@ -38,12 +43,7 @@ public class EndDayManager : MonoBehaviour
         fisherAIManager.GenerateAllFishersCatch();
         yield return new WaitForSeconds(0.1f);
 
-        // Generate customers
-        Debug.Log("Generating customers...");
-        customerManager.TestGenerateInitialCustomers();
-        yield return new WaitForSeconds(0.1f);
-
-        // Process purchases
+        // Process purchases (this will also generate more customers if needed)
         Debug.Log("Processing customer purchases...");
         purchaseManager.ProcessCustomerPurchases();
         
