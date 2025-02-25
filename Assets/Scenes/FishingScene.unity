@@ -1360,7 +1360,7 @@ GameObject:
   - component: {fileID: 1912969497}
   - component: {fileID: 1912969496}
   m_Layer: 0
-  m_Name: Flock
+  m_Name: FishManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1380,7 +1380,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   agentPrefab: {fileID: 5317058714821455866, guid: 6b09fd19084158d4caf2b8405db81612, type: 3}
   behaviour: {fileID: 11400000, guid: 178e9fced6d3a6f4a9f8f2789d3f141b, type: 2}
-  startingCount: 250
+  startingCount: 46
   driveFactor: 10
   maxSpeed: 5
   neighbourRadius: 1.5

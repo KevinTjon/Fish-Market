@@ -221,7 +221,6 @@ public class GameSceneManager : MonoBehaviour
         var weightParam = command.CreateParameter();
         weightParam.ParameterName = "@Weight";
         weightParam.Value = fish.Weight.ToString(); // Convert to string as Weight is TEXT in DB
-
         command.Parameters.Add(weightParam);
 
         try

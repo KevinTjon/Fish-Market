@@ -53,8 +53,7 @@ public class RodController : MonoBehaviour
         {
             if (input >= 0)
             {
-                // Code that runs when player reels line
-                //Destroy(gameObject);
+                // Add to inventory
             }
             else
             {

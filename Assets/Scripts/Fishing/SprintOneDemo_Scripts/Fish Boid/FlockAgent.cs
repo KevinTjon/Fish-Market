@@ -18,7 +18,8 @@ public class FlockAgent : ObjectHookable, IFish
     private new void Awake()
     {
         base.Awake();
-        rb.isKinematic = false;
+        rb.gravityScale = 0;
+        //rb.isKinematic = true;
         isHooked = false;
         isStunned = false;
     }
@@ -28,7 +29,8 @@ public class FlockAgent : ObjectHookable, IFish
     {
         base.Hook(hookPos);
         isStunned = true;
-        rb.isKinematic = true;
+        rb.gravityScale = 0;
+        //rb.isDynamic = false;
     }
 
     // Unhooks fish, then stuns for a bit
@@ -43,7 +45,7 @@ public class FlockAgent : ObjectHookable, IFish
         isHooked = false;
         yield return new WaitForSeconds(2f);
         isStunned = false;
-        rb.isKinematic = false;
+        rb.gravityScale = 1;
     }
 
     public void Initialize(Flock flock)
@@ -59,14 +61,12 @@ public class FlockAgent : ObjectHookable, IFish
 
     public void Move(Vector2 velocity)
     {
-        if (isHooked)
-        {
-            return;
-        }
         if (!isStunned)
         {
+            
             transform.up = velocity;
-            transform.position += (Vector3)velocity * Time.deltaTime; //using delta time to ensure constant movement regardless of framerate of the running system
+            rb.velocity = velocity;
+            //transform.position += (Vector3)velocity * Time.deltaTime; //using delta time to ensure constant movement regardless of framerate of the running system
             // *deltaTime gets the time between frames
             // *fixedDeltaTime gets the time between physics simulations
 

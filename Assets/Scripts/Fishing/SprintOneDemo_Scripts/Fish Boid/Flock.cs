@@ -59,8 +59,8 @@ public class Flock : MonoBehaviour
     {
         foreach (FlockAgent agent in agents)
         {
-            Vector2 move = Vector2.zero;
-            if (agent.IsStunned)
+            //Vector2 move = Vector2.zero;
+            if (!agent.IsStunned)
             {
                 List<Transform> context = GetNearbyObjects(agent); //What things exists in our neighbour radius
 
@@ -68,14 +68,15 @@ public class Flock : MonoBehaviour
                 //agent.GetComponentInChildren<SpriteRenderer>().color = Color.Lerp(Color.white, Color.red, context.Count / 6f); //if 0 neighbours white, if 6 red, between a hue betwwen
 
 
-                move = behaviour.CalculateMove(agent, context, this);
+                Vector2 move = behaviour.CalculateMove(agent, context, this);
                 move *= driveFactor;
                 if (move.sqrMagnitude > sqaureMaxSpeed){ //checks if move is greater than our set maxspeed
                     move = move.normalized * maxSpeed; //reset the move speed back to 1 and then set it to max speed
                 }
+                agent.Move(move);
             }
             //Debug.Log("Move: "+ move);
-            agent.Move(move);
+            
 
         }
     }
