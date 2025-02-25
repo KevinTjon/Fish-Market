@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class BookController : MonoBehaviour
 {
@@ -12,7 +13,7 @@ public class BookController : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Keyboard.current.spaceKey.wasPressedThisFrame)
         {
             bool isOpen = animator.GetBool("IsOpen");
             animator.SetBool("IsOpen", !isOpen);
