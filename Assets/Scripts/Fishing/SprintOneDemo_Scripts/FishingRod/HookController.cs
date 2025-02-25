@@ -24,21 +24,30 @@ public class HookController : MonoBehaviour
     // Determines if the hook collides with an IHookable object
     public void OnCollisionEnter2D(Collision2D col)
     {
+        
         if (baitObject == null)
         {
-            if (col.rigidbody != null &&
+            Debug.Log(col.collider);
+            if (col.collider != null &&
                 col.gameObject.layer == LayerMask.NameToLayer("Hookable"))
             {
-                
-                var offset = -transform.up * baitOffset;
-                var newPos = offset + transform.position;
-                
-
+                var newPos = (-transform.up*baitOffset) + transform.position;
+                 
                 // set posistion of recently hooked object
-                col.gameObject.GetComponent<ObjectHookable>().Hook(newPos);
+                var colObj = col.gameObject;
+                var flockAgent = colObj.GetComponent<FlockAgent>();
+                if (flockAgent != null)
+                {
+                    flockAgent.Hook(newPos);
+                }
+                else
+                {
+                    colObj.GetComponent<ObjectHookable>().Hook(newPos);
+                }
 
                 gameObject.AddComponent<FixedJoint2D>();
                 gameObject.GetComponent<FixedJoint2D>().connectedBody = col.rigidbody;
+                baitObject = col.gameObject;
             }
         }
     }

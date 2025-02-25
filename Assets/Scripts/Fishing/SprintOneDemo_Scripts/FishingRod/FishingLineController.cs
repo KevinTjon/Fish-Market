@@ -127,7 +127,7 @@ public class FishingLineController : MonoBehaviour
         var currX = isFacingRight ? -currVector.x : currVector.x;
         if (currX > TurnTriggerLength)
         {
-            Debug.Log("Change direction");
+            //Debug.Log("Change direction");
             return true;
         }
         return false;

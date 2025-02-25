@@ -24,7 +24,7 @@ public class ObjectHookable : MonoBehaviour, IHookable
         isHooked = false;
         // Sets layer
         gameObject.layer = LayerMask.NameToLayer("Hookable");
-        Debug.Log("Current layer of " + gameObject.name + ": " + gameObject.layer);
+        //Debug.Log("Current layer of " + gameObject.name + ": " + gameObject.layer);
     }
 
         // Fish follow hook

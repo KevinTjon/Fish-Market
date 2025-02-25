@@ -17,7 +17,13 @@ public class FlockAgent : ObjectHookable, IFish
 
     private new void Awake()
     {
-        base.Awake();
+        // Instantiate Rigidbody
+        rb = gameObject.GetComponent<Rigidbody2D>();
+        col = gameObject.GetComponent<Collider2D>();
+        //isHooked = false;
+        // Sets layer
+        gameObject.layer = LayerMask.NameToLayer("Hookable");
+        //Debug.Log("Current layer of " + gameObject.name + ": " + gameObject.layer);
         rb.gravityScale = 0;
         //rb.isKinematic = true;
         isHooked = false;
@@ -27,9 +33,10 @@ public class FlockAgent : ObjectHookable, IFish
     // Removes item from the boid algorithm, but also points 
     public new void Hook(Vector2 hookPos)
     {
+        Debug.Log("lmao u got hooked");
         base.Hook(hookPos);
         isStunned = true;
-        rb.gravityScale = 0;
+        rb.gravityScale = 1;
         //rb.isDynamic = false;
     }
 
@@ -45,7 +52,7 @@ public class FlockAgent : ObjectHookable, IFish
         isHooked = false;
         yield return new WaitForSeconds(2f);
         isStunned = false;
-        rb.gravityScale = 1;
+        rb.gravityScale = 0;
     }
 
     public void Initialize(Flock flock)
