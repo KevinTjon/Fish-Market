@@ -21,9 +21,10 @@ public class CustomerPurchaseManager : MonoBehaviour
     // Add at class level
     private static List<string> purchaseHistory = new List<string>();
 
-    // Add new fields for tracking market balance
-    [SerializeField] private float listingToCustomerRatio = 3f; // Threshold for generating new customers
-    [SerializeField] private int maxNewCustomersPerBatch = 5;
+    // Modify these fields for new customer generation logic
+    [SerializeField] private int unsoldListingsPerCustomer = 5; // Generate 1 customer per 5 unsold listings
+    [SerializeField] private int maxNewCustomersPerBatch = 2; // Maximum customers to generate at once
+    [SerializeField] private int maxTotalCustomers = 30; // Maximum total customers allowed in the system
     
     // Add cache for listings
     private Dictionary<Customer.FISHRARITY, List<MarketListing>> listingsCache = new Dictionary<Customer.FISHRARITY, List<MarketListing>>();
@@ -80,7 +81,7 @@ public class CustomerPurchaseManager : MonoBehaviour
     public void ProcessCustomerPurchases()
     {
         bool shouldGenerateMore;
-        int maxGenerationCycles = 3; // Limit how many times we generate new customers
+        int maxGenerationCycles = 2; // Reduced from 3 to 2 cycles
         int generationCycle = 0;
 
         do {
@@ -119,7 +120,7 @@ public class CustomerPurchaseManager : MonoBehaviour
             if (generationCycle < maxGenerationCycles)
             {
                 int unsoldListings = GetTotalUnsoldListings();
-                if (unsoldListings > 0)
+                if (unsoldListings >= unsoldListingsPerCustomer) // Only generate if we have enough unsold listings
                 {
                     generationCycle++;
                     CheckAndGenerateMoreCustomers();
@@ -205,11 +206,13 @@ public class CustomerPurchaseManager : MonoBehaviour
                                             $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) for {decision.SelectedListing.ListedPrice} gold from Seller {selectedSellerId}");
                                         
                                         // Update the HasPurchased status in the database
-                                        DatabaseManager.Instance.UpdateCustomerPreference(
+                                        Debug.Log($"Attempting to update HasPurchased for Customer {customer.CustomerID}, Fish {decision.SelectedListing.FishName}");
+                                        bool updateSuccess = DatabaseManager.Instance.UpdateCustomerPreference(
                                             customer.CustomerID, 
                                             decision.SelectedListing.FishName, 
                                             true
                                         );
+                                        Debug.Log($"HasPurchased update {(updateSuccess ? "succeeded" : "failed")}");
                                         
                                         customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
                                             $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) " +
@@ -271,60 +274,53 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     private void CheckAndGenerateMoreCustomers()
     {
-        // Count total unsold listings across all rarities
-        int totalUnsoldListings = 0;
-        Dictionary<Customer.FISHRARITY, int> unsoldCountByRarity = new Dictionary<Customer.FISHRARITY, int>();
-        
-        foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+        // Check total customer count first
+        if (activeCustomers.Count >= maxTotalCustomers)
         {
-            var listings = GetListings(rarity);
-            int unsoldCount = listings.Count(l => !l.IsSold);
-            unsoldCountByRarity[rarity] = unsoldCount;
-            totalUnsoldListings += unsoldCount;
+            Debug.Log($"Not generating new customers - At maximum customer capacity ({activeCustomers.Count}/{maxTotalCustomers})");
+            return;
         }
 
-        // Count total unpurchased preferences
-        int totalUnpurchasedPreferences = waitingCustomers.Sum(c => c.GetUnpurchasedPreferences().Count);
-
-        // Calculate ratio (avoid division by zero)
-        float ratio = totalUnpurchasedPreferences > 0 ? 
-            (float)totalUnsoldListings / totalUnpurchasedPreferences : 
-            float.MaxValue;
-
-        Debug.Log($"Market analysis - Unsold listings: {totalUnsoldListings}, Unfulfilled preferences: {totalUnpurchasedPreferences}, Ratio: {ratio:F2}");
-
-        // If we have many unsold listings compared to unfulfilled preferences
-        if (ratio > listingToCustomerRatio && waitingCustomers.Count < maxWaitingCustomers)
+        // Calculate total remaining potential purchases across all active customers
+        int totalRemainingPurchases = activeCustomers.Sum(c => c.MaxPurchases - c.PurchaseHistory.Count);
+        
+        if (totalRemainingPurchases >= 6)
         {
-            // Calculate how many customers to add based on the ratio
-            int customersToAdd = Mathf.Min(maxNewCustomersPerBatch, (int)(totalUnsoldListings / listingToCustomerRatio));
-            
-            // Convert counts to weights
-            Dictionary<Customer.FISHRARITY, float> rarityWeights = new Dictionary<Customer.FISHRARITY, float>();
-            if (totalUnsoldListings > 0)
+            Debug.Log($"Not generating new customers - {totalRemainingPurchases} total purchases still remaining across all customers");
+            return;
+        }
+
+        int unsoldListings = GetTotalUnsoldListings();
+        if (unsoldListings >= unsoldListingsPerCustomer) // Only generate if we have enough unsold listings
+        {
+            // Calculate new customers needed (1 per 5 unsold listings)
+            int maxPossibleNewCustomers = Mathf.Min(
+                maxTotalCustomers - activeCustomers.Count,
+                maxNewCustomersPerBatch
+            );
+
+            int customersToAdd = Mathf.Min(
+                unsoldListings / unsoldListingsPerCustomer,
+                maxPossibleNewCustomers
+            );
+
+            if (customersToAdd > 0)
             {
-                foreach (var kvp in unsoldCountByRarity)
-                {
-                    rarityWeights[kvp.Key] = (float)kvp.Value / totalUnsoldListings;
-                }
+                Debug.Log($"Generating {customersToAdd} new customers " +
+                    $"(Current: {activeCustomers.Count}, Max: {maxTotalCustomers}, " +
+                    $"Unsold: {unsoldListings}, Remaining purchases: {totalRemainingPurchases})");
+                
+                // Calculate rarity weights based on unsold listings
+                Dictionary<Customer.FISHRARITY, float> rarityWeights = CalculateRarityWeights();
+                
+                // Generate the new customers
+                customerManager.GenerateCustomersForCurrentDay(customersToAdd, rarityWeights);
             }
-            else
-            {
-                // Default even distribution if no unsold listings
-                foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
-                {
-                    rarityWeights[rarity] = 1.0f / Enum.GetValues(typeof(Customer.FISHRARITY)).Length;
-                }
-            }
-            
-            // Generate new customers with appropriate preferences
-            customerManager.GenerateCustomersForCurrentDay(customersToAdd, rarityWeights);
-            
-            Debug.Log($"Generated {customersToAdd} new customers based on market conditions.");
-            
-            // Log the rarity distribution
-            string rarityDistribution = string.Join(", ", rarityWeights.Select(kv => $"{kv.Key}: {kv.Value:P0}"));
-            Debug.Log($"Rarity distribution for new customers: {rarityDistribution}");
+        }
+        else
+        {
+            Debug.Log($"Not enough unsold listings to generate new customers " +
+                $"(Need {unsoldListingsPerCustomer}, Have {unsoldListings})");
         }
     }
 
@@ -467,35 +463,57 @@ public class CustomerPurchaseManager : MonoBehaviour
     // New unified bias adjustment method
     private void AdjustSellerBias(Customer customer, int sellerId, Customer.FISHRARITY rarity, float adjustmentAmount, string reason = "")
     {
+        // Make adjustments more significant
+        adjustmentAmount *= 2.0f; // Double the adjustment impact
+        
         float currentBias = customer.GetBias(sellerId, rarity);
-        float newBias = Mathf.Clamp(currentBias + adjustmentAmount, 0.1f, 1.0f);
+        float newBias = Mathf.Clamp(currentBias + adjustmentAmount, 0.1f, 0.9f); // Allow wider range
         customer.SetBias(sellerId, rarity, newBias);
 
-        // If this is a positive adjustment, slightly decrease other sellers' biases
+        // If this is a positive adjustment, decrease other sellers' biases more aggressively
         if (adjustmentAmount > 0)
         {
-            // Decrease other sellers' biases by a small amount
+            float decreaseAmount = adjustmentAmount / 3.0f; // Distribute one-third of the increase as decrease
             for (int otherSellerId = 0; otherSellerId <= 4; otherSellerId++)
             {
                 if (otherSellerId != sellerId)
                 {
                     float otherBias = customer.GetBias(otherSellerId, rarity);
-                    float reducedBias = Mathf.Max(otherBias - (adjustmentAmount * 0.25f), 0.1f); // Don't go below 0.1
+                    float reducedBias = Mathf.Max(otherBias - decreaseAmount, 0.1f);
                     customer.SetBias(otherSellerId, rarity, reducedBias);
                 }
             }
         }
 
-        // Normalize all biases after adjustment
-        NormalizeBiases(customer, rarity);
-
-        // Save the updated bias to the database
-        DatabaseManager.Instance.UpdateCustomerBias(
-            customer.CustomerID, 
-            sellerId, 
-            rarity.ToString(), 
-            customer.GetBias(sellerId, rarity)
-        );
+        // Normalize biases to ensure they sum to 1.0
+        float totalBias = 0f;
+        Dictionary<int, float> biases = new Dictionary<int, float>();
+        
+        // First pass: collect all biases
+        for (int i = 0; i <= 4; i++)
+        {
+            float bias = customer.GetBias(i, rarity);
+            biases[i] = bias;
+            totalBias += bias;
+        }
+        
+        // Second pass: normalize and update
+        if (totalBias > 0)
+        {
+            foreach (var kvp in biases)
+            {
+                float normalizedBias = kvp.Value / totalBias;
+                customer.SetBias(kvp.Key, rarity, normalizedBias);
+                
+                // Save to database immediately
+                DatabaseManager.Instance.UpdateCustomerBias(
+                    customer.CustomerID,
+                    kvp.Key,
+                    rarity.ToString(),
+                    normalizedBias
+                );
+            }
+        }
 
         if (!string.IsNullOrEmpty(reason))
         {
@@ -612,6 +630,32 @@ public class CustomerPurchaseManager : MonoBehaviour
     public void ClearListingsCache()
     {
         listingsCache.Clear();
-        listingsCacheNeedsRefresh = true;
+        Debug.Log("Cleared listings cache in CustomerPurchaseManager");
+    }
+
+    private Dictionary<Customer.FISHRARITY, float> CalculateRarityWeights()
+    {
+        int unsoldListings = GetTotalUnsoldListings();
+        Dictionary<Customer.FISHRARITY, float> rarityWeights = new Dictionary<Customer.FISHRARITY, float>();
+
+        if (unsoldListings > 0)
+        {
+            foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+            {
+                var listings = GetListings(rarity);
+                int unsoldCount = listings.Count(l => !l.IsSold);
+                rarityWeights[rarity] = (float)unsoldCount / unsoldListings;
+            }
+        }
+        else
+        {
+            // Default even distribution if no unsold listings
+            foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+            {
+                rarityWeights[rarity] = 1.0f / Enum.GetValues(typeof(Customer.FISHRARITY)).Length;
+            }
+        }
+
+        return rarityWeights;
     }
 }

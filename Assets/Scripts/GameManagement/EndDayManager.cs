@@ -83,7 +83,8 @@ public class EndDayManager : MonoBehaviour
         purchaseManager.ProcessCustomerPurchases();
         
         // Optional: Display debug information
-        Debug.Log(purchaseManager.DebugRemainingShoppingLists());
+        string debugInfo = purchaseManager.DebugRemainingShoppingLists();
+        Debug.Log($"Customer Status after purchases:\n{debugInfo}");
 
         // Generate next day's market prices after purchases are processed
         if (currentDay >= 1)
@@ -91,11 +92,19 @@ public class EndDayManager : MonoBehaviour
             Debug.Log("Generating next day's market prices...");
             marketPriceAdjuster.UpdateAllPrices();
             yield return new WaitForSeconds(0.1f);
+            
+            // Clear daily tables after prices are updated but before next day
+            Debug.Log("Clearing daily tables for next day...");
+            clearMarketListings.ClearDailyTables();
+            yield return new WaitForSeconds(0.1f);
+
+            // Clear the listings cache in purchase manager
+            purchaseManager.ClearListingsCache();
         }
 
         currentDay++;
         UpdateDayText();
-        Debug.Log("Day processing complete!");
+        Debug.Log($"Day {currentDay-1} processing complete! Total active customers: {purchaseManager.GetActiveCustomers().Count}");
     }
 
     // For testing in Unity Editor

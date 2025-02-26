@@ -512,8 +512,12 @@ public class DatabaseManager : MonoBehaviour
             { "@fishName", fishName },
             { "@hasPurchased", hasPurchased }
         };
+
+        Debug.Log($"Executing SQL: {sql}\nParameters: CustomerID={customerId}, FishName={fishName}, HasPurchased={hasPurchased}");
+        int rowsAffected = ExecuteNonQuery(sql, parameters);
+        Debug.Log($"UpdateCustomerPreference affected {rowsAffected} rows");
             
-        return ExecuteNonQuery(sql, parameters) > 0;
+        return rowsAffected > 0;
     }
 
     /// <summary>

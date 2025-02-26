@@ -28,6 +28,19 @@ public class MarketPriceAdjuster : MonoBehaviour
         { Customer.FISHRARITY.COMMON, (40f, 60f) }
     };
 
+    // Maximum daily price volatility percentages per rarity
+    private readonly Dictionary<Customer.FISHRARITY, float> MaxDailyVolatility = new()
+    {
+        { Customer.FISHRARITY.LEGENDARY, 0.75f }, // 75% max daily change
+        { Customer.FISHRARITY.EPIC, 0.60f },      // 60% max daily change
+        { Customer.FISHRARITY.RARE, 0.50f },      // 50% max daily change
+        { Customer.FISHRARITY.UNCOMMON, 0.40f },  // 40% max daily change
+        { Customer.FISHRARITY.COMMON, 0.35f }     // 35% max daily change
+    };
+
+    // Volatility multiplier based on market conditions (can be adjusted based on events)
+    [SerializeField] private float globalVolatilityMultiplier = 1.0f;
+
     private void Awake()
     {
         if (purchaseManager == null)
@@ -244,28 +257,181 @@ public class MarketPriceAdjuster : MonoBehaviour
 
     private float CalculateNextDayPrice(FishDemandMetrics metrics)
     {
-        // Calculate combined demand score
-        float demandScore = (metrics.PreferenceScore * 0.6f) + (metrics.SalesScore * 0.4f);
-
-        // Get rarity-based adjustment range
-        float maxAdjustment = metrics.Rarity switch
+        try
         {
-            Customer.FISHRARITY.LEGENDARY => 0.30f,
-            Customer.FISHRARITY.EPIC => 0.25f,
-            Customer.FISHRARITY.RARE => 0.20f,
-            Customer.FISHRARITY.UNCOMMON => 0.15f,
-            _ => 0.10f
-        };
+            // Calculate combined demand score with more variance
+            float demandScore = (metrics.PreferenceScore * 0.6f) + (metrics.SalesScore * 0.4f);
+            
+            // Add market sentiment based on recent trend with momentum
+            float trendFactor = CalculatePriceTrend(metrics.FishName);
+            float momentum = Mathf.Sign(trendFactor) * Mathf.Min(Mathf.Abs(trendFactor) * 1.5f, 0.3f);
+            
+            // Add random market noise with rarity-based scaling
+            float noiseScale = metrics.Rarity switch
+            {
+                Customer.FISHRARITY.LEGENDARY => 0.75f,
+                Customer.FISHRARITY.EPIC => 0.60f,
+                Customer.FISHRARITY.RARE => 0.50f,
+                Customer.FISHRARITY.UNCOMMON => 0.40f,
+                _ => 0.35f
+            };
+            float randomFactor = UnityEngine.Random.Range(-noiseScale, noiseScale);
+            
+            // Add extra randomness to prevent stagnation
+            float priceStability = CalculatePriceStability(metrics.FishName);
+            if (priceStability > 0.5f) // Even lower threshold for randomness
+            {
+                randomFactor *= 3.0f; // More aggressive random factor
+            }
+            
+            // Add varied random noise to prevent clustering
+            float variationScale = metrics.CurrentBasePrice * 0.05f; // 5% of current price
+            randomFactor += UnityEngine.Random.Range(-variationScale, variationScale);
+            
+            // Combine factors with momentum
+            demandScore = demandScore + (momentum * 2.0f) + randomFactor;
 
-        // Calculate price adjustment
-        float adjustment = (demandScore - 1.0f) * maxAdjustment;
-        
-        // Apply adjustment to current price
-        float newPrice = metrics.CurrentBasePrice * (1 + adjustment);
-        
-        // Clamp to rarity price range
-        var (minPrice, maxPrice) = RarityPriceRanges[metrics.Rarity];
-        return Mathf.Clamp(newPrice, minPrice, maxPrice);
+            // Get rarity-based adjustment range with increased base volatility
+            float maxAdjustment = metrics.Rarity switch
+            {
+                Customer.FISHRARITY.LEGENDARY => 0.45f,
+                Customer.FISHRARITY.EPIC => 0.40f,
+                Customer.FISHRARITY.RARE => 0.35f,
+                Customer.FISHRARITY.UNCOMMON => 0.30f,
+                _ => 0.25f
+            };
+
+            // Calculate base price adjustment with more sensitivity
+            float adjustment = (demandScore - 1.0f) * maxAdjustment;
+            
+            // Add supply-based adjustment with increased impact
+            if (metrics.TotalListings > 0)
+            {
+                float supplyFactor = metrics.SuccessfulSales / (float)metrics.TotalListings;
+                float supplyImpact = (supplyFactor - 0.5f) * 0.25f; // Increased impact
+                
+                // Add extra impact for extreme supply conditions
+                if (supplyFactor > 0.8f || supplyFactor < 0.2f)
+                {
+                    supplyImpact *= 1.5f;
+                }
+                
+                adjustment += supplyImpact;
+            }
+            
+            // Dynamic minimum movement based on price stability and base price
+            float baseMinMovement = metrics.Rarity switch
+            {
+                Customer.FISHRARITY.LEGENDARY => 0.05f,
+                Customer.FISHRARITY.EPIC => 0.04f,
+                Customer.FISHRARITY.RARE => 0.035f,
+                Customer.FISHRARITY.UNCOMMON => 0.03f,
+                _ => 0.025f
+            };
+
+            // Ensure minimum price change in whole numbers
+            float minPriceChange = Mathf.Max(
+                metrics.CurrentBasePrice * baseMinMovement,
+                metrics.Rarity switch
+                {
+                    Customer.FISHRARITY.LEGENDARY => 100f,
+                    Customer.FISHRARITY.EPIC => 75f,
+                    Customer.FISHRARITY.RARE => 50f,
+                    Customer.FISHRARITY.UNCOMMON => 25f,
+                    _ => 15f
+                }
+            );
+
+            // Force minimum movement with trend consideration
+            if (Mathf.Abs(adjustment * metrics.CurrentBasePrice) < minPriceChange)
+            {
+                if (Mathf.Abs(momentum) > 0.01f)
+                {
+                    adjustment = (minPriceChange / metrics.CurrentBasePrice) * Mathf.Sign(momentum);
+                }
+                else
+                {
+                    float upwardBias = metrics.TotalListings > 0 ? 
+                        metrics.SuccessfulSales / (float)metrics.TotalListings : 0.5f;
+                    bool moveUp = UnityEngine.Random.value < upwardBias;
+                    adjustment = (minPriceChange / metrics.CurrentBasePrice) * (moveUp ? 1f : -1f);
+                }
+            }
+            
+            // Calculate initial new price
+            float newPrice = metrics.CurrentBasePrice * (1 + adjustment);
+            
+            // Apply volatility controls with dynamic scaling
+            float maxDailyVolatility = MaxDailyVolatility[metrics.Rarity] * globalVolatilityMultiplier;
+            if (priceStability > 0.5f) // Lower threshold for increased volatility
+            {
+                maxDailyVolatility *= 3.0f; // More aggressive multiplier
+            }
+            float maxChange = Mathf.Max(
+                metrics.CurrentBasePrice * maxDailyVolatility,
+                metrics.Rarity switch
+                {
+                    Customer.FISHRARITY.LEGENDARY => 200f,
+                    Customer.FISHRARITY.EPIC => 150f,
+                    Customer.FISHRARITY.RARE => 100f,
+                    Customer.FISHRARITY.UNCOMMON => 50f,
+                    _ => 25f
+                }
+            );
+            
+            // Clamp the price change within volatility limits
+            float minAllowedPrice = metrics.CurrentBasePrice - maxChange;
+            float maxAllowedPrice = metrics.CurrentBasePrice + maxChange;
+            newPrice = Mathf.Clamp(newPrice, minAllowedPrice, maxAllowedPrice);
+
+            // Final clamp to rarity price range with minimal padding
+            var (minPrice, maxPrice) = RarityPriceRanges[metrics.Rarity];
+            float padding = (maxPrice - minPrice) * 0.01f; // Minimal padding
+            newPrice = Mathf.Clamp(newPrice, minPrice + padding, maxPrice - padding);
+
+            // Force price movement if too stable
+            if (priceStability > 0.6f && Mathf.Abs(newPrice - metrics.CurrentBasePrice) < minPriceChange * 2f)
+            {
+                float direction = UnityEngine.Random.value > 0.5f ? 1f : -1f;
+                newPrice = metrics.CurrentBasePrice + (minPriceChange * 4f * direction);
+                
+                // Add larger random variation to prevent clustering
+                float variation = metrics.CurrentBasePrice * UnityEngine.Random.Range(0.05f, 0.15f);
+                newPrice += variation * direction;
+            }
+
+            // Round to whole numbers with added variation to prevent clustering
+            newPrice = Mathf.Round(newPrice + UnityEngine.Random.Range(-7f, 7f));
+            
+            // If the price hasn't changed enough, force a minimum change with variation
+            if (Mathf.Abs(newPrice - metrics.CurrentBasePrice) < minPriceChange)
+            {
+                float direction = (newPrice >= metrics.CurrentBasePrice) ? 1f : -1f;
+                float extraChange = UnityEngine.Random.Range(0f, minPriceChange * 0.5f);
+                newPrice = metrics.CurrentBasePrice + ((minPriceChange + extraChange) * direction);
+                newPrice = Mathf.Round(newPrice);
+            }
+
+            // Final randomization to prevent price clustering
+            float finalVariation = Mathf.Max(5f, metrics.CurrentBasePrice * 0.02f);
+            newPrice = Mathf.Clamp(
+                Mathf.Round(newPrice + UnityEngine.Random.Range(-finalVariation, finalVariation)),
+                minPrice,
+                maxPrice
+            );
+
+            Debug.Log($"Price adjustment for {metrics.FishName}: " +
+                     $"Current: {metrics.CurrentBasePrice:F0} -> New: {newPrice:F0} " +
+                     $"(Change: {(newPrice - metrics.CurrentBasePrice):F0}, " +
+                     $"Min Change: {minPriceChange:F0}, Max Change: {maxChange:F0})");
+
+            return newPrice;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error calculating next day price for {metrics.FishName}: {e.Message}");
+            return metrics.CurrentBasePrice;
+        }
     }
 
     private void StoreFishPrice(string fishName, float price, int day)
@@ -315,10 +481,109 @@ public class MarketPriceAdjuster : MonoBehaviour
         return Convert.ToInt32(result) + 1;
     }
 
-    // For testing in Unity Editor
-    [ContextMenu("Test Price Updates")]
-    public void TestPriceUpdates()
+    // Method to adjust global volatility (can be called by events or market conditions)
+    public void SetGlobalVolatilityMultiplier(float multiplier)
     {
+        globalVolatilityMultiplier = Mathf.Clamp(multiplier, 0.5f, 2.0f);
+        Debug.Log($"Global volatility multiplier set to: {globalVolatilityMultiplier:F2}");
+    }
+
+    // Method to get current volatility for a fish
+    public float GetCurrentVolatility(Customer.FISHRARITY rarity)
+    {
+        return MaxDailyVolatility[rarity] * globalVolatilityMultiplier;
+    }
+
+    // For testing in Unity Editor
+    [ContextMenu("Test High Volatility")]
+    public void TestHighVolatility()
+    {
+        SetGlobalVolatilityMultiplier(2.0f);
         UpdateAllPrices();
+    }
+
+    [ContextMenu("Test Low Volatility")]
+    public void TestLowVolatility()
+    {
+        SetGlobalVolatilityMultiplier(0.5f);
+        UpdateAllPrices();
+    }
+
+    [ContextMenu("Reset Volatility")]
+    public void ResetVolatility()
+    {
+        SetGlobalVolatilityMultiplier(1.0f);
+    }
+
+    // Helper method to calculate price trend
+    private float CalculatePriceTrend(string fishName, int lookbackDays = 3)
+    {
+        var prices = new List<float>();
+        
+        databaseManager.ExecuteReader(
+            @"SELECT Price 
+            FROM MarketPrices 
+            WHERE FishName = @fishName 
+            ORDER BY Day DESC 
+            LIMIT @lookback",
+            reader => {
+                while (reader.Read())
+                {
+                    prices.Add(reader.GetFloat(0));
+                }
+            },
+            new Dictionary<string, object> 
+            { 
+                { "@fishName", fishName },
+                { "@lookback", lookbackDays }
+            }
+        );
+        
+        if (prices.Count >= 2)
+        {
+            float trend = 0f;
+            for (int i = 0; i < prices.Count - 1; i++)
+            {
+                trend += (prices[i] - prices[i + 1]) / prices[i + 1];
+            }
+            return trend / (prices.Count - 1);
+        }
+        
+        return 0f;
+    }
+
+    // Helper method to calculate price stability (0 = volatile, 1 = stable)
+    private float CalculatePriceStability(string fishName, int lookbackDays = 5)
+    {
+        var prices = new List<float>();
+        
+        databaseManager.ExecuteReader(
+            @"SELECT Price 
+            FROM MarketPrices 
+            WHERE FishName = @fishName 
+            ORDER BY Day DESC 
+            LIMIT @lookback",
+            reader => {
+                while (reader.Read())
+                {
+                    prices.Add(reader.GetFloat(0));
+                }
+            },
+            new Dictionary<string, object> 
+            { 
+                { "@fishName", fishName },
+                { "@lookback", lookbackDays }
+            }
+        );
+        
+        if (prices.Count >= 2)
+        {
+            float avgPrice = prices.Average();
+            float variance = prices.Select(p => (p - avgPrice) * (p - avgPrice)).Average();
+            float coefficient = Mathf.Sqrt(variance) / avgPrice;
+            return Mathf.Clamp01(1f - coefficient * 5f); // Convert to stability score
+        }
+        
+        return 0.5f; // Default stability for new prices
     }
 } 
