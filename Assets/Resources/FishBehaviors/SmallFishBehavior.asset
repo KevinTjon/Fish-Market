@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ce1c8edc52c30549a2afb936ee37fbc, type: 3}
+  m_Name: SmallFishBehavior
+  m_EditorClassIdentifier: 
+  size: 0.75
+  baseSpeed: 3.5
+  maxSpeed: 7
+  turnSpeed: 3.5
+  wanderWeight: 0.5
+  flockWeight: 1.5
+  avoidanceWeight: 1.5
+  baitAttractionWeight: 1.2
+  predatorAvoidanceWeight: 1.8
+  visionRange: 4
+  baitDetectionRange: 2.5
+  predatorDetectionRange: 2
+  personalSpace: 0.5
+  isPredator: 0
+  preyLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  preyChaseWeight: 0
+  preyMaxSizeRatio: 0.75
+  fishColor: {r: 0, g: 1, b: 1, a: 1}
