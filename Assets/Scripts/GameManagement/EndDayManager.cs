@@ -4,6 +4,27 @@ using TMPro;
 
 public class EndDayManager : MonoBehaviour
 {
+    private static EndDayManager _instance;
+    public static EndDayManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                // Find existing instance
+                _instance = FindObjectOfType<EndDayManager>();
+                
+                // If no instance exists, create one
+                if (_instance == null)
+                {
+                    GameObject obj = new GameObject("EndDayManager");
+                    _instance = obj.AddComponent<EndDayManager>();
+                }
+            }
+            return _instance;
+        }
+    }
+
     [SerializeField] private ClearMarketListings clearMarketListings;
     [SerializeField] private MarketPriceInitializer marketPriceInitializer;
     [SerializeField] private CustomerManager customerManager;
@@ -16,6 +37,26 @@ public class EndDayManager : MonoBehaviour
 
     private void Awake()
     {
+        // If there's already an instance and it's not this one, destroy this one
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        // Make this the singleton instance
+        _instance = this;
+        
+        // Ensure this GameObject is at the root level
+        if (transform.parent != null)
+        {
+            transform.SetParent(null);
+        }
+        
+        // Don't destroy on load (only called once we're sure this is the singleton instance)
+        DontDestroyOnLoad(gameObject);
+
+        // Initialize references
         if (marketPriceAdjuster == null)
             marketPriceAdjuster = FindObjectOfType<MarketPriceAdjuster>();
         

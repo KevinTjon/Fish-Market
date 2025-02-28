@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baitName: Worm
   attractionRadius: 2
-  attractionStrength: 1.2
+  attractionStrength: 1
   targetFishSizes: 0000000001000000
-  sizeSpecificAttractionMultiplier: 1.5
-  baitColor: {r: 0.7, g: 0.4, b: 0.3, a: 1}
-  size: 0.25
+  sizeSpecificAttractionMultiplier: 1.2
+  baitColor: {r: 0.6, g: 0.4, b: 0.2, a: 1}
+  size: 0.3

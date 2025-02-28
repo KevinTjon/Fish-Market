@@ -17,12 +17,15 @@ public class DatabaseManager : MonoBehaviour
         {
             if (_instance == null)
             {
+                // Find existing instance
                 _instance = FindObjectOfType<DatabaseManager>();
+                
+                // If no instance exists, create one
                 if (_instance == null)
                 {
+                    // Create a new GameObject at the root level
                     GameObject obj = new GameObject("DatabaseManager");
                     _instance = obj.AddComponent<DatabaseManager>();
-                    DontDestroyOnLoad(obj);
                 }
             }
             return _instance;
@@ -35,14 +38,25 @@ public class DatabaseManager : MonoBehaviour
 
     private void Awake()
     {
+        // First, ensure this GameObject is at the root level
+        if (transform.parent != null)
+        {
+            transform.SetParent(null);
+        }
+
+        // If there's already an instance and it's not this one, destroy this one
         if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
+        // Make this the singleton instance
         _instance = this;
+        
+        // Don't destroy on load (only called once we're sure this is the singleton instance)
         DontDestroyOnLoad(gameObject);
+        
         InitializeDatabase();
     }
 

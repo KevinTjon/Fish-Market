@@ -13,18 +13,18 @@ MonoBehaviour:
   m_Name: TinyFishBehavior
   m_EditorClassIdentifier: 
   size: 0.5
-  baseSpeed: 4
-  maxSpeed: 8
-  turnSpeed: 4
+  baseSpeed: 1
+  maxSpeed: 2
+  turnSpeed: 2
   wanderWeight: 0.3
   flockWeight: 2
   avoidanceWeight: 2
   baitAttractionWeight: 1.5
   predatorAvoidanceWeight: 2
-  visionRange: 3
-  baitDetectionRange: 2
+  visionRange: 1.5
+  baitDetectionRange: 1
   predatorDetectionRange: 2
-  personalSpace: 0.3
+  personalSpace: 0.2
   isPredator: 0
   preyLayer:
     serializedVersion: 2

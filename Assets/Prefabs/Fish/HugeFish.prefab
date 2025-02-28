@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 4604365493068027759}
   - component: {fileID: 4835814734505561727}
   - component: {fileID: 7524250326877551234}
-  m_Layer: 6
+  m_Layer: 9
   m_Name: HugeFish
   m_TagString: Fish
   m_Icon: {fileID: 0}

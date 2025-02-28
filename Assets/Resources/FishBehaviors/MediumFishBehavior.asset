@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: MediumFishBehavior
   m_EditorClassIdentifier: 
   size: 1
-  baseSpeed: 3
-  maxSpeed: 6
-  turnSpeed: 3
+  baseSpeed: 1.5
+  maxSpeed: 3
+  turnSpeed: 2
   wanderWeight: 0.8
   flockWeight: 1
   avoidanceWeight: 1

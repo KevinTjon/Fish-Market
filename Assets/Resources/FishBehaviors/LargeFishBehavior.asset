@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: LargeFishBehavior
   m_EditorClassIdentifier: 
   size: 1.5
-  baseSpeed: 2.5
-  maxSpeed: 5
-  turnSpeed: 2.5
+  baseSpeed: 1.2
+  maxSpeed: 2.5
+  turnSpeed: 1.8
   wanderWeight: 1
   flockWeight: 0.5
   avoidanceWeight: 0.5

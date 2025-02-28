@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: HugeFishBehavior
   m_EditorClassIdentifier: 
   size: 2
-  baseSpeed: 2
-  maxSpeed: 4
-  turnSpeed: 2
+  baseSpeed: 1
+  maxSpeed: 2
+  turnSpeed: 1.5
   wanderWeight: 1.2
   flockWeight: 0
   avoidanceWeight: 0.2

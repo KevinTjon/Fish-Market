@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: SmallFishBehavior
   m_EditorClassIdentifier: 
   size: 0.75
-  baseSpeed: 3.5
-  maxSpeed: 7
-  turnSpeed: 3.5
+  baseSpeed: 1.5
+  maxSpeed: 3
+  turnSpeed: 2.5
   wanderWeight: 0.5
   flockWeight: 1.5
   avoidanceWeight: 1.5

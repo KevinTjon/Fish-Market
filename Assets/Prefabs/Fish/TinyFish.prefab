@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 6038424410841551670}
   - component: {fileID: 1618310596285623444}
   - component: {fileID: 5447314984783806809}
-  m_Layer: 6
+  m_Layer: 9
   m_Name: TinyFish
   m_TagString: Fish
   m_Icon: {fileID: 0}
