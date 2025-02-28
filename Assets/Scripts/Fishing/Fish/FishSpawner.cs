@@ -164,8 +164,11 @@ public class FishSpawner : MonoBehaviour
         float y = Random.Range(bounds.min.y, bounds.max.y);
         Vector3 spawnPosition = new Vector3(x, y, 0f);
 
-        // Spawn the fish with no rotation
+        // Spawn the fish with zero rotation
         GameObject fish = Instantiate(fishPrefab, spawnPosition, Quaternion.identity);
+        
+        // Reset the fish's transform rotation to ensure it's perfectly horizontal
+        fish.transform.rotation = Quaternion.identity;
         
         // Get components
         var fishHookable = fish.GetComponent<FishHookable>();
@@ -194,14 +197,26 @@ public class FishSpawner : MonoBehaviour
         {
             fishMovement.boundaryArea = spawnBoundary;
             
-            // Set initial sprite direction based on spawn position relative to center
+            // Find and setup the sprite transform
             Transform spriteTransform = fish.transform.Find("Sprite");
             if (spriteTransform != null)
             {
+                // Reset all rotations to ensure proper alignment
+                spriteTransform.localRotation = Quaternion.identity;
+                
+                // Reset scale to positive values first
                 Vector3 scale = spriteTransform.localScale;
-                // Face towards center initially
-                scale.x = Mathf.Abs(scale.x) * (x < bounds.center.x ? 1 : -1);
+                scale.x = Mathf.Abs(scale.x);
+                scale.y = Mathf.Abs(scale.y);
+                scale.z = Mathf.Abs(scale.z);
+                
+                // Only flip X scale based on spawn position relative to center
+                scale.x *= (x < bounds.center.x ? 1 : -1);
                 spriteTransform.localScale = scale;
+            }
+            else
+            {
+                Debug.LogWarning($"No 'Sprite' child object found on fish: {fish.name}");
             }
         }
         

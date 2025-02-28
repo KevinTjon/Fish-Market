@@ -164,11 +164,8 @@ public class FishHookable : ObjectHookable, IFish
     {
         if (isHooked || isStunned) return;
 
-        // Store the current velocity for reference
+        // Just store the velocity for reference, don't apply movement
         currentVelocity = velocity;
-        
-        // We don't need to apply movement here as it's handled by FishMovement
-        // This method now just stores the velocity for reference
     }
 
     private Vector2 CalculateFlockingForce()

@@ -11,6 +11,7 @@ public class FishMovement : MonoBehaviour
     private Transform spriteTransform; // Cache the sprite transform
     public FishSpawner spawner { get; private set; } // Reference to spawner for debug settings, accessible but only settable internally
     private FishSchooling schooling; // Reference to schooling component
+    private Vector2 currentForce = Vector2.zero; // Add this at class level
 
     [Header("Movement Bounds")]
     [HideInInspector] public BoxCollider2D boundaryArea; // Now assigned by spawner
@@ -126,20 +127,32 @@ public class FishMovement : MonoBehaviour
         
         // Apply movement using the rigidbody
         Vector2 targetVelocity = movementForce * behavior.baseSpeed * speedMultiplier;
-        fishHookable.GetComponent<Rigidbody2D>().velocity = targetVelocity;
+        var rb = fishHookable.GetComponent<Rigidbody2D>();
+        
+        // Ensure rigidbody doesn't rotate
+        rb.angularVelocity = 0f;
+        rb.rotation = 0f;
+        rb.freezeRotation = true;
+        
+        // Apply velocity
+        rb.velocity = targetVelocity;
         
         // Store current velocity for reference
         currentVelocity = targetVelocity;
         
-        // Simple left/right sprite flipping
+        // Simple left/right sprite flipping based on movement direction
         if (spriteTransform != null && Mathf.Abs(targetVelocity.x) > 0.01f)
         {
             Vector3 scale = spriteTransform.localScale;
+            // Ensure Y and Z scales are positive
+            scale.y = Mathf.Abs(scale.y);
+            scale.z = Mathf.Abs(scale.z);
+            // Only flip X scale based on movement direction
             scale.x = Mathf.Abs(scale.x) * (targetVelocity.x > 0 ? 1 : -1);
             spriteTransform.localScale = scale;
         }
         
-        // Pass the velocity to FishHookable for consistency
+        // Pass the velocity to FishHookable for reference only, don't apply movement
         fishHookable.Move(targetVelocity);
     }
 
@@ -158,55 +171,76 @@ public class FishMovement : MonoBehaviour
 
     private Vector2 CalculateMovementForce()
     {
-        Vector2 force = Vector2.zero;
+        Vector2 targetForce = Vector2.zero;
+        float totalWeight = 0f;
         
-        // Get the fish hookable component
-        if (fishHookable == null) return force;
+        if (fishHookable == null) return targetForce;
         
-        // If there's nearby bait, move towards it
+        // Bait attraction - with smoother distance-based weighting
         Transform nearestBait = fishHookable.GetNearestBait();
         if (nearestBait != null)
         {
             Vector2 toBait = (Vector2)nearestBait.position - (Vector2)transform.position;
             float distanceToBait = toBait.magnitude;
+            float baitAttractionMultiplier = Mathf.Clamp01(1f - (distanceToBait / behavior.baitDetectionRange));
+            baitAttractionMultiplier = Mathf.SmoothStep(0f, 1f, baitAttractionMultiplier); // Smoother transition
             
-            // Calculate bait attraction force
-            Vector2 baitForce = toBait.normalized * behavior.baitAttractionWeight;
-            
-            // Apply stronger attraction when closer to bait
-            float baitAttractionMultiplier = 1f - (distanceToBait / behavior.baitDetectionRange);
-            baitAttractionMultiplier = Mathf.Pow(baitAttractionMultiplier, 2); // Square for stronger close-range attraction
-            baitForce *= baitAttractionMultiplier;
-            
-            force += baitForce;
-            
-            Debug.Log($"Fish {gameObject.name} moving towards bait: {nearestBait.name}, Force: {baitForce}, Distance: {distanceToBait}");
+            Vector2 baitForce = toBait.normalized * behavior.baitAttractionWeight * baitAttractionMultiplier;
+            targetForce += baitForce * 2f;
+            totalWeight += 2f * baitAttractionMultiplier; // Weight scales with distance
         }
         
-        // Add schooling force if we have a schooling component
+        // Schooling force with smoother transitions
         if (schooling != null)
         {
             Vector2 schoolingForce = schooling.CalculateSchoolingForce();
-            force += schoolingForce;
+            float schoolingMagnitude = schoolingForce.magnitude;
+            // Only apply significant schooling forces
+            if (schoolingMagnitude > 0.1f)
+            {
+                targetForce += schoolingForce * behavior.flockWeight;
+                totalWeight += behavior.flockWeight * Mathf.Min(1f, schoolingMagnitude);
+            }
         }
         
-        // Add boundary avoidance
+        // Boundary avoidance with smoother transitions
         Vector2 boundaryForce = CalculateBoundaryAvoidance();
-        force += boundaryForce;
+        float boundaryMagnitude = boundaryForce.magnitude;
+        if (boundaryMagnitude > 0)
+        {
+            // Use SmoothStep for gentler boundary response
+            float boundaryWeight = Mathf.SmoothStep(0f, 3f, boundaryMagnitude);
+            targetForce += boundaryForce * boundaryWeight;
+            totalWeight += boundaryWeight;
+        }
         
-        // Add return to center force if outside safe zone
+        // Return to center with smooth transition
         if (IsOutsideSafeZone(transform.position))
         {
-            force += CalculateReturnForce();
+            Vector2 returnForce = CalculateReturnForce();
+            float returnMagnitude = returnForce.magnitude;
+            float returnWeight = Mathf.SmoothStep(0f, 2f, returnMagnitude / returnToCenterForce);
+            targetForce += returnForce * returnWeight;
+            totalWeight += returnWeight;
         }
         
-        // Add random wandering if no other forces are significant
-        if (force.magnitude < 0.1f)
+        // Add minimal wandering if no other forces are significant
+        if (targetForce.magnitude < 0.1f)
         {
-            force += CalculateWanderForce();
+            Vector2 wanderForce = CalculateWanderForce();
+            targetForce += wanderForce;
+            totalWeight += 0.5f; // Reduced weight for wandering
         }
         
-        return force.normalized;
+        // Normalize based on total weights
+        if (totalWeight > 0)
+        {
+            targetForce /= totalWeight;
+        }
+        
+        // Smooth transition between forces
+        currentForce = Vector2.Lerp(currentForce, targetForce, Time.fixedDeltaTime * 2f);
+        return currentForce.normalized;
     }
 
     private Vector2 CalculateLevelMaintenanceForce()
@@ -234,38 +268,37 @@ public class FishMovement : MonoBehaviour
         Vector2 avoidanceForce = Vector2.zero;
         Vector2 position = transform.position;
 
-        // Calculate distances from boundaries
         float distanceFromLeft = position.x - minX;
         float distanceFromRight = maxX - position.x;
         float distanceFromBottom = position.y - minY;
         float distanceFromTop = maxY - position.y;
 
-        // Only apply forces when actually near boundaries
+        // Smoother boundary response using SmoothStep
         if (distanceFromLeft < edgeBuffer)
         {
-            float urgency = Mathf.Pow(1 - (distanceFromLeft / edgeBuffer), boundaryExponent);
-            avoidanceForce += Vector2.right * boundaryForce * urgency;
+            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromLeft / edgeBuffer));
+            avoidanceForce += Vector2.right * boundaryForce * t;
         }
         if (distanceFromRight < edgeBuffer)
         {
-            float urgency = Mathf.Pow(1 - (distanceFromRight / edgeBuffer), boundaryExponent);
-            avoidanceForce += Vector2.left * boundaryForce * urgency;
+            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromRight / edgeBuffer));
+            avoidanceForce += Vector2.left * boundaryForce * t;
         }
         if (distanceFromBottom < edgeBuffer)
         {
-            float urgency = Mathf.Pow(1 - (distanceFromBottom / edgeBuffer), boundaryExponent);
-            avoidanceForce += Vector2.up * boundaryForce * urgency;
+            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromBottom / edgeBuffer));
+            avoidanceForce += Vector2.up * boundaryForce * t;
         }
         if (distanceFromTop < edgeBuffer)
         {
-            float urgency = Mathf.Pow(1 - (distanceFromTop / edgeBuffer), boundaryExponent);
-            avoidanceForce += Vector2.down * boundaryForce * urgency;
+            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromTop / edgeBuffer));
+            avoidanceForce += Vector2.down * boundaryForce * t;
         }
 
-        // Only add randomization if we're actually applying forces
-        if (avoidanceForce.magnitude > 0)
+        // Minimal randomization only when actually near boundaries
+        if (avoidanceForce.magnitude > 0.1f)
         {
-            avoidanceForce += Random.insideUnitCircle * boundaryForce * 0.1f;
+            avoidanceForce += Random.insideUnitCircle * boundaryForce * 0.05f; // Reduced random influence
         }
 
         return avoidanceForce;
@@ -274,23 +307,23 @@ public class FishMovement : MonoBehaviour
     private Vector2 CalculateReturnForce()
     {
         Vector2 position = transform.position;
-        Vector2 returnForce = Vector2.zero;
-
         Vector2 toCenter = centerPoint - position;
         float distanceFromCenter = toCenter.magnitude;
         float maxAllowedDistance = Mathf.Min(maxX - minX, maxY - minY) * 0.5f;
         
-        // Only apply return force when actually outside safe zone
+        // Only apply return force when outside safe zone with smooth transition
         if (distanceFromCenter > maxAllowedDistance * 0.8f)
         {
-            float urgency = Mathf.Pow((distanceFromCenter - maxAllowedDistance * 0.8f) / (maxAllowedDistance * 0.2f), boundaryExponent);
-            returnForce = toCenter.normalized * returnToCenterForce * urgency;
+            float t = (distanceFromCenter - maxAllowedDistance * 0.8f) / (maxAllowedDistance * 0.2f);
+            t = Mathf.SmoothStep(0, 1, t); // Smooth transition
+            Vector2 returnForce = toCenter.normalized * returnToCenterForce * t;
             
             // Minimal randomization
-            returnForce += Random.insideUnitCircle * returnToCenterForce * 0.02f;
+            returnForce += Random.insideUnitCircle * returnToCenterForce * 0.01f;
+            return returnForce;
         }
 
-        return returnForce;
+        return Vector2.zero;
     }
 
     private Vector2 CalculateWanderForce()
