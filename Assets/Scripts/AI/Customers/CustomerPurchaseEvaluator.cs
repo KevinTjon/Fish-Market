@@ -23,10 +23,10 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
     private readonly Dictionary<Customer.CUSTOMERTYPE, (float min, float max)> PriceThresholds = 
         new Dictionary<Customer.CUSTOMERTYPE, (float min, float max)>
     {
-        { Customer.CUSTOMERTYPE.BUDGET, (0.6f, 1.0f) },      // Lowered min from 0.8f to 0.6f
-        { Customer.CUSTOMERTYPE.CASUAL, (0.9f, 1.1f) },      // Unchanged
-        { Customer.CUSTOMERTYPE.COLLECTOR, (1.0f, 1.5f) },   // Unchanged
-        { Customer.CUSTOMERTYPE.WEALTHY, (1.2f, 2.0f) }      // Unchanged
+        { Customer.CUSTOMERTYPE.BUDGET, (0.6f, 1.0f) },      // Unchanged
+        { Customer.CUSTOMERTYPE.CASUAL, (0.8f, 1.2f) },      // Widened range
+        { Customer.CUSTOMERTYPE.COLLECTOR, (0.8f, 2.0f) },   // Increased max for rare fish
+        { Customer.CUSTOMERTYPE.WEALTHY, (0.9f, 2.5f) }      // Increased max for luxury purchases
     };
 
     // Rarity preferences for each customer type
@@ -124,19 +124,19 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
 
             foreach (var listing in matchingListings)
             {
-                var marketAverage = purchaseManager.GetHistoricalAveragePrices(preference.Rarity)
-                    .GetValueOrDefault(listing.FishName, listing.ListedPrice);
-
-                // For wealthy customers, only check against budget
+                // For wealthy customers, prioritize preferences over price
                 if (customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
                 {
-                    if (listing.ListedPrice <= customer.Budget)
+                    // Changed condition to be more lenient for wealthy customers
+                    if (listing.ListedPrice <= customer.Budget && 
+                        (preference.PreferenceScore >= 0.4f || // Lowered threshold
+                         preference.Rarity >= Customer.FISHRARITY.EPIC)) // Always consider EPIC and LEGENDARY
                     {
                         return new PurchaseDecision
                         {
                             WillPurchase = true,
                             SelectedListing = listing,
-                            Reason = $"Wealthy customer accepting preferred fish ({preference.FishName}) within budget"
+                            Reason = $"Wealthy customer accepting {preference.Rarity} fish ({preference.FishName}) within budget"
                         };
                     }
                     purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.OutOfBudget);
@@ -146,12 +146,26 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
                 var (minWTP, maxWTP) = PriceThresholds[customer.Type];
                 float sellerBias = customer.GetBias(listing.SellerID, preference.Rarity);
 
-                // Adjust WTP based on preference score and seller bias
-                float adjustedMaxWTP = maxWTP * (1 + preference.PreferenceScore) * (1 + sellerBias * 0.2f);
+                // Adjust WTP based on preference score, seller bias, and rarity
+                float rarityMultiplier = preference.Rarity switch
+                {
+                    Customer.FISHRARITY.LEGENDARY => 1.5f,
+                    Customer.FISHRARITY.EPIC => 1.3f,
+                    Customer.FISHRARITY.RARE => 1.2f,
+                    Customer.FISHRARITY.UNCOMMON => 1.1f,
+                    _ => 1.0f
+                };
+
+                float adjustedMaxWTP = maxWTP * (1 + preference.PreferenceScore) * (1 + sellerBias * 0.2f) * rarityMultiplier;
                 float adjustedMinWTP = minWTP * (1 - (1 - preference.PreferenceScore) * 0.2f);
+
+                // Get market average price for this rarity
+                var marketAverage = purchaseManager.GetHistoricalAveragePrices(preference.Rarity)
+                    .GetValueOrDefault(listing.FishName, listing.ListedPrice);
 
                 float priceRatio = listing.ListedPrice / marketAverage;
 
+                // Check if price is acceptable and within budget
                 if (priceRatio >= adjustedMinWTP && priceRatio <= adjustedMaxWTP && listing.ListedPrice <= customer.Budget)
                 {
                     return new PurchaseDecision

@@ -78,12 +78,9 @@ public class Customer
     // Add a maximum purchases property
     public int MaxPurchases { get; private set; }
 
-    private string dbPath;  // Add this field
-
     // Constructor
-    public Customer(CUSTOMERTYPE type, string dbPath, int id = 0, int? predefinedBudget = null)
+    public Customer(CUSTOMERTYPE type, int id = 0, int? predefinedBudget = null)
     {
-        this.dbPath = dbPath;  // Store the dbPath
         CustomerID = id;
         Type = type;
         FishPreferences = new List<FishPreference>();
@@ -148,65 +145,48 @@ public class Customer
 
     private void AddFishPreferencesForRarity(FISHRARITY rarity, float minPreference, float maxPreference)
     {
-        // Query the database for all fish of this rarity
-        using (var connection = new SqliteConnection(dbPath))
+        // Get all fish names of this rarity from the database
+        List<string> fishNames = DatabaseManager.Instance.GetFishNamesByRarity(rarity.ToString());
+
+        if (fishNames.Count == 0) return;
+
+        // Calculate how many fish should be high preference (above 0.5)
+        int highPrefCount = Mathf.CeilToInt(fishNames.Count * GetHighPreferenceRatio(rarity));
+        int lowPrefCount = fishNames.Count - highPrefCount;
+
+        // Shuffle the fish names
+        for (int i = fishNames.Count - 1; i > 0; i--)
         {
-            connection.Open();
-            using (var command = connection.CreateCommand())
+            int j = Random.Range(0, i + 1);
+            var temp = fishNames[i];
+            fishNames[i] = fishNames[j];
+            fishNames[j] = temp;
+        }
+
+        // Assign high preferences to the first portion
+        for (int i = 0; i < highPrefCount; i++)
+        {
+            float prefScore = Random.Range(0.5f, maxPreference);
+            FishPreferences.Add(new FishPreference
             {
-                command.CommandText = "SELECT Name FROM Fish WHERE Rarity = @rarity";
-                command.Parameters.AddWithValue("@rarity", rarity.ToString());
+                FishName = fishNames[i],
+                PreferenceScore = prefScore,
+                Rarity = rarity,
+                HasPurchased = false
+            });
+        }
 
-                List<string> fishNames = new List<string>();
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        fishNames.Add(reader.GetString(0));
-                    }
-                }
-
-                if (fishNames.Count == 0) return;
-
-                // Calculate how many fish should be high preference (above 0.5)
-                int highPrefCount = Mathf.CeilToInt(fishNames.Count * GetHighPreferenceRatio(rarity));
-                int lowPrefCount = fishNames.Count - highPrefCount;
-
-                // Shuffle the fish names
-                for (int i = fishNames.Count - 1; i > 0; i--)
-                {
-                    int j = Random.Range(0, i + 1);
-                    var temp = fishNames[i];
-                    fishNames[i] = fishNames[j];
-                    fishNames[j] = temp;
-                }
-
-                // Assign high preferences to the first portion
-                for (int i = 0; i < highPrefCount; i++)
-                {
-                    float prefScore = Random.Range(0.5f, maxPreference);
-                    FishPreferences.Add(new FishPreference
-                    {
-                        FishName = fishNames[i],
-                        PreferenceScore = prefScore,
-                        Rarity = rarity,
-                        HasPurchased = false
-                    });
-                }
-
-                // Assign low preferences to the remainder
-                for (int i = highPrefCount; i < fishNames.Count; i++)
-                {
-                    float prefScore = Random.Range(minPreference, 0.5f);
-                    FishPreferences.Add(new FishPreference
-                    {
-                        FishName = fishNames[i],
-                        PreferenceScore = prefScore,
-                        Rarity = rarity,
-                        HasPurchased = false
-                    });
-                }
-            }
+        // Assign low preferences to the remainder
+        for (int i = highPrefCount; i < fishNames.Count; i++)
+        {
+            float prefScore = Random.Range(minPreference, 0.5f);
+            FishPreferences.Add(new FishPreference
+            {
+                FishName = fishNames[i],
+                PreferenceScore = prefScore,
+                Rarity = rarity,
+                HasPurchased = false
+            });
         }
     }
 
@@ -363,32 +343,20 @@ public class Customer
             
             randomLowPref.PreferenceScore = Mathf.Min(1.0f, randomLowPref.PreferenceScore + increase);
             
-            // Save both preference changes to the database
-            using (var connection = new SqliteConnection(dbPath))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
-                        UPDATE CustomerPreferences 
-                        SET PreferenceScore = @score
-                        WHERE CustomerID = @customerId 
-                        AND FishName = @fishName";
-                    
-                    // Update decreased preference
-                    command.Parameters.AddWithValue("@customerId", CustomerID);
-                    command.Parameters.AddWithValue("@fishName", purchasedFishName);
-                    command.Parameters.AddWithValue("@score", purchasedPref.PreferenceScore);
-                    command.ExecuteNonQuery();
+            // Save both preference changes to the database using DatabaseManager
+            // Update decreased preference
+            DatabaseManager.Instance.UpdateCustomerPreferenceScore(
+                CustomerID,
+                purchasedFishName,
+                purchasedPref.PreferenceScore
+            );
 
-                    // Update increased preference
-                    command.Parameters.Clear();
-                    command.Parameters.AddWithValue("@customerId", CustomerID);
-                    command.Parameters.AddWithValue("@fishName", randomLowPref.FishName);
-                    command.Parameters.AddWithValue("@score", randomLowPref.PreferenceScore);
-                    command.ExecuteNonQuery();
-                }
-            }
+            // Update increased preference
+            DatabaseManager.Instance.UpdateCustomerPreferenceScore(
+                CustomerID,
+                randomLowPref.FishName,
+                randomLowPref.PreferenceScore
+            );
         }
     }
 }
