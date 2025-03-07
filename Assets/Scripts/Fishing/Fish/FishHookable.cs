@@ -157,7 +157,7 @@ public class FishHookable : ObjectHookable, IFish
     public Vector2 HookedMovement()
     {
         // Add random struggling movement when hooked
-        return new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * behavior.baseSpeed * 0.5f;
+        return new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * currentSpeed * 0.5f;
     }
 
     public void Move(Vector2 velocity)

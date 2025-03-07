@@ -163,7 +163,7 @@
                     "name": "Submit",
                     "type": "Button",
                     "id": "1eba8047-69df-444d-a1da-e7a149f2ef0b",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -172,7 +172,16 @@
                     "name": "Cancel",
                     "type": "Button",
                     "id": "68c5eba5-74d0-44f2-9905-eded0db3be96",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "PauseToggle",
+                    "type": "Button",
+                    "id": "d8d399b9-625d-481d-8b92-6d852682cc00",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -657,6 +666,28 @@
                     "processors": "",
                     "groups": "XR",
                     "action": "TrackedDeviceOrientation",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b7e22aa3-04e3-426e-a1cd-6d927e2c2259",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "PauseToggle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f7ff900f-1559-4c81-9b30-537e9e02fdea",
+                    "path": "<Gamepad>/start",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "PauseToggle",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -82,7 +82,7 @@ public class FishLog : MonoBehaviour
         }
     }
 
-     void LoadFishData()
+    void LoadFishData()
     {
         string dbPath = @"Data Source=" + Application.dataPath + "/StreamingAssets/FishDB.db";
 
