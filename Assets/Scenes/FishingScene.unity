@@ -653,11 +653,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fishTypes:
-  - fishPrefab: {fileID: 1508197357442281480, guid: fa19be51e5e69b34cbffed89b8a692fc, type: 3}
+  - fishPrefab: {fileID: 702920876994150435, guid: fa19be51e5e69b34cbffed89b8a692fc, type: 3}
     initialCount: 1
     maxCount: 0
     spawnChance: 1
-  - fishPrefab: {fileID: 5820290787296300199, guid: 5ae5fe0f0e7779e40a6ad6c44bfc0293, type: 3}
+  - fishPrefab: {fileID: 5531755810262855031, guid: 5ae5fe0f0e7779e40a6ad6c44bfc0293, type: 3}
     initialCount: 10
     maxCount: 0
     spawnChance: 1
@@ -699,7 +699,7 @@ BoxCollider2D:
   m_IsTrigger: 1
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0.79641247, y: -2.7732244}
+  m_Offset: {x: 0.35248947, y: -15.343399}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -710,7 +710,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 17.78156, y: 9.106347}
+  m_Size: {x: 58.408897, y: 34.246696}
   m_EdgeRadius: 0
 --- !u!4 &591247057
 Transform:

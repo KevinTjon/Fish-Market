@@ -174,21 +174,40 @@ public class FishSpawner : MonoBehaviour
         var fishHookable = fish.GetComponent<FishHookable>();
         var fishMovement = fish.GetComponent<FishMovement>();
         
-        // Load behavior if not already assigned
-        if (fishHookable != null && fishHookable.behavior == null)
+        if (fishHookable != null)
         {
-            // Try to find behavior based on fish name
-            string behaviorName = fish.name.Replace("(Clone)", "").Replace("Fish", "FishBehavior");
-            FishBehavior behavior = Resources.Load<FishBehavior>($"FishBehaviors/{behaviorName}");
-            if (behavior != null)
+            // Load FishType if not already assigned
+            if (fishHookable.fishType == null)
             {
-                fishHookable.behavior = behavior;
+                string typeName = fish.name.Replace("(Clone)", "").Replace("Fish", "FishType");
+                FishType fishType = Resources.Load<FishType>($"FishTypes/{typeName}");
+                if (fishType != null)
+                {
+                    fishHookable.fishType = fishType;
+                }
+                else
+                {
+                    Debug.LogError($"Could not find FishType for fish: {fish.name}. Looking for: FishTypes/{typeName}");
+                    Destroy(fish);
+                    return;
+                }
             }
-            else
+            
+            // Load behavior if not already assigned
+            if (fishHookable.behavior == null)
             {
-                Debug.LogError($"Could not find behavior for fish: {fish.name}");
-                Destroy(fish);
-                return;
+                string behaviorName = fish.name.Replace("(Clone)", "").Replace("Fish", "FishBehavior");
+                FishBehavior behavior = Resources.Load<FishBehavior>($"FishBehaviors/{behaviorName}");
+                if (behavior != null)
+                {
+                    fishHookable.behavior = behavior;
+                }
+                else
+                {
+                    Debug.LogError($"Could not find behavior for fish: {fish.name}");
+                    Destroy(fish);
+                    return;
+                }
             }
         }
         

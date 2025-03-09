@@ -5,7 +5,8 @@ using UnityEngine;
 public class FishHookable : ObjectHookable, IFish
 {
     [Header("Fish Configuration")]
-    public FishBehavior behavior;
+    public FishType fishType; // Reference to the fish type scriptable object
+    public FishBehavior behavior; // Now only used for movement behavior
     
     private bool isStunned;
     public bool IsStunned { get {return isStunned;}}
@@ -47,6 +48,12 @@ public class FishHookable : ObjectHookable, IFish
             currentSpeed = 1f; // Default speed
         }
         
+        // Validate fish type
+        if (fishType == null)
+        {
+            Debug.LogError($"No fish type assigned to fish: {gameObject.name}");
+        }
+        
         StartCoroutine(UpdateNearbyEntities());
     }
 
@@ -54,82 +61,68 @@ public class FishHookable : ObjectHookable, IFish
     {
         while (true)
         {
-            if (!isStunned && !isHooked && behavior != null)
+            if (!isStunned && !isHooked && fishType != null)
             {
                 // Update nearby fish
                 nearbyFish.Clear();
-                Collider2D[] fishColliders = Physics2D.OverlapCircleAll(transform.position, behavior.visionRange, fishLayer);
+                Collider2D[] fishColliders = Physics2D.OverlapCircleAll(transform.position, fishType.visionRange, fishLayer);
                 foreach (var collider in fishColliders)
                 {
                     if (collider.transform != transform)
                     {
                         nearbyFish.Add(collider.transform);
-                    }
-                }
-
-                // Find nearest bait
-                Collider2D[] baitColliders = Physics2D.OverlapCircleAll(transform.position, behavior.baitDetectionRange, baitLayer);
-                float nearestBaitDistance = float.MaxValue;
-                Transform previousBait = nearestBait;  // Store previous bait for comparison
-                nearestBait = null;
-                
-                if (baitColliders.Length > 0)
-                {
-                    Debug.Log($"Fish {gameObject.name} detected {baitColliders.Length} bait(s) within range {behavior.baitDetectionRange}");
-                    
-                    foreach (var collider in baitColliders)
-                    {
-                        float distance = Vector2.Distance(transform.position, collider.transform.position);
-                        BaitObject baitObj = collider.GetComponent<BaitObject>();
                         
-                        if (baitObj != null)
+                        // Check if this is potential prey
+                        if (fishType.canEat)
                         {
-                            bool isCompatible = baitObj.IsAttractedToFish(GetFishSize());
-                            Debug.Log($"Checking bait {baitObj.name} - Distance: {distance}, Compatible: {isCompatible}");
-                            
-                            if (isCompatible && distance < nearestBaitDistance)
+                            var otherFish = collider.GetComponent<FishHookable>();
+                            if (otherFish != null && fishType.CanEatSize(otherFish.GetFishSize()))
                             {
-                                nearestBaitDistance = distance;
-                                nearestBait = collider.transform;
+                                float distance = Vector2.Distance(transform.position, collider.transform.position);
+                                if (nearestPrey == null || distance < Vector2.Distance(transform.position, nearestPrey.position))
+                                {
+                                    nearestPrey = collider.transform;
+                                }
                             }
                         }
                     }
                 }
-                else
-                {
-                    Debug.Log($"Fish {gameObject.name} found no bait within range {behavior.baitDetectionRange}");
-                }
+
+                // Find nearest bait within vision range
+                Collider2D[] baitColliders = Physics2D.OverlapCircleAll(transform.position, fishType.visionRange, baitLayer);
+                float nearestBaitDistance = float.MaxValue;
+                nearestBait = null;
                 
-                // Log if bait target changed
-                if (previousBait != nearestBait)
+                foreach (var collider in baitColliders)
                 {
-                    if (nearestBait != null)
-                        Debug.Log($"Fish {gameObject.name} now targeting bait: {nearestBait.name}");
-                    else if (previousBait != null)
-                        Debug.Log($"Fish {gameObject.name} stopped targeting bait: {previousBait.name}");
+                    float distance = Vector2.Distance(transform.position, collider.transform.position);
+                    if (distance < nearestBaitDistance)
+                    {
+                        BaitObject baitObj = collider.GetComponent<BaitObject>();
+                        if (baitObj != null && baitObj.IsAttractedToFish(GetFishSize()))
+                        {
+                            nearestBaitDistance = distance;
+                            nearestBait = collider.transform;
+                        }
+                    }
                 }
             }
-            yield return new WaitForSeconds(0.2f); // Update every 0.2 seconds for performance
+            yield return new WaitForSeconds(0.2f);
         }
     }
 
-    private FishSize GetFishSize()
+    // Get the fish size directly from the FishType
+    public FishSize GetFishSize()
     {
-        if (behavior == null) return FishSize.Medium;
-        
-        float size = behavior.size;
-        if (size <= 0.6f) return FishSize.Tiny;
-        else if (size <= 0.8f) return FishSize.Small;
-        else if (size <= 1.2f) return FishSize.Medium;
-        else if (size <= 1.7f) return FishSize.Large;
-        else return FishSize.Huge;
+        return fishType != null ? fishType.size : FishSize.Medium;
     }
 
-    public new void Hook(Vector2 hookPos)
+    public override void Hook(Vector2 hookPosition)
     {
-        base.Hook(hookPos);
+        base.Hook(hookPosition);
         isStunned = true;
-        rb.isKinematic = true;
+        rb.isKinematic = false;
+        rb.gravityScale = 0f;
         
         // Clear references to nearby entities when hooked
         nearbyFish.Clear();
@@ -139,6 +132,19 @@ public class FishHookable : ObjectHookable, IFish
         
         // Stop the coroutine that updates nearby entities
         StopAllCoroutines();
+    }
+
+    // New method that takes the hook transform
+    public void SetHookPosition(Transform hookTransform)
+    {
+        if (hookTransform != null)
+        {
+            // Set position below the hook
+            transform.position = hookTransform.position - (Vector3.up * 0.5f);
+            
+            // Rotate fish to be vertical
+            transform.rotation = Quaternion.identity;
+        }
     }
 
     public new void Unhook()
@@ -152,25 +158,49 @@ public class FishHookable : ObjectHookable, IFish
         yield return new WaitForSeconds(2f);
         isStunned = false;
         rb.isKinematic = false;
+        
+        // Restart entity detection
+        StartCoroutine(UpdateNearbyEntities());
     }
 
+    // Internal method for calculating struggling movement when hooked
+    internal Vector2 CalculateHookedMovement()
+    {
+        if (!isHooked) return Vector2.zero;
+
+        // Calculate struggling movement
+        float struggleSpeed = behavior != null ? behavior.baseSpeed * 2f : 2f;
+        float time = Time.time; // Use time for smooth oscillation
+        
+        // Create a more natural struggling pattern
+        float horizontalStruggle = Mathf.Sin(time * 5f) * Mathf.Cos(time * 3f);
+        float verticalStruggle = Mathf.Cos(time * 4f) * Mathf.Sin(time * 2f);
+        
+        return new Vector2(horizontalStruggle, verticalStruggle).normalized * struggleSpeed;
+    }
+
+    // Implementation of IFish interface
     public Vector2 HookedMovement()
     {
-        // Add random struggling movement when hooked
-        return new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * behavior.baseSpeed * 0.5f;
+        return CalculateHookedMovement();
     }
 
     public void Move(Vector2 velocity)
     {
         if (isHooked || isStunned) return;
 
-        // Just store the velocity for reference, don't apply movement
+        // Adjust speed based on whether chasing prey
+        if (nearestPrey != null && fishType != null)
+        {
+            velocity *= fishType.preyChaseSpeed;
+        }
+
         currentVelocity = velocity;
     }
 
     private Vector2 CalculateFlockingForce()
     {
-        if (nearbyFish.Count == 0) return Vector2.zero;
+        if (nearbyFish.Count == 0 || fishType == null) return Vector2.zero;
 
         Vector2 cohesion = Vector2.zero;
         Vector2 alignment = Vector2.zero;
@@ -182,7 +212,7 @@ public class FishHookable : ObjectHookable, IFish
             float distance = Vector2.Distance(transform.position, fish.position);
             
             // Separation
-            if (distance < behavior.personalSpace)
+            if (distance < fishType.personalSpace)
             {
                 Vector2 diff = (Vector2)(transform.position - fish.position);
                 diff.Normalize();
@@ -191,7 +221,7 @@ public class FishHookable : ObjectHookable, IFish
             }
             
             // Cohesion and Alignment
-            if (distance < behavior.visionRange)
+            if (distance < fishType.visionRange)
             {
                 cohesion += (Vector2)fish.position;
                 alignment += (Vector2)fish.up;
@@ -227,7 +257,7 @@ public class FishHookable : ObjectHookable, IFish
 
     private Vector2 CalculatePreyForce()
     {
-        if (!behavior.isPredator || nearestPrey == null) return Vector2.zero;
+        if (nearestPrey == null || fishType == null || !fishType.canEat) return Vector2.zero;
         
         return ((Vector2)nearestPrey.position - (Vector2)transform.position).normalized;
     }

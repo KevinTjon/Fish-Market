@@ -27,10 +27,9 @@ public class ObjectHookable : MonoBehaviour, IHookable
         //Debug.Log("Current layer of " + gameObject.name + ": " + gameObject.layer);
     }
 
-        // Fish follow hook
-    public void Hook(Vector2 hookPosition)
+    // Fish follow hook
+    public virtual void Hook(Vector2 hookPosition)
     {
-        Position = hookPosition;
         isHooked = true;
     }
 

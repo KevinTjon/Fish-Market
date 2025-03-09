@@ -30,22 +30,72 @@ public class FishSchooling : MonoBehaviour
     
     private void Start()
     {
+        // Get required components
         fishMovement = GetComponent<FishMovement>();
         fishHookable = GetComponent<FishHookable>();
         
-        // Start with default weights based on fish size
-        if (fishHookable?.behavior != null)
+        // Validate components
+        if (fishMovement == null)
         {
-            // Smaller fish tend to school more tightly
-            float sizeMultiplier = 1f / fishHookable.behavior.size;
-            cohesionWeight *= sizeMultiplier;
-            alignmentWeight *= sizeMultiplier;
+            Debug.LogError($"FishSchooling on {gameObject.name} requires FishMovement component");
+            enabled = false;
+            return;
+        }
+        
+        if (fishHookable == null)
+        {
+            Debug.LogError($"FishSchooling on {gameObject.name} requires FishHookable component");
+            enabled = false;
+            return;
+        }
+        
+        if (fishHookable.fishType == null)
+        {
+            Debug.LogError($"FishHookable on {gameObject.name} requires FishType to be assigned");
+            enabled = false;
+            return;
+        }
+
+        // Calculate school radius based on spawn area size
+        if (fishMovement.boundaryArea != null)
+        {
+            Bounds bounds = fishMovement.boundaryArea.bounds;
+            float minDimension = Mathf.Min(bounds.size.x, bounds.size.y);
+            // Set school radius to 25% of the smallest spawn area dimension
+            schoolRadius = minDimension * 0.25f;
             
-            // Adjust detection ranges based on fish size
-            schoolRadius *= fishHookable.behavior.size;
-            separationRadius *= fishHookable.behavior.size;
-            optimalSchoolDistance *= fishHookable.behavior.size;
-            predatorDetectionRadius *= (1f + (1f - fishHookable.behavior.size)); // Smaller fish detect predators from further away
+            // Adjust other distances proportionally
+            separationRadius = schoolRadius * 0.2f;
+            optimalSchoolDistance = schoolRadius * 0.4f;
+            predatorDetectionRadius = schoolRadius * 0.4f;
+        }
+        
+        // Start with default weights based on fish size
+        float sizeValue = GetSizeValue(fishHookable.fishType.size);
+        float sizeMultiplier = 1f / sizeValue;
+        
+        // Smaller fish tend to school more tightly
+        cohesionWeight *= sizeMultiplier;
+        alignmentWeight *= sizeMultiplier;
+        
+        // Adjust detection ranges based on fish size
+        schoolRadius *= sizeValue;
+        separationRadius *= sizeValue;
+        optimalSchoolDistance *= sizeValue;
+        predatorDetectionRadius *= (1f + (1f - sizeValue)); // Smaller fish detect predators from further away
+    }
+    
+    // Helper method to convert FishSize enum to numeric value
+    private float GetSizeValue(FishSize size)
+    {
+        switch (size)
+        {
+            case FishSize.Tiny: return 0.5f;
+            case FishSize.Small: return 0.75f;
+            case FishSize.Medium: return 1f;
+            case FishSize.Large: return 1.5f;
+            case FishSize.Huge: return 2f;
+            default: return 1f;
         }
     }
     
@@ -62,15 +112,15 @@ public class FishSchooling : MonoBehaviour
             Vector2 otherPos = otherFish.transform.position;
             float distance = Vector2.Distance(transform.position, otherPos);
             
-            // Check for predators first
+            // Check for predators first (keep predator detection range-limited)
             if (IsPredator(otherFish.fishHookable) && distance <= predatorDetectionRadius)
             {
                 nearbyPredators.Add(otherFish.fishHookable);
                 isPanicked = true;
             }
             
-            // Then check for schoolmates
-            if (distance <= schoolRadius && IsSameSchoolType(otherFish))
+            // Check for schoolmates - no distance check, just type matching
+            if (IsSameSchoolType(otherFish))
             {
                 nearbyFish.Add(otherFish);
                 if (nearbyFish.Count >= maxSchoolSize) break;
@@ -80,16 +130,22 @@ public class FishSchooling : MonoBehaviour
     
     private bool IsPredator(FishHookable other)
     {
-        if (fishHookable == null || other == null || other.behavior == null) return false;
+        if (fishHookable == null || other == null || other.fishType == null) return false;
+        
+        // Get numeric values for size comparison
+        float mySizeValue = GetSizeValue(fishHookable.fishType.size);
+        float otherSizeValue = GetSizeValue(other.fishType.size);
         
         // Consider a fish a predator if it's significantly larger
-        return other.behavior.size >= (fishHookable.behavior.size * minPredatorSize);
+        return otherSizeValue >= (mySizeValue * minPredatorSize);
     }
     
     private bool IsSameSchoolType(FishSchooling other)
     {
+        // Check for null references at each level
         if (fishHookable == null || other.fishHookable == null) return false;
-        return fishHookable.behavior.size == other.fishHookable.behavior.size;
+        if (fishHookable.fishType == null || other.fishHookable.fishType == null) return false;
+        return fishHookable.fishType.size == other.fishHookable.fishType.size;
     }
     
     private Vector2 CalculatePredatorAvoidance()
@@ -110,7 +166,9 @@ public class FishSchooling : MonoBehaviour
             avoidanceStrength = Mathf.Pow(avoidanceStrength, 2); // Square for stronger close-range avoidance
             
             // Add size difference factor - flee more from bigger predators
-            float sizeDifference = predator.behavior.size / fishHookable.behavior.size;
+            float predatorSize = GetSizeValue(predator.fishType.size);
+            float mySize = GetSizeValue(fishHookable.fishType.size);
+            float sizeDifference = predatorSize / mySize;
             avoidanceStrength *= Mathf.Clamp(sizeDifference, 1f, 3f);
             
             avoidance += awayFromPredator.normalized * avoidanceStrength;

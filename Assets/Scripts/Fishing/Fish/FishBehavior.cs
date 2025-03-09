@@ -3,7 +3,8 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "FishBehavior", menuName = "Fish/Behavior")]
 public class FishBehavior : ScriptableObject
 {
-    [Header("Fish Properties")]
+    [Header("Movement Properties")]
+    [Tooltip("The relative size of the fish")]
     public float size = 1f;
     public float baseSpeed = 5f;
     public float maxSpeed = 10f;

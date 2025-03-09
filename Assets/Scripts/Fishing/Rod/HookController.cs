@@ -161,17 +161,29 @@ public class HookController : MonoBehaviour
             var hookable = col.gameObject.GetComponent<ObjectHookable>();
             var fishHookable = hookable as FishHookable;  // Try to cast to FishHookable
             
-            // Only proceed if:
-            // 1. We have a valid hookable
-            // 2. It's not already hooked
-            // 3. Either:
-            //    a) It's not a fish, OR
-            //    b) We have compatible bait and the fish is attracted to our bait type
-            if (hookable != null && !hookable.IsHooked && 
-                (fishHookable == null || 
-                 (currentBait != null && IsBaitCompatibleWithFish(fishHookable) && currentBait.IsAttractedToFish(GetFishSize(fishHookable)))))
+            // First check if it's a fish
+            if (fishHookable != null)
             {
-                Debug.Log($"Attempting to hook: {col.gameObject.name}"); // Debug log
+                // For fish, we need compatible bait
+                if (currentBait == null)
+                {
+                    Debug.Log("Cannot hook fish without bait");
+                    return;
+                }
+
+                if (!IsBaitCompatibleWithFish(fishHookable))
+                {
+                    Debug.Log($"Fish is not attracted to current bait type");
+                    return;
+                }
+            }
+
+            // If we get here, either:
+            // 1. It's not a fish (hook anything)
+            // 2. It's a fish and we have compatible bait
+            if (hookable != null && !hookable.IsHooked)
+            {
+                Debug.Log($"Attempting to hook: {col.gameObject.name}");
                 
                 // Calculate hook position based on collision point
                 Vector2 collisionPoint = col.GetContact(0).point;
@@ -184,6 +196,12 @@ public class HookController : MonoBehaviour
                 // Hook the object
                 hookable.Hook(newPos);
                 hasHookedObject = true;  // Mark that we have something hooked
+                
+                // For fish, set the position relative to hook
+                if (fishHookable != null)
+                {
+                    fishHookable.SetHookPosition(transform);
+                }
                 
                 // Remove bait if we caught something
                 RemoveBait();
@@ -200,52 +218,50 @@ public class HookController : MonoBehaviour
                 newJoint.connectedBody = col.rigidbody;
                 newJoint.autoConfigureConnectedAnchor = false;
                 newJoint.anchor = Vector2.zero;
-                newJoint.connectedAnchor = col.transform.InverseTransformPoint(collisionPoint);
                 
-                Debug.Log($"Successfully hooked: {col.gameObject.name}"); // Debug log
-            }
-            else
-            {
-                // Debug why hooking failed
-                if (hookable == null) Debug.Log("Failed to hook: No hookable component");
-                else if (hookable.IsHooked) Debug.Log("Failed to hook: Already hooked");
-                else if (fishHookable != null)
+                // For fish, connect the joint at the top of the fish sprite
+                if (fishHookable != null)
                 {
-                    if (currentBait == null) Debug.Log("Failed to hook: No bait attached");
-                    else if (!IsBaitCompatibleWithFish(fishHookable)) Debug.Log("Failed to hook: Incompatible bait type");
-                    else if (!currentBait.IsAttractedToFish(GetFishSize(fishHookable))) Debug.Log($"Failed to hook: Fish size {GetFishSize(fishHookable)} not attracted to this bait");
+                    // Set the anchor point at the top of the fish
+                    newJoint.connectedAnchor = Vector2.up * 0.5f;
+                    
+                    // Make the joint more flexible
+                    newJoint.dampingRatio = 0.5f;
+                    newJoint.frequency = 2f;
                 }
+                else
+                {
+                    // For non-fish objects, use the collision point
+                    newJoint.connectedAnchor = col.transform.InverseTransformPoint(collisionPoint);
+                }
+                
+                Debug.Log($"Successfully hooked: {col.gameObject.name}");
             }
         }
     }
     
     private FishSize GetFishSize(FishHookable fish)
     {
-        // Get the fish size from its behavior
-        if (fish == null || fish.behavior == null)
-            return FishSize.Medium; // Default to medium if no behavior
+        // Get the fish size from its type
+        if (fish == null || fish.fishType == null)
+            return FishSize.Medium; // Default to medium if no type
         
-        float size = fish.behavior.size;
-        if (size <= 0.6f) return FishSize.Tiny;
-        else if (size <= 0.8f) return FishSize.Small;
-        else if (size <= 1.2f) return FishSize.Medium;
-        else if (size <= 1.7f) return FishSize.Large;
-        else return FishSize.Huge;
+        return fish.fishType.size;
     }
 
     private bool IsBaitCompatibleWithFish(FishHookable fish)
     {
         // If we have no bait, nothing can be caught
-        if (currentBait == null || currentBait.baitData == null || fish == null || fish.behavior == null)
+        if (currentBait == null || currentBait.baitData == null || fish == null || fish.fishType == null)
         {
-            Debug.LogWarning($"Bait compatibility check failed: currentBait={currentBait != null}, baitData={currentBait?.baitData != null}, fish={fish != null}, behavior={fish?.behavior != null}");
+            Debug.LogWarning($"Bait compatibility check failed: currentBait={currentBait != null}, baitData={currentBait?.baitData != null}, fish={fish != null}, fishType={fish?.fishType != null}");
             return false;
         }
         
         // Get the fish size using the existing GetFishSize method
         FishSize fishSize = GetFishSize(fish);
         
-        Debug.Log($"Fish size check - Raw size: {fish.behavior.size}, Calculated size: {fishSize}");
+        Debug.Log($"Fish size check - Size: {fishSize}");
         
         // Check if this fish size is compatible with our bait
         bool isCompatible = currentBait.IsAttractedToFish(fishSize);
