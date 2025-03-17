@@ -53,6 +53,8 @@ public class RodController : MonoBehaviour
         {
             if (input >= 0)
             {
+                if (hook.baitObject != null)
+                    Debug.Log(hook.baitObject.name + " caught!");
                 // Add to inventory
             }
             else

@@ -18,7 +18,7 @@ public class UIController : MonoBehaviour
         isPaused = false;
     }
 
-    void Start()
+    private void Start()
     {
         uiActions.PauseToggle.Enable();
     }

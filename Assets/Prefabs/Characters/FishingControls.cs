@@ -53,6 +53,15 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""OpenInventory"",
+                    ""type"": ""Button"",
+                    ""id"": ""fc026268-7aa3-4dc6-8c3e-f1f20b0b8024"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -165,6 +174,28 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""action"": ""CastRod"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""dbace925-1fad-4fb6-8033-b90283473675"",
+                    ""path"": ""<Keyboard>/leftShift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""OpenInventory"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""266099fb-65c3-42a8-842f-125df7e64c56"",
+                    ""path"": ""<Gamepad>/buttonNorth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Gamepad"",
+                    ""action"": ""OpenInventory"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -258,6 +289,15 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""type"": ""PassThrough"",
                     ""id"": ""dfe6bd1a-68c1-4bf1-b2d3-276c69b774c1"",
                     ""expectedControlType"": ""Quaternion"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""PauseToggle"",
+                    ""type"": ""Button"",
+                    ""id"": ""142a08a9-39df-434c-bcb5-c2448899b814"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -681,6 +721,28 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""action"": ""TrackedDeviceOrientation"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7c5d9fd4-3634-4126-a96d-f1cb0eaf293d"",
+                    ""path"": ""<Keyboard>/escape"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""PauseToggle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4984d8c8-8972-40a8-b79c-898aa10a48cb"",
+                    ""path"": ""<Gamepad>/start"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Gamepad"",
+                    ""action"": ""PauseToggle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -720,6 +782,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         m_Player_MoveBoat = m_Player.FindAction("MoveBoat", throwIfNotFound: true);
         m_Player_ReelLine = m_Player.FindAction("ReelLine", throwIfNotFound: true);
         m_Player_CastRod = m_Player.FindAction("CastRod", throwIfNotFound: true);
+        m_Player_OpenInventory = m_Player.FindAction("OpenInventory", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -732,6 +795,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         m_UI_RightClick = m_UI.FindAction("RightClick", throwIfNotFound: true);
         m_UI_TrackedDevicePosition = m_UI.FindAction("TrackedDevicePosition", throwIfNotFound: true);
         m_UI_TrackedDeviceOrientation = m_UI.FindAction("TrackedDeviceOrientation", throwIfNotFound: true);
+        m_UI_PauseToggle = m_UI.FindAction("PauseToggle", throwIfNotFound: true);
     }
 
     ~@FishingControls()
@@ -802,6 +866,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_MoveBoat;
     private readonly InputAction m_Player_ReelLine;
     private readonly InputAction m_Player_CastRod;
+    private readonly InputAction m_Player_OpenInventory;
     public struct PlayerActions
     {
         private @FishingControls m_Wrapper;
@@ -809,6 +874,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         public InputAction @MoveBoat => m_Wrapper.m_Player_MoveBoat;
         public InputAction @ReelLine => m_Wrapper.m_Player_ReelLine;
         public InputAction @CastRod => m_Wrapper.m_Player_CastRod;
+        public InputAction @OpenInventory => m_Wrapper.m_Player_OpenInventory;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -827,6 +893,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @CastRod.started += instance.OnCastRod;
             @CastRod.performed += instance.OnCastRod;
             @CastRod.canceled += instance.OnCastRod;
+            @OpenInventory.started += instance.OnOpenInventory;
+            @OpenInventory.performed += instance.OnOpenInventory;
+            @OpenInventory.canceled += instance.OnOpenInventory;
         }
 
         private void UnregisterCallbacks(IPlayerActions instance)
@@ -840,6 +909,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @CastRod.started -= instance.OnCastRod;
             @CastRod.performed -= instance.OnCastRod;
             @CastRod.canceled -= instance.OnCastRod;
+            @OpenInventory.started -= instance.OnOpenInventory;
+            @OpenInventory.performed -= instance.OnOpenInventory;
+            @OpenInventory.canceled -= instance.OnOpenInventory;
         }
 
         public void RemoveCallbacks(IPlayerActions instance)
@@ -871,6 +943,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_UI_RightClick;
     private readonly InputAction m_UI_TrackedDevicePosition;
     private readonly InputAction m_UI_TrackedDeviceOrientation;
+    private readonly InputAction m_UI_PauseToggle;
     public struct UIActions
     {
         private @FishingControls m_Wrapper;
@@ -885,6 +958,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         public InputAction @RightClick => m_Wrapper.m_UI_RightClick;
         public InputAction @TrackedDevicePosition => m_Wrapper.m_UI_TrackedDevicePosition;
         public InputAction @TrackedDeviceOrientation => m_Wrapper.m_UI_TrackedDeviceOrientation;
+        public InputAction @PauseToggle => m_Wrapper.m_UI_PauseToggle;
         public InputActionMap Get() { return m_Wrapper.m_UI; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -924,6 +998,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @TrackedDeviceOrientation.started += instance.OnTrackedDeviceOrientation;
             @TrackedDeviceOrientation.performed += instance.OnTrackedDeviceOrientation;
             @TrackedDeviceOrientation.canceled += instance.OnTrackedDeviceOrientation;
+            @PauseToggle.started += instance.OnPauseToggle;
+            @PauseToggle.performed += instance.OnPauseToggle;
+            @PauseToggle.canceled += instance.OnPauseToggle;
         }
 
         private void UnregisterCallbacks(IUIActions instance)
@@ -958,6 +1035,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @TrackedDeviceOrientation.started -= instance.OnTrackedDeviceOrientation;
             @TrackedDeviceOrientation.performed -= instance.OnTrackedDeviceOrientation;
             @TrackedDeviceOrientation.canceled -= instance.OnTrackedDeviceOrientation;
+            @PauseToggle.started -= instance.OnPauseToggle;
+            @PauseToggle.performed -= instance.OnPauseToggle;
+            @PauseToggle.canceled -= instance.OnPauseToggle;
         }
 
         public void RemoveCallbacks(IUIActions instance)
@@ -998,6 +1078,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         void OnMoveBoat(InputAction.CallbackContext context);
         void OnReelLine(InputAction.CallbackContext context);
         void OnCastRod(InputAction.CallbackContext context);
+        void OnOpenInventory(InputAction.CallbackContext context);
     }
     public interface IUIActions
     {
@@ -1011,5 +1092,6 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         void OnRightClick(InputAction.CallbackContext context);
         void OnTrackedDevicePosition(InputAction.CallbackContext context);
         void OnTrackedDeviceOrientation(InputAction.CallbackContext context);
+        void OnPauseToggle(InputAction.CallbackContext context);
     }
 }
