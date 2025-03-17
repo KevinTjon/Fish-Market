@@ -4,18 +4,19 @@ using UnityEngine;
 public class BaitObject : MonoBehaviour
 {
     public Bait baitData;
-    private CircleCollider2D attractionArea;
+    private CircleCollider2D collider;
     private SpriteRenderer spriteRenderer;
     
     private void Awake()
     {
-        // Set up attraction area (trigger collider)
-        attractionArea = GetComponent<CircleCollider2D>();
-        if (attractionArea == null)
+        // Set up collider
+        collider = GetComponent<CircleCollider2D>();
+        if (collider == null)
         {
-            attractionArea = gameObject.AddComponent<CircleCollider2D>();
+            collider = gameObject.AddComponent<CircleCollider2D>();
         }
-        attractionArea.isTrigger = true;
+        collider.isTrigger = false;
+        collider.radius = 0.2f; // Small physical collider
         
         // Find or create sprite renderer
         Transform spriteTransform = transform.Find("Sprite");
@@ -40,11 +41,6 @@ public class BaitObject : MonoBehaviour
     
     private void ApplyBaitData()
     {
-        if (attractionArea != null)
-        {
-            attractionArea.radius = baitData.attractionRadius;
-        }
-        
         if (spriteRenderer != null)
         {
             // Create a simple circle sprite for the bait
@@ -85,39 +81,14 @@ public class BaitObject : MonoBehaviour
         if (baitData == null || baitData.targetFishSizes == null)
         {
             Debug.LogWarning($"Bait data missing: baitData={baitData != null}, targetFishSizes={baitData?.targetFishSizes != null}");
-            return true; // If no preferences set, attract all fish
+            return false; // If no preferences set, don't attract any fish
         }
             
-        string configuredSizes = string.Join(", ", baitData.targetFishSizes);
-        Debug.Log($"Checking bait compatibility - Bait: {baitData.baitName}, Configured sizes: [{configuredSizes}], Target size: {fishSize}");
-        
         foreach (FishSize size in baitData.targetFishSizes)
         {
             if (size == fishSize)
                 return true;
         }
         return false;
-    }
-    
-    public float GetAttractionStrength(FishSize fishSize)
-    {
-        float baseStrength = baitData.attractionStrength;
-        
-        // Apply size-specific multiplier if this is a target fish size
-        if (IsAttractedToFish(fishSize))
-        {
-            baseStrength *= baitData.sizeSpecificAttractionMultiplier;
-        }
-        
-        return baseStrength;
-    }
-    
-    private void OnDrawGizmosSelected()
-    {
-        if (baitData == null) return;
-        
-        // Draw attraction radius
-        Gizmos.color = new Color(1f, 1f, 0f, 0.2f);
-        Gizmos.DrawWireSphere(transform.position, baitData.attractionRadius);
     }
 } 

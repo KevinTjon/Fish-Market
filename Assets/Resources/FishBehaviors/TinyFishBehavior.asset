@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ce1c8edc52c30549a2afb936ee37fbc, type: 3}
   m_Name: TinyFishBehavior
   m_EditorClassIdentifier: 
-  size: 0.5
+  size: 15
   baseSpeed: 1
   maxSpeed: 2
   turnSpeed: 2
@@ -22,7 +22,7 @@ MonoBehaviour:
   baitAttractionWeight: 1.5
   predatorAvoidanceWeight: 2
   visionRange: 1.5
-  baitDetectionRange: 1
+  baitDetectionRange: 10
   predatorDetectionRange: 2
   personalSpace: 0.2
   isPredator: 0

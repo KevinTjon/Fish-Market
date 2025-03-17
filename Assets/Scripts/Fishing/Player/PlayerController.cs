@@ -35,7 +35,8 @@ public class PlayerController : MonoBehaviour
         playerAnimator = bHierarchy.GetChild(1).GetComponent<Animator>();
         rodAnimator = bHierarchy.GetChild(2).GetComponent<Animator>();
         
-        playerActions = new FishingControls().Player;
+        FishingControls fishingControls = new FishingControls();
+        playerActions = fishingControls.Player;
         
         rod.SetWaterLevel(waterLevel);
     }

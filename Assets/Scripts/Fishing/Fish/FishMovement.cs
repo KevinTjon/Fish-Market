@@ -18,6 +18,7 @@ public class FishMovement : MonoBehaviour
     public float boundaryForce = 5f;
     public float boundaryTurnSpeed = 2f;
     public float edgeBuffer = 2f;
+    public float hardBoundaryBuffer = 0.5f; // Distance from edge where hard boundary kicks in
     public float returnToCenterForce = 2f;
     public float boundaryExponent = 2f;
 
@@ -25,9 +26,12 @@ public class FishMovement : MonoBehaviour
     public float directionChangeSpeed = 0.1f;
     public float minSpeedMultiplier = 0.5f;
     public float maxSpeedMultiplier = 1.5f;
+    public float maxTurnSpeed = 2f; // Maximum turning speed in radians per second
+    public float minimumSpeed = 1f; // Minimum speed the fish must maintain
     private float speedMultiplier = 1f;
     private float directionChangeTimer;
     private float directionChangeInterval;
+    private Vector2 currentDirection; // Track current movement direction
 
     // Cached boundary values
     private float minX, maxX, minY, maxY;
@@ -65,11 +69,15 @@ public class FishMovement : MonoBehaviour
         {
             currentSpeed = behavior.baseSpeed;
             // Initialize with a random direction
-            targetDirection = Random.insideUnitCircle.normalized;
+            currentDirection = Random.insideUnitCircle.normalized;
+            targetDirection = currentDirection;
             
             // Initialize random timers
             directionChangeInterval = Random.Range(3f, 6f);
             speedMultiplier = Random.Range(minSpeedMultiplier, maxSpeedMultiplier);
+
+            // Apply proper scaling to all components
+            ApplyFishScale();
         }
     }
 
@@ -117,43 +125,134 @@ public class FishMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (fishHookable.IsStunned || fishHookable.IsHooked || behavior == null)
-            return;
-
-        UpdateTimers();
-        
-        // Calculate all movement forces
-        Vector2 movementForce = CalculateMovementForce();
-        
-        // Apply movement using the rigidbody
-        Vector2 targetVelocity = movementForce * behavior.baseSpeed * speedMultiplier;
+        // Get rigidbody reference
         var rb = fishHookable.GetComponent<Rigidbody2D>();
         
         // Ensure rigidbody doesn't rotate
         rb.angularVelocity = 0f;
         rb.rotation = 0f;
         rb.freezeRotation = true;
-        
-        // Apply velocity
-        rb.velocity = targetVelocity;
-        
-        // Store current velocity for reference
+
+        Vector2 targetVelocity;
+
+        if (fishHookable.IsStunned)
+        {
+            // When stunned, no movement
+            targetVelocity = Vector2.zero;
+            currentDirection = Vector2.zero;
+        }
+        else if (fishHookable.IsHooked)
+        {
+            // When hooked, calculate struggling movement
+            targetVelocity = fishHookable.HookedMovement();
+            currentDirection = targetVelocity.normalized;
+        }
+        else if (behavior != null)
+        {
+            // Normal movement
+            UpdateTimers();
+            Vector2 desiredDirection = CalculateMovementForce();
+            
+            // Smoothly rotate current direction towards desired direction
+            float angle = Vector2.SignedAngle(currentDirection, desiredDirection);
+            float maxRotation = maxTurnSpeed * Time.fixedDeltaTime;
+            float rotation = Mathf.Clamp(angle, -maxRotation, maxRotation);
+            
+            currentDirection = RotateVector2(currentDirection, rotation);
+            
+            // Calculate base velocity with schooling influence
+            float baseSpeed = behavior.baseSpeed * speedMultiplier;
+            if (schooling != null)
+            {
+                Vector2 schoolingForce = schooling.CalculateSchoolingForce();
+                // Adjust speed based on schooling - slower when close to school, faster when catching up
+                float schoolingInfluence = Mathf.Lerp(0.8f, 1.2f, schoolingForce.magnitude);
+                baseSpeed *= schoolingInfluence;
+            }
+            
+            // Apply minimum speed as a floor
+            baseSpeed = Mathf.Max(baseSpeed, minimumSpeed);
+            targetVelocity = currentDirection * baseSpeed;
+        }
+        else
+        {
+            targetVelocity = Vector2.zero;
+            currentDirection = Vector2.zero;
+        }
+
+        // Store current velocity for reference (used by other components like schooling)
         currentVelocity = targetVelocity;
         
-        // Simple left/right sprite flipping based on movement direction
-        if (spriteTransform != null && Mathf.Abs(targetVelocity.x) > 0.01f)
+        // Update FishHookable's state (but don't apply movement there)
+        fishHookable.Move(targetVelocity);
+        
+        // Apply the actual movement through rigidbody
+        rb.velocity = targetVelocity;
+
+        // Clamp position to stay within bounds
+        if (hasBoundary)
         {
-            Vector3 scale = spriteTransform.localScale;
-            // Ensure Y and Z scales are positive
-            scale.y = Mathf.Abs(scale.y);
-            scale.z = Mathf.Abs(scale.z);
-            // Only flip X scale based on movement direction
-            scale.x = Mathf.Abs(scale.x) * (targetVelocity.x > 0 ? 1 : -1);
-            spriteTransform.localScale = scale;
+            Vector2 position = transform.position;
+            bool wasOutOfBounds = false;
+
+            // Clamp X position
+            if (position.x < minX + hardBoundaryBuffer)
+            {
+                position.x = minX + hardBoundaryBuffer;
+                currentDirection.x = Mathf.Abs(currentDirection.x);
+                wasOutOfBounds = true;
+            }
+            else if (position.x > maxX - hardBoundaryBuffer)
+            {
+                position.x = maxX - hardBoundaryBuffer;
+                currentDirection.x = -Mathf.Abs(currentDirection.x);
+                wasOutOfBounds = true;
+            }
+
+            // Clamp Y position
+            if (position.y < minY + hardBoundaryBuffer)
+            {
+                position.y = minY + hardBoundaryBuffer;
+                currentDirection.y = Mathf.Abs(currentDirection.y);
+                wasOutOfBounds = true;
+            }
+            else if (position.y > maxY - hardBoundaryBuffer)
+            {
+                position.y = maxY - hardBoundaryBuffer;
+                currentDirection.y = -Mathf.Abs(currentDirection.y);
+                wasOutOfBounds = true;
+            }
+
+            // If we were out of bounds, update position and velocity with minimum speed enforcement
+            if (wasOutOfBounds)
+            {
+                transform.position = position;
+                float speed = Mathf.Max(behavior.baseSpeed * speedMultiplier, minimumSpeed);
+                rb.velocity = currentDirection * speed;
+            }
         }
         
-        // Pass the velocity to FishHookable for reference only, don't apply movement
-        fishHookable.Move(targetVelocity);
+        // Update sprite direction based on current direction instead of velocity
+        if (spriteTransform != null && Mathf.Abs(currentDirection.x) > 0.01f)
+        {
+            Vector3 scale = spriteTransform.localScale;
+            scale.y = Mathf.Abs(scale.y);
+            scale.z = Mathf.Abs(scale.z);
+            scale.x = Mathf.Abs(scale.x) * (currentDirection.x > 0 ? 1 : -1);
+            spriteTransform.localScale = scale;
+        }
+    }
+
+    private Vector2 RotateVector2(Vector2 vector, float degrees)
+    {
+        float radians = degrees * Mathf.Deg2Rad;
+        float sin = Mathf.Sin(radians);
+        float cos = Mathf.Cos(radians);
+        
+        return new Vector2(
+            vector.x * cos - vector.y * sin,
+            vector.x * sin + vector.y * cos
+        );
     }
 
     private void UpdateTimers()
@@ -161,8 +260,7 @@ public class FishMovement : MonoBehaviour
         directionChangeTimer += Time.fixedDeltaTime;
         if (directionChangeTimer >= directionChangeInterval)
         {
-            // Change direction and speed
-            targetDirection = Random.insideUnitCircle.normalized;
+            // Only update speed multiplier, direction changes are now handled smoothly
             speedMultiplier = Random.Range(minSpeedMultiplier, maxSpeedMultiplier);
             directionChangeInterval = Random.Range(3f, 6f);
             directionChangeTimer = 0f;
@@ -171,76 +269,68 @@ public class FishMovement : MonoBehaviour
 
     private Vector2 CalculateMovementForce()
     {
-        Vector2 targetForce = Vector2.zero;
-        float totalWeight = 0f;
+        if (fishHookable == null) return Vector2.zero;
         
-        if (fishHookable == null) return targetForce;
-        
-        // Bait attraction - with smoother distance-based weighting
+        // Check boundaries first
+        Vector2 boundaryDirection = CalculateBoundaryAvoidance();
+        if (boundaryDirection != Vector2.zero)
+        {
+            // If we're near a boundary, use the corrected direction
+            return boundaryDirection;
+        }
+
+        // Check for bait
         Transform nearestBait = fishHookable.GetNearestBait();
         if (nearestBait != null)
         {
             Vector2 toBait = (Vector2)nearestBait.position - (Vector2)transform.position;
             float distanceToBait = toBait.magnitude;
-            float baitAttractionMultiplier = Mathf.Clamp01(1f - (distanceToBait / behavior.baitDetectionRange));
-            baitAttractionMultiplier = Mathf.SmoothStep(0f, 1f, baitAttractionMultiplier); // Smoother transition
             
-            Vector2 baitForce = toBait.normalized * behavior.baitAttractionWeight * baitAttractionMultiplier;
-            targetForce += baitForce * 2f;
-            totalWeight += 2f * baitAttractionMultiplier; // Weight scales with distance
+            if (distanceToBait <= behavior.visionRange)
+            {
+                // Move towards bait if it's compatible (compatibility already checked in FishHookable)
+                return toBait.normalized;
+            }
         }
-        
-        // Schooling force with smoother transitions
+
+        // Normal movement - combine schooling and wandering
+        Vector2 moveDirection = Vector2.zero;
+        float totalWeight = 0f;
+
+        // Add schooling force with higher priority
         if (schooling != null)
         {
             Vector2 schoolingForce = schooling.CalculateSchoolingForce();
-            float schoolingMagnitude = schoolingForce.magnitude;
-            // Only apply significant schooling forces
-            if (schoolingMagnitude > 0.1f)
+            if (schoolingForce.magnitude > 0.1f)
             {
-                targetForce += schoolingForce * behavior.flockWeight;
-                totalWeight += behavior.flockWeight * Mathf.Min(1f, schoolingMagnitude);
+                moveDirection += schoolingForce * behavior.flockWeight * 2f; // Doubled schooling weight
+                totalWeight += behavior.flockWeight * 2f;
             }
         }
-        
-        // Boundary avoidance with smoother transitions
-        Vector2 boundaryForce = CalculateBoundaryAvoidance();
-        float boundaryMagnitude = boundaryForce.magnitude;
-        if (boundaryMagnitude > 0)
+
+        // Add wander force with lower priority
+        if (moveDirection.magnitude < 0.1f) // Only add wander if schooling is weak
         {
-            // Use SmoothStep for gentler boundary response
-            float boundaryWeight = Mathf.SmoothStep(0f, 3f, boundaryMagnitude);
-            targetForce += boundaryForce * boundaryWeight;
-            totalWeight += boundaryWeight;
+            Vector2 wanderForce = CalculateWanderForce();
+            moveDirection += wanderForce;
+            totalWeight += 1f;
         }
-        
-        // Return to center with smooth transition
+
+        // Return to center if too far out
         if (IsOutsideSafeZone(transform.position))
         {
             Vector2 returnForce = CalculateReturnForce();
-            float returnMagnitude = returnForce.magnitude;
-            float returnWeight = Mathf.SmoothStep(0f, 2f, returnMagnitude / returnToCenterForce);
-            targetForce += returnForce * returnWeight;
-            totalWeight += returnWeight;
+            moveDirection += returnForce * returnToCenterForce;
+            totalWeight += returnToCenterForce;
         }
-        
-        // Add minimal wandering if no other forces are significant
-        if (targetForce.magnitude < 0.1f)
-        {
-            Vector2 wanderForce = CalculateWanderForce();
-            targetForce += wanderForce;
-            totalWeight += 0.5f; // Reduced weight for wandering
-        }
-        
-        // Normalize based on total weights
+
+        // Normalize the result
         if (totalWeight > 0)
         {
-            targetForce /= totalWeight;
+            moveDirection /= totalWeight;
         }
-        
-        // Smooth transition between forces
-        currentForce = Vector2.Lerp(currentForce, targetForce, Time.fixedDeltaTime * 2f);
-        return currentForce.normalized;
+
+        return moveDirection.normalized;
     }
 
     private Vector2 CalculateLevelMaintenanceForce()
@@ -265,62 +355,47 @@ public class FishMovement : MonoBehaviour
 
     private Vector2 CalculateBoundaryAvoidance()
     {
-        Vector2 avoidanceForce = Vector2.zero;
+        if (!hasBoundary) return Vector2.zero;
+
         Vector2 position = transform.position;
+        Vector2 direction = currentDirection;
 
-        float distanceFromLeft = position.x - minX;
-        float distanceFromRight = maxX - position.x;
-        float distanceFromBottom = position.y - minY;
-        float distanceFromTop = maxY - position.y;
-
-        // Smoother boundary response using SmoothStep
-        if (distanceFromLeft < edgeBuffer)
+        // Check if we're too close to any boundary and reverse the appropriate direction
+        if (position.x - minX < edgeBuffer)
         {
-            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromLeft / edgeBuffer));
-            avoidanceForce += Vector2.right * boundaryForce * t;
+            direction.x = Mathf.Abs(direction.x); // Force movement to the right
         }
-        if (distanceFromRight < edgeBuffer)
+        else if (maxX - position.x < edgeBuffer)
         {
-            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromRight / edgeBuffer));
-            avoidanceForce += Vector2.left * boundaryForce * t;
-        }
-        if (distanceFromBottom < edgeBuffer)
-        {
-            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromBottom / edgeBuffer));
-            avoidanceForce += Vector2.up * boundaryForce * t;
-        }
-        if (distanceFromTop < edgeBuffer)
-        {
-            float t = Mathf.SmoothStep(0, 1, 1 - (distanceFromTop / edgeBuffer));
-            avoidanceForce += Vector2.down * boundaryForce * t;
+            direction.x = -Mathf.Abs(direction.x); // Force movement to the left
         }
 
-        // Minimal randomization only when actually near boundaries
-        if (avoidanceForce.magnitude > 0.1f)
+        if (position.y - minY < edgeBuffer)
         {
-            avoidanceForce += Random.insideUnitCircle * boundaryForce * 0.05f; // Reduced random influence
+            direction.y = Mathf.Abs(direction.y); // Force movement upward
+        }
+        else if (maxY - position.y < edgeBuffer)
+        {
+            direction.y = -Mathf.Abs(direction.y); // Force movement downward
         }
 
-        return avoidanceForce;
+        return direction.normalized * boundaryForce;
     }
 
     private Vector2 CalculateReturnForce()
     {
+        if (!hasBoundary) return Vector2.zero;
+
         Vector2 position = transform.position;
         Vector2 toCenter = centerPoint - position;
         float distanceFromCenter = toCenter.magnitude;
         float maxAllowedDistance = Mathf.Min(maxX - minX, maxY - minY) * 0.5f;
         
-        // Only apply return force when outside safe zone with smooth transition
+        // Only apply return force when significantly outside safe zone
         if (distanceFromCenter > maxAllowedDistance * 0.8f)
         {
             float t = (distanceFromCenter - maxAllowedDistance * 0.8f) / (maxAllowedDistance * 0.2f);
-            t = Mathf.SmoothStep(0, 1, t); // Smooth transition
-            Vector2 returnForce = toCenter.normalized * returnToCenterForce * t;
-            
-            // Minimal randomization
-            returnForce += Random.insideUnitCircle * returnToCenterForce * 0.01f;
-            return returnForce;
+            return toCenter.normalized * t;
         }
 
         return Vector2.zero;
@@ -376,6 +451,40 @@ public class FishMovement : MonoBehaviour
                 Vector3 returnForce = (Vector3)CalculateReturnForce();
                 Gizmos.DrawLine(pos, pos + returnForce);
             }
+        }
+    }
+
+    private void ApplyFishScale()
+    {
+        if (behavior == null) return;
+
+        // Get the base size from behavior
+        float size = behavior.size;
+
+        // Scale the collider
+        CircleCollider2D fishCollider = GetComponent<CircleCollider2D>();
+        if (fishCollider != null)
+        {
+            fishCollider.radius = 0.5f * size; // Base radius is 0.5, scale with size
+        }
+
+        // Scale the sprite
+        if (spriteTransform != null)
+        {
+            // Preserve the current X direction (for fish facing)
+            float currentXDirection = spriteTransform.localScale.x > 0 ? 1 : -1;
+            
+            // Apply the new scale while preserving direction
+            Vector3 newScale = Vector3.one * size;
+            newScale.x *= currentXDirection;
+            spriteTransform.localScale = newScale;
+        }
+
+        // Adjust schooling parameters if present
+        if (schooling != null)
+        {
+            schooling.separationRadius *= size;
+            schooling.optimalSchoolDistance *= size;
         }
     }
 } 
