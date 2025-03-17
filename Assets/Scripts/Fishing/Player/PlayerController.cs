@@ -17,6 +17,11 @@ public class PlayerController : MonoBehaviour
     // Player flags
     private bool isTurning;
     private bool isFacingRight;
+
+    //private bool isPaused;
+    //public bool IsPaused { get => isPaused; }
+
+    
     
 
     private void Awake()
@@ -41,7 +46,6 @@ public class PlayerController : MonoBehaviour
         // Change when line casting is added
         playerActions.ReelLine.Enable();
         // ---------------------------------
-        
 
         isTurning = false;
         isFacingRight = true;
@@ -71,6 +75,8 @@ public class PlayerController : MonoBehaviour
     
     private void FixedUpdate()
     {
+        
+        // if ()
         // Handle input
         var boatInput = playerActions.MoveBoat.ReadValue<float>();
         var reelInput = playerActions.ReelLine.ReadValue<float>();

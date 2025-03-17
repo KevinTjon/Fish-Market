@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -22,7 +20,6 @@ public class UIController : MonoBehaviour
 
     void Start()
     {
-        //isPaused = false;
         uiActions.PauseToggle.Enable();
     }
 
@@ -42,36 +39,13 @@ public class UIController : MonoBehaviour
         if (isPaused)
         {
             pauseUI.SetActive(true);
-            StartCoroutine(ActivatePause());
+            StartCoroutine(TimePause.PauseSimulation(pauseTime));
         }
         else
         {
             pauseUI.SetActive(false);
-            StartCoroutine(DeactivatePause());
+            StartCoroutine(TimePause.UnpauseSimulation(pauseTime));
         }
     }
 
-    private IEnumerator ActivatePause()
-    {
-        float elapsedTime = 0;
-        while (elapsedTime < pauseTime)
-        {
-            Time.timeScale = Mathf.Lerp(1, 0, elapsedTime / pauseTime);
-            elapsedTime += Time.unscaledDeltaTime;
-            yield return null;
-        }
-        Time.timeScale = 0;
-    }
-
-    private IEnumerator DeactivatePause()
-    {
-        float elapsedTime = 0;
-        while (elapsedTime < pauseTime)
-        {
-            Time.timeScale = Mathf.Lerp(0, 1, elapsedTime / pauseTime);
-            elapsedTime += Time.unscaledDeltaTime;
-            yield return null;
-        }
-        Time.timeScale = 1;
-    }
 }
