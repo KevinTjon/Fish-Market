@@ -3,17 +3,20 @@ using UnityEngine;
 [RequireComponent(typeof(FishHookable))]
 public class FishMovement : MonoBehaviour
 {
+    private enum FishState
+    {
+        Normal,
+        ChasingBait,
+        Hooked,
+        Stunned
+    }
+
     private FishHookable fishHookable;
     private FishBehavior behavior;
     private Vector2 currentVelocity;
-    private Vector2 targetDirection;
-    private float currentSpeed;
-    private Transform spriteTransform; // Cache the sprite transform
-    public FishSpawner spawner { get; private set; } // Reference to spawner for debug settings, accessible but only settable internally
-    private FishSchooling schooling; // Reference to schooling component
-    private Vector2 currentForce = Vector2.zero; // Add this at class level
-
-    [Header("Movement Bounds")]
+    private FishSchooling schooling;
+    private Transform spriteTransform;
+    [HideInInspector] public FishSpawner spawner;
     [HideInInspector] public BoxCollider2D boundaryArea; // Now assigned by spawner
     public float boundaryForce = 5f;
     public float boundaryTurnSpeed = 2f;
@@ -21,6 +24,11 @@ public class FishMovement : MonoBehaviour
     public float hardBoundaryBuffer = 0.5f; // Distance from edge where hard boundary kicks in
     public float returnToCenterForce = 2f;
     public float boundaryExponent = 2f;
+
+    [Header("State Settings")]
+    private FishState currentState = FishState.Normal;
+    public float baitChaseSpeedMultiplier = 2f;
+    public float baitChaseTurnSpeedMultiplier = 4f;
 
     [Header("Movement Settings")]
     public float directionChangeSpeed = 0.1f;
@@ -32,6 +40,8 @@ public class FishMovement : MonoBehaviour
     private float directionChangeTimer;
     private float directionChangeInterval;
     private Vector2 currentDirection; // Track current movement direction
+    private Vector2 targetDirection; // Target direction for wandering
+    private float currentSpeed; // Current base speed of the fish
 
     // Cached boundary values
     private float minX, maxX, minY, maxY;
@@ -125,114 +135,146 @@ public class FishMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // Get rigidbody reference
         var rb = fishHookable.GetComponent<Rigidbody2D>();
-        
-        // Ensure rigidbody doesn't rotate
         rb.angularVelocity = 0f;
         rb.rotation = 0f;
         rb.freezeRotation = true;
 
-        Vector2 targetVelocity;
+        // Update the current state
+        UpdateState();
 
-        if (fishHookable.IsStunned)
+        Vector2 targetVelocity = Vector2.zero;
+
+        switch (currentState)
         {
-            // When stunned, no movement
-            targetVelocity = Vector2.zero;
-            currentDirection = Vector2.zero;
-        }
-        else if (fishHookable.IsHooked)
-        {
-            // When hooked, calculate struggling movement
-            targetVelocity = fishHookable.HookedMovement();
-            currentDirection = targetVelocity.normalized;
-        }
-        else if (behavior != null)
-        {
-            // Normal movement
-            UpdateTimers();
-            Vector2 desiredDirection = CalculateMovementForce();
-            
-            // Smoothly rotate current direction towards desired direction
-            float angle = Vector2.SignedAngle(currentDirection, desiredDirection);
-            float maxRotation = maxTurnSpeed * Time.fixedDeltaTime;
-            float rotation = Mathf.Clamp(angle, -maxRotation, maxRotation);
-            
-            currentDirection = RotateVector2(currentDirection, rotation);
-            
-            // Calculate base velocity with schooling influence
-            float baseSpeed = behavior.baseSpeed * speedMultiplier;
-            if (schooling != null)
-            {
-                Vector2 schoolingForce = schooling.CalculateSchoolingForce();
-                // Adjust speed based on schooling - slower when close to school, faster when catching up
-                float schoolingInfluence = Mathf.Lerp(0.8f, 1.2f, schoolingForce.magnitude);
-                baseSpeed *= schoolingInfluence;
-            }
-            
-            // Apply minimum speed as a floor
-            baseSpeed = Mathf.Max(baseSpeed, minimumSpeed);
-            targetVelocity = currentDirection * baseSpeed;
-        }
-        else
-        {
-            targetVelocity = Vector2.zero;
-            currentDirection = Vector2.zero;
+            case FishState.Stunned:
+                targetVelocity = HandleStunnedState();
+                break;
+
+            case FishState.Hooked:
+                targetVelocity = HandleHookedState();
+                break;
+
+            case FishState.ChasingBait:
+                targetVelocity = HandleBaitChaseState();
+                break;
+
+            case FishState.Normal:
+                targetVelocity = HandleNormalState();
+                break;
         }
 
-        // Store current velocity for reference (used by other components like schooling)
+        // Apply movement
         currentVelocity = targetVelocity;
-        
-        // Update FishHookable's state (but don't apply movement there)
         fishHookable.Move(targetVelocity);
-        
-        // Apply the actual movement through rigidbody
         rb.velocity = targetVelocity;
 
-        // Clamp position to stay within bounds
-        if (hasBoundary)
+        // Handle boundaries
+        HandleBoundaries(rb);
+        
+        // Update sprite direction
+        UpdateSpriteDirection();
+    }
+
+    private Vector2 HandleStunnedState()
+    {
+        currentDirection = Vector2.zero;
+        return Vector2.zero;
+    }
+
+    private Vector2 HandleHookedState()
+    {
+        Vector2 hookedMovement = fishHookable.HookedMovement();
+        currentDirection = hookedMovement.normalized;
+        return hookedMovement;
+    }
+
+    private Vector2 HandleBaitChaseState()
+    {
+        Transform bait = fishHookable.GetNearestBait();
+        if (bait == null) return HandleNormalState();
+
+        // Calculate direct path to bait
+        Vector2 toBait = (Vector2)bait.position - (Vector2)transform.position;
+        
+        // Directly set the direction to the bait without smooth rotation
+        currentDirection = toBait.normalized;
+
+        // Use increased speed for bait chasing
+        float chaseSpeed = behavior.baseSpeed * baitChaseSpeedMultiplier;
+        
+        Debug.Log($"Fish {gameObject.name} chasing bait - Speed: {chaseSpeed}, Direction: {currentDirection}");
+        return currentDirection * chaseSpeed;
+    }
+
+    private Vector2 HandleNormalState()
+    {
+        UpdateTimers();
+        Vector2 desiredDirection = CalculateMovementForce();
+        
+        // Normal smooth rotation
+        float angle = Vector2.SignedAngle(currentDirection, desiredDirection);
+        float maxRotation = maxTurnSpeed * Time.fixedDeltaTime;
+        float rotation = Mathf.Clamp(angle, -maxRotation, maxRotation);
+        
+        currentDirection = RotateVector2(currentDirection, rotation);
+        
+        // Calculate normal movement speed
+        float baseSpeed = behavior.baseSpeed * speedMultiplier;
+        if (schooling != null)
         {
-            Vector2 position = transform.position;
-            bool wasOutOfBounds = false;
-
-            // Clamp X position
-            if (position.x < minX + hardBoundaryBuffer)
-            {
-                position.x = minX + hardBoundaryBuffer;
-                currentDirection.x = Mathf.Abs(currentDirection.x);
-                wasOutOfBounds = true;
-            }
-            else if (position.x > maxX - hardBoundaryBuffer)
-            {
-                position.x = maxX - hardBoundaryBuffer;
-                currentDirection.x = -Mathf.Abs(currentDirection.x);
-                wasOutOfBounds = true;
-            }
-
-            // Clamp Y position
-            if (position.y < minY + hardBoundaryBuffer)
-            {
-                position.y = minY + hardBoundaryBuffer;
-                currentDirection.y = Mathf.Abs(currentDirection.y);
-                wasOutOfBounds = true;
-            }
-            else if (position.y > maxY - hardBoundaryBuffer)
-            {
-                position.y = maxY - hardBoundaryBuffer;
-                currentDirection.y = -Mathf.Abs(currentDirection.y);
-                wasOutOfBounds = true;
-            }
-
-            // If we were out of bounds, update position and velocity with minimum speed enforcement
-            if (wasOutOfBounds)
-            {
-                transform.position = position;
-                float speed = Mathf.Max(behavior.baseSpeed * speedMultiplier, minimumSpeed);
-                rb.velocity = currentDirection * speed;
-            }
+            Vector2 schoolingForce = schooling.CalculateSchoolingForce();
+            float schoolingInfluence = Mathf.Lerp(0.8f, 1.2f, schoolingForce.magnitude);
+            baseSpeed *= schoolingInfluence;
         }
         
-        // Update sprite direction based on current direction instead of velocity
+        baseSpeed = Mathf.Max(baseSpeed, minimumSpeed);
+        return currentDirection * baseSpeed;
+    }
+
+    private void HandleBoundaries(Rigidbody2D rb)
+    {
+        if (!hasBoundary) return;
+
+        Vector2 position = transform.position;
+        bool wasOutOfBounds = false;
+
+        if (position.x < minX + hardBoundaryBuffer)
+        {
+            position.x = minX + hardBoundaryBuffer;
+            currentDirection.x = Mathf.Abs(currentDirection.x);
+            wasOutOfBounds = true;
+        }
+        else if (position.x > maxX - hardBoundaryBuffer)
+        {
+            position.x = maxX - hardBoundaryBuffer;
+            currentDirection.x = -Mathf.Abs(currentDirection.x);
+            wasOutOfBounds = true;
+        }
+
+        if (position.y < minY + hardBoundaryBuffer)
+        {
+            position.y = minY + hardBoundaryBuffer;
+            currentDirection.y = Mathf.Abs(currentDirection.y);
+            wasOutOfBounds = true;
+        }
+        else if (position.y > maxY - hardBoundaryBuffer)
+        {
+            position.y = maxY - hardBoundaryBuffer;
+            currentDirection.y = -Mathf.Abs(currentDirection.y);
+            wasOutOfBounds = true;
+        }
+
+        if (wasOutOfBounds)
+        {
+            transform.position = position;
+            float speed = Mathf.Max(behavior.baseSpeed * speedMultiplier, minimumSpeed);
+            rb.velocity = currentDirection * speed;
+        }
+    }
+
+    private void UpdateSpriteDirection()
+    {
         if (spriteTransform != null && Mathf.Abs(currentDirection.x) > 0.01f)
         {
             Vector3 scale = spriteTransform.localScale;
@@ -240,6 +282,40 @@ public class FishMovement : MonoBehaviour
             scale.z = Mathf.Abs(scale.z);
             scale.x = Mathf.Abs(scale.x) * (currentDirection.x > 0 ? 1 : -1);
             spriteTransform.localScale = scale;
+        }
+    }
+
+    private void UpdateState()
+    {
+        if (fishHookable.IsStunned)
+        {
+            currentState = FishState.Stunned;
+        }
+        else if (fishHookable.IsHooked)
+        {
+            currentState = FishState.Hooked;
+        }
+        else
+        {
+            // Check for bait
+            Transform nearestBait = fishHookable.GetNearestBait();
+            if (nearestBait != null)
+            {
+                float distanceToBait = Vector2.Distance(transform.position, nearestBait.position);
+                if (distanceToBait <= behavior.baitDetectionRange)
+                {
+                    currentState = FishState.ChasingBait;
+                    Debug.Log($"Fish {gameObject.name} entering bait chase state, distance: {distanceToBait}");
+                }
+                else
+                {
+                    currentState = FishState.Normal;
+                }
+            }
+            else
+            {
+                currentState = FishState.Normal;
+            }
         }
     }
 
@@ -275,46 +351,69 @@ public class FishMovement : MonoBehaviour
         Vector2 boundaryDirection = CalculateBoundaryAvoidance();
         if (boundaryDirection != Vector2.zero)
         {
-            // If we're near a boundary, use the corrected direction
+            Debug.Log($"Fish {gameObject.name} avoiding boundary");
             return boundaryDirection;
         }
 
-        // Check for bait
+        Vector2 moveDirection = Vector2.zero;
+        float totalWeight = 0f;
+
+        // Check for bait first (highest priority)
         Transform nearestBait = fishHookable.GetNearestBait();
         if (nearestBait != null)
         {
             Vector2 toBait = (Vector2)nearestBait.position - (Vector2)transform.position;
             float distanceToBait = toBait.magnitude;
             
-            if (distanceToBait <= behavior.visionRange)
+            Debug.Log($"Fish {gameObject.name} detected bait at distance {distanceToBait}, detection range: {behavior.baitDetectionRange}");
+            
+            if (distanceToBait <= behavior.baitDetectionRange)
             {
-                // Move towards bait if it's compatible (compatibility already checked in FishHookable)
-                return toBait.normalized;
+                // Move towards bait with highest priority
+                Vector2 baitForce = toBait.normalized * behavior.baitAttractionWeight * 5f; // Increased multiplier
+                moveDirection += baitForce;
+                totalWeight += behavior.baitAttractionWeight * 5f;
+                
+                Debug.Log($"Fish {gameObject.name} moving towards bait with force: {baitForce}, weight: {behavior.baitAttractionWeight * 5f}");
+                
+                // If bait is detected, greatly reduce other behaviors
+                if (moveDirection.magnitude > 0.1f)
+                {
+                    // Add minimal schooling and wandering to maintain some natural movement
+                    if (schooling != null)
+                    {
+                        Vector2 schoolForce = schooling.CalculateSchoolingForce() * 0.1f; // Reduced schooling influence
+                        moveDirection += schoolForce;
+                        totalWeight += 0.1f;
+                    }
+                    
+                    // Return normalized result with bait as primary influence
+                    Vector2 finalDirection = (moveDirection / totalWeight).normalized;
+                    Debug.Log($"Fish {gameObject.name} final bait movement direction: {finalDirection}");
+                    return finalDirection;
+                }
             }
         }
+        else
+        {
+            Debug.Log($"Fish {gameObject.name} no bait detected");
+        }
 
-        // Normal movement - combine schooling and wandering
-        Vector2 moveDirection = Vector2.zero;
-        float totalWeight = 0f;
-
-        // Add schooling force with higher priority
+        // If no bait or bait influence is weak, calculate normal movement
         if (schooling != null)
         {
             Vector2 schoolingForce = schooling.CalculateSchoolingForce();
             if (schoolingForce.magnitude > 0.1f)
             {
-                moveDirection += schoolingForce * behavior.flockWeight * 2f; // Doubled schooling weight
-                totalWeight += behavior.flockWeight * 2f;
+                moveDirection += schoolingForce * behavior.flockWeight;
+                totalWeight += behavior.flockWeight;
             }
         }
 
         // Add wander force with lower priority
-        if (moveDirection.magnitude < 0.1f) // Only add wander if schooling is weak
-        {
-            Vector2 wanderForce = CalculateWanderForce();
-            moveDirection += wanderForce;
-            totalWeight += 1f;
-        }
+        Vector2 wanderForce = CalculateWanderForce();
+        moveDirection += wanderForce * behavior.wanderWeight;
+        totalWeight += behavior.wanderWeight;
 
         // Return to center if too far out
         if (IsOutsideSafeZone(transform.position))
@@ -416,27 +515,30 @@ public class FishMovement : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (boundaryArea == null || !Application.isPlaying || behavior == null || spawner == null || !spawner.showDebugVisuals) return;
+        if (!Application.isPlaying || behavior == null) return;
         
-        UpdateBoundaryValues();
-        Vector3 center = centerPoint;
-
-        // Only draw force vectors for this fish
         Vector3 pos = transform.position;
         
         // Draw movement direction
         Gizmos.color = Color.green;
         Gizmos.DrawLine(pos, pos + (Vector3)currentVelocity);
         
-        // Draw dot at target position
-        Gizmos.color = Color.blue;
-        Vector3 targetPos = pos + (Vector3)currentVelocity;
-        Gizmos.DrawSphere(targetPos, 0.1f);
-        
-        // If near boundary or outside safe zone, draw force vectors
-        if (IsNearBoundary(pos) || IsOutsideSafeZone(pos))
+        // Draw bait attraction force if bait is detected
+        Transform nearestBait = fishHookable?.GetNearestBait();
+        if (nearestBait != null)
         {
-            // Draw boundary avoidance force
+            Vector2 toBait = (Vector2)nearestBait.position - (Vector2)pos;
+            if (toBait.magnitude <= behavior.baitDetectionRange)
+            {
+                Gizmos.color = Color.yellow;
+                Vector3 baitForce = (Vector3)(toBait.normalized * behavior.baitAttractionWeight * 5f);
+                Gizmos.DrawLine(pos, pos + baitForce);
+            }
+        }
+        
+        // Draw boundary and return forces if applicable
+        if (boundaryArea != null && spawner != null && spawner.showDebugVisuals)
+        {
             if (IsNearBoundary(pos))
             {
                 Gizmos.color = Color.red;
@@ -444,7 +546,6 @@ public class FishMovement : MonoBehaviour
                 Gizmos.DrawLine(pos, pos + boundaryForce);
             }
             
-            // Draw return force
             if (IsOutsideSafeZone(pos))
             {
                 Gizmos.color = new Color(1f, 0.5f, 0f);
@@ -461,13 +562,6 @@ public class FishMovement : MonoBehaviour
         // Get the base size from behavior
         float size = behavior.size;
 
-        // Scale the collider
-        CircleCollider2D fishCollider = GetComponent<CircleCollider2D>();
-        if (fishCollider != null)
-        {
-            fishCollider.radius = 0.5f * size; // Base radius is 0.5, scale with size
-        }
-
         // Scale the sprite
         if (spriteTransform != null)
         {
@@ -478,13 +572,6 @@ public class FishMovement : MonoBehaviour
             Vector3 newScale = Vector3.one * size;
             newScale.x *= currentXDirection;
             spriteTransform.localScale = newScale;
-        }
-
-        // Adjust schooling parameters if present
-        if (schooling != null)
-        {
-            schooling.separationRadius *= size;
-            schooling.optimalSchoolDistance *= size;
         }
     }
 } 

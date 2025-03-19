@@ -17,17 +17,16 @@ public class FishSpawner : MonoBehaviour
     public FishTypeSpawnInfo[] fishTypes;
     public float spawnInterval = 5f;
     
-    [Header("Boundary Settings")]
-    public BoxCollider2D spawnBoundary;
+    [Header("Spawn Zones")]
+    public SpawnZone[] spawnZones;  // Assign your spawn zone objects here
+    
     [Header("Debug Visualization")]
     public bool showDebugVisuals = true;
-    public bool showSpawnArea = true;
-    public bool showFishForces = true;
-
+    
     [Header("Schooling Update")]
     public float schoolingUpdateInterval = 0.2f;  // How often to update school memberships
     private float nextSchoolingUpdate;
-
+    
     private Dictionary<GameObject, List<GameObject>> activeFish;
     private List<FishSchooling> allFishSchooling = new List<FishSchooling>();
     private float nextSpawnTime;
@@ -36,12 +35,14 @@ public class FishSpawner : MonoBehaviour
     {
         activeFish = new Dictionary<GameObject, List<GameObject>>();
         
-        if (spawnBoundary == null)
+        // Find spawn zones if not assigned
+        if (spawnZones == null || spawnZones.Length == 0)
         {
-            // Create a default boundary if none is assigned
-            spawnBoundary = gameObject.AddComponent<BoxCollider2D>();
-            spawnBoundary.size = new Vector2(20f, 10f);
-            spawnBoundary.isTrigger = true;
+            spawnZones = FindObjectsOfType<SpawnZone>();
+            if (spawnZones.Length == 0)
+            {
+                Debug.LogError("No spawn zones found in scene!");
+            }
         }
     }
 
@@ -71,7 +72,7 @@ public class FishSpawner : MonoBehaviour
 
     private void InitializeFishTracking()
     {
-        if (fishTypes == null) return;
+        if (fishTypes == null || spawnZones == null || spawnZones.Length == 0) return;
         
         // Clear existing tracking
         activeFish.Clear();
@@ -94,7 +95,7 @@ public class FishSpawner : MonoBehaviour
 
     private void Update()
     {
-        if (fishTypes == null) return;
+        if (fishTypes == null || spawnZones == null || spawnZones.Length == 0) return;
 
         // Update schooling
         if (Time.time >= nextSchoolingUpdate)
@@ -154,15 +155,30 @@ public class FishSpawner : MonoBehaviour
         }
     }
 
-    private void SpawnFish(GameObject fishPrefab)
+    private Vector3 GetRandomSpawnPosition()
     {
-        if (fishPrefab == null || !activeFish.ContainsKey(fishPrefab) || spawnBoundary == null) return;
-
-        // Calculate random position within spawn area
-        Bounds bounds = spawnBoundary.bounds;
+        if (spawnZones == null || spawnZones.Length == 0) return Vector3.zero;
+        
+        // Pick a random spawn zone
+        SpawnZone zone = spawnZones[Random.Range(0, spawnZones.Length)];
+        if (zone == null) return Vector3.zero;
+        
+        BoxCollider2D collider = zone.GetComponent<BoxCollider2D>();
+        if (collider == null) return Vector3.zero;
+        
+        // Get random position within the zone's bounds
+        Bounds bounds = collider.bounds;
         float x = Random.Range(bounds.min.x, bounds.max.x);
         float y = Random.Range(bounds.min.y, bounds.max.y);
-        Vector3 spawnPosition = new Vector3(x, y, 0f);
+        return new Vector3(x, y, 0f);
+    }
+
+    private void SpawnFish(GameObject fishPrefab, Vector3? position = null)
+    {
+        if (fishPrefab == null) return;
+
+        // Use provided position or get random position
+        Vector3 spawnPosition = position ?? GetRandomSpawnPosition();
 
         // Spawn the fish with zero rotation
         GameObject fish = Instantiate(fishPrefab, spawnPosition, Quaternion.identity);
@@ -173,6 +189,37 @@ public class FishSpawner : MonoBehaviour
         // Get components
         var fishHookable = fish.GetComponent<FishHookable>();
         var fishMovement = fish.GetComponent<FishMovement>();
+        
+        // Find and assign the boundary area BEFORE any other initialization
+        if (fishMovement != null)
+        {
+            foreach (var zone in spawnZones)
+            {
+                if (zone != null)
+                {
+                    var zoneCollider = zone.GetComponent<BoxCollider2D>();
+                    if (zoneCollider != null && zoneCollider.bounds.Contains(spawnPosition))
+                    {
+                        fishMovement.boundaryArea = zoneCollider;
+                        break;
+                    }
+                }
+            }
+            
+            // If no specific zone was found, use the first available zone as fallback
+            if (fishMovement.boundaryArea == null && spawnZones.Length > 0 && spawnZones[0] != null)
+            {
+                fishMovement.boundaryArea = spawnZones[0].GetComponent<BoxCollider2D>();
+                Debug.LogWarning($"No specific zone found for fish at {spawnPosition}, using first available zone as fallback.");
+            }
+            
+            if (fishMovement.boundaryArea == null)
+            {
+                Debug.LogError($"Could not assign boundary area for fish at {spawnPosition}. Make sure spawn zones are set up correctly.");
+                Destroy(fish);
+                return;
+            }
+        }
         
         if (fishHookable != null)
         {
@@ -211,52 +258,37 @@ public class FishSpawner : MonoBehaviour
             }
         }
         
-        // Assign the boundary to the fish
-        if (fishMovement != null)
+        // Find and setup the sprite transform
+        Transform spriteTransform = fish.transform.Find("Sprite");
+        if (spriteTransform != null)
         {
-            fishMovement.boundaryArea = spawnBoundary;
+            // Reset all rotations to ensure proper alignment
+            spriteTransform.localRotation = Quaternion.identity;
             
-            // Find and setup the sprite transform
-            Transform spriteTransform = fish.transform.Find("Sprite");
-            if (spriteTransform != null)
+            // Reset scale to positive values first
+            Vector3 scale = spriteTransform.localScale;
+            scale.x = Mathf.Abs(scale.x);
+            scale.y = Mathf.Abs(scale.y);
+            scale.z = Mathf.Abs(scale.z);
+            
+            // Only flip X scale based on spawn position relative to center
+            if (fishMovement.boundaryArea != null)
             {
-                // Reset all rotations to ensure proper alignment
-                spriteTransform.localRotation = Quaternion.identity;
-                
-                // Reset scale to positive values first
-                Vector3 scale = spriteTransform.localScale;
-                scale.x = Mathf.Abs(scale.x);
-                scale.y = Mathf.Abs(scale.y);
-                scale.z = Mathf.Abs(scale.z);
-                
-                // Only flip X scale based on spawn position relative to center
-                scale.x *= (x < bounds.center.x ? 1 : -1);
-                spriteTransform.localScale = scale;
+                scale.x *= (spawnPosition.x < fishMovement.boundaryArea.bounds.center.x ? 1 : -1);
             }
-            else
-            {
-                Debug.LogWarning($"No 'Sprite' child object found on fish: {fish.name}");
-            }
+            spriteTransform.localScale = scale;
+        }
+        else
+        {
+            Debug.LogWarning($"No 'Sprite' child object found on fish: {fish.name}");
         }
         
-        activeFish[fishPrefab].Add(fish);
-    }
-
-    private void OnDrawGizmos()
-    {
-        if (!showDebugVisuals || spawnBoundary == null) return;
-
-        if (showSpawnArea)
+        // Initialize tracking if needed
+        if (!activeFish.ContainsKey(fishPrefab))
         {
-            // Draw spawn area
-            Gizmos.color = new Color(0f, 1f, 1f, 0.2f);
-            Bounds bounds = spawnBoundary.bounds;
-            Gizmos.DrawCube(bounds.center, bounds.size);
-            
-            // Draw wire frame
-            Gizmos.color = new Color(0f, 1f, 1f, 0.8f);
-            Gizmos.DrawWireCube(bounds.center, bounds.size);
+            activeFish[fishPrefab] = new List<GameObject>();
         }
+        activeFish[fishPrefab].Add(fish);
     }
 
     // Helper method to get all fish of a specific type
