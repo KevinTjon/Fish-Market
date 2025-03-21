@@ -26,6 +26,10 @@ public class FishHookable : ObjectHookable, IFish
     private Transform nearestPredator;
     private Transform nearestPrey;
 
+    [Header("Debug")]
+    public bool showDebugRanges = true;
+    private Color baitRangeColor = new Color(1f, 1f, 0f, 0.2f); // Yellow with transparency
+
     // Add public accessor for nearest bait
     public Transform GetNearestBait()
     {
@@ -38,6 +42,10 @@ public class FishHookable : ObjectHookable, IFish
         rb.isKinematic = false;
         isHooked = false;
         isStunned = false;
+        
+        // Set up layer masks
+        baitLayer = 1 << 11; // Set to layer 11 (Bait)
+        fishLayer = LayerMask.GetMask("Fish");
         
         // Only set current speed if behavior is assigned
         if (behavior != null)
@@ -59,53 +67,60 @@ public class FishHookable : ObjectHookable, IFish
         StartCoroutine(UpdateNearbyEntities());
     }
 
+    private void OnDrawGizmos()
+    {
+        if (!showDebugRanges || behavior == null) return;
+
+        // Draw bait detection range
+        Gizmos.color = baitRangeColor;
+        Gizmos.DrawWireSphere(transform.position, behavior.baitDetectionRange);
+        
+        // If there's a nearest bait, draw line to it
+        if (nearestBait != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position, nearestBait.position);
+        }
+    }
+
     private IEnumerator UpdateNearbyEntities()
     {
         while (true)
         {
-            if (!isStunned && !isHooked && fishType != null)
+            if (!isHooked && !isStunned)
             {
-                // Update nearby fish
-                nearbyFish.Clear();
-                Collider2D[] fishColliders = Physics2D.OverlapCircleAll(transform.position, fishType.visionRange, fishLayer);
-                foreach (var collider in fishColliders)
-                {
-                    if (collider.transform != transform)
-                    {
-                        nearbyFish.Add(collider.transform);
-                        
-                        // Check if this is potential prey
-                        if (fishType.canEat)
-                        {
-                            var otherFish = collider.GetComponent<FishHookable>();
-                            if (otherFish != null && fishType.CanEatSize(otherFish.GetFishSize()))
-                            {
-                                float distance = Vector2.Distance(transform.position, collider.transform.position);
-                                if (nearestPrey == null || distance < Vector2.Distance(transform.position, nearestPrey.position))
-                                {
-                                    nearestPrey = collider.transform;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Find nearest bait within vision range
-                Collider2D[] baitColliders = Physics2D.OverlapCircleAll(transform.position, fishType.visionRange, baitLayer);
+                // Debug log the layer mask
+                Debug.Log($"Fish {gameObject.name} searching for bait. Bait Layer Mask: {baitLayer.value}");
+                
+                // Find nearest bait within bait detection range
+                Collider2D[] baitColliders = Physics2D.OverlapCircleAll(transform.position, behavior.baitDetectionRange, baitLayer);
+                Debug.Log($"Found {baitColliders.Length} potential bait objects within range");
+                
                 float nearestBaitDistance = float.MaxValue;
                 nearestBait = null;
                 
                 foreach (var collider in baitColliders)
                 {
                     float distance = Vector2.Distance(transform.position, collider.transform.position);
-                    if (distance < nearestBaitDistance)
+                    BaitObject baitObj = collider.GetComponent<BaitObject>();
+                    
+                    if (baitObj != null)
                     {
-                        BaitObject baitObj = collider.GetComponent<BaitObject>();
-                        if (baitObj != null && baitObj.IsAttractedToFish(GetFishSize()))
+                        Debug.Log($"Found bait object: {baitObj.name}, checking compatibility with fish size: {GetFishSize()}");
+                        if (baitObj.IsAttractedToFish(GetFishSize()))
                         {
+                            Debug.Log($"Compatible bait found at distance: {distance}");
                             nearestBaitDistance = distance;
                             nearestBait = collider.transform;
                         }
+                        else
+                        {
+                            Debug.Log($"Bait not compatible with fish size: {GetFishSize()}");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"Collider {collider.name} on bait layer but no BaitObject component found");
                     }
                 }
             }

@@ -183,7 +183,6 @@ public class FishPrefabCreator : EditorWindow
         if (fishBehavior != null)
         {
             fishObject.transform.localScale = Vector3.one * fishBehavior.size;
-            fishCollider.radius = 0.5f * fishBehavior.size; // Adjust collider size
         }
         
         // Create or update the prefab

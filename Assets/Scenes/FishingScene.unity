@@ -824,11 +824,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fishTypes:
   - fishPrefab: {fileID: 702920876994150435, guid: fa19be51e5e69b34cbffed89b8a692fc, type: 3}
-    initialCount: 1
+    initialCount: 0
     maxCount: 0
     spawnChance: 1
-  - fishPrefab: {fileID: 5531755810262855031, guid: 5ae5fe0f0e7779e40a6ad6c44bfc0293, type: 3}
-    initialCount: 10
+  - fishPrefab: {fileID: 5531755810262855031, guid: d02db3ff74b7e4c48bf7f6bd377a805e, type: 3}
+    initialCount: 5
     maxCount: 0
     spawnChance: 1
   spawnInterval: 5
@@ -837,6 +837,7 @@ MonoBehaviour:
   showSpawnArea: 1
   showFishForces: 0
   schoolingUpdateInterval: 0.2
+  spawnLevelManager: {fileID: 0}
 --- !u!61 &591247056
 BoxCollider2D:
   m_ObjectHideFlags: 0

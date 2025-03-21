@@ -19,7 +19,7 @@ MonoBehaviour:
   wanderWeight: 0.5
   flockWeight: 1.5
   avoidanceWeight: 1.5
-  baitAttractionWeight: 1.2
+  baitAttractionWeight: 3.0
   predatorAvoidanceWeight: 1.8
   visionRange: 4
   baitDetectionRange: 2.5
