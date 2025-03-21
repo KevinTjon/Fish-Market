@@ -8,7 +8,8 @@ public class HookController : MonoBehaviour
     public bool hasHookedObject { get; private set; }  // Track if we have something hooked
 
     public Rigidbody2D hookRB { get; private set; }
-    public GameObject baitObject { get; private set; }
+    public GameObject attachedObject { get; private set; }
+    //public GameObject baitObject { get; private set; }
     public BaitObject currentBait { get; private set; }
     
     public float baitOffset = 0.5f;
@@ -71,39 +72,42 @@ public class HookController : MonoBehaviour
         }
     }
 
-    private void FixedUpdate()
+    
+    public void AttachBait(GameObject baitPrefab)
     {
-        if (hookRB != null)
+        // Remove any existing bait
+        if (attachedObject != null)
         {
-            // Keep hook vertical at all times
-            transform.rotation = Quaternion.identity;
+            Destroy(attachedObject);
+        }
 
-            /* Original rotation logic
-            // Calculate rotation based on line direction instead of velocity
-            Vector2 lineDirection = ((Vector2)(rodTransform.position - transform.position)).normalized;
+        // Create and attach new bait
+        if (baitPrefab != null)
+        {
+            // Create bait at hook's position with offset
+            Vector3 baitPosition = transform.position - transform.up * baitOffset;
+            attachedObject = Instantiate(baitPrefab, baitPosition, Quaternion.identity);
+            currentBait = attachedObject.GetComponent<BaitObject>();
             
-            // Only update rotation if we're moving enough
-            if (lineDirection.magnitude > 0.01f)
+            // Debug log bait data
+            if (currentBait != null && currentBait.baitData != null)
             {
-                targetRotation = Mathf.Atan2(lineDirection.y, lineDirection.x) * Mathf.Rad2Deg + 90f;
+                string targetSizes = currentBait.baitData.targetFishSizes != null ? 
+                    string.Join(", ", currentBait.baitData.targetFishSizes) : "none";
+                Debug.Log($"Attached bait: {currentBait.baitData.name} with target sizes: [{targetSizes}]");
+            }
+            else
+            {
+                Debug.LogError($"Failed to load bait data for {baitPrefab.name}");
             }
             
-            // Smoothly rotate towards target rotation
-            float currentRotation = transform.eulerAngles.z;
-            if (currentRotation > 180) currentRotation -= 360;
-            
-            float newRotation = Mathf.LerpAngle(currentRotation, targetRotation, Time.fixedDeltaTime * rotationSmoothSpeed);
-            transform.rotation = Quaternion.Euler(0, 0, newRotation);
-            
-            // Keep the hook's rotation constrained when on surface
-            if (onWaterSurface)
-            {
-                transform.rotation = Quaternion.Euler(0, 0, 0);
-            }
-            */
+            // Parent the bait to the hook
+            attachedObject.transform.SetParent(transform);
+            attachedObject.transform.localPosition = -Vector3.up * baitOffset;
+            attachedObject.transform.localRotation = Quaternion.identity;
         }
     }
-
+    /*
     public void AttachBait(GameObject baitPrefab)
     {
         // Remove any existing bait
@@ -138,16 +142,8 @@ public class HookController : MonoBehaviour
             baitObject.transform.localRotation = Quaternion.identity;
         }
     }
+    */
 
-    public void RemoveBait()
-    {
-        if (baitObject != null)
-        {
-            Destroy(baitObject);
-            baitObject = null;
-            currentBait = null;
-        }
-    }
 
     // Determines if the hook collides with an IHookable object
     public void OnCollisionEnter2D(Collision2D col)
@@ -158,7 +154,8 @@ public class HookController : MonoBehaviour
         // Check if we're colliding with a hookable object
         if (col.collider != null && col.gameObject.layer == LayerMask.NameToLayer("Hookable"))
         {
-            var hookable = col.gameObject.GetComponent<ObjectHookable>();
+            var fishObj = col.gameObject;
+            var hookable = fishObj.GetComponent<ObjectHookable>();
             var fishHookable = hookable as FishHookable;  // Try to cast to FishHookable
             
             // First check if it's a fish
@@ -204,8 +201,13 @@ public class HookController : MonoBehaviour
                 }
                 
                 // Remove bait if we caught something
-                RemoveBait();
-                
+                if (attachedObject != null)
+                {
+                    Destroy(attachedObject);
+                    attachedObject = fishObj;
+                    currentBait = null;
+                }
+                        
                 // Remove any existing joints
                 var joints = GetComponents<Joint2D>();
                 foreach (var joint in joints)
