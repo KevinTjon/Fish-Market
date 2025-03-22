@@ -7,7 +7,9 @@ public class FishHookable : ObjectHookable, IFish
     [Header("Fish Configuration")]
     public FishType fishType; // Reference to the fish type scriptable object
     public FishBehavior behavior; // Now only used for movement behavior
-    
+    public float fishWeight = 1f; // Weight of the fish for reeling in
+    // TODO: Make this a random generated function
+
     private bool isStunned;
     public bool IsStunned { get {return isStunned;}}
     

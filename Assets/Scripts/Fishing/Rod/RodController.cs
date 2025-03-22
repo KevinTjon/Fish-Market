@@ -9,6 +9,8 @@ public class RodController : MonoBehaviour
     public HookController hook { get; private set; }
     public Transform rodConnection { get; private set; }
 
+    public Cooler fishCooler { get; private set; }
+
     private bool isCasting;
 
     
@@ -27,6 +29,8 @@ public class RodController : MonoBehaviour
         line = gameObject.transform.GetChild(0).GetComponent<FishingLineController>();
         hook = gameObject.transform.GetChild(1).GetComponent<HookController>();
         rodConnection = gameObject.transform.parent.GetChild(0).GetChild(3);
+
+        fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
 
         isCasting = true;    
     }
@@ -51,13 +55,19 @@ public class RodController : MonoBehaviour
 
         if (hook.onWaterSurface) 
         {
-            if (input >= 0)
+            //Debug.Log("Hook is on the water surface");
+            if (input > 0)
             {
-                if (hook.baitObject != null)
-                    Debug.Log(hook.baitObject.name + " caught!");
-                // Add to inventory
+                var fishObj = hook.attachedObject;
+                if (fishObj != null)
+                {
+                    Debug.Log(fishObj.name + " caught!");
+                    fishCooler.AddFish(fishObj.GetComponent<FishHookable>());
+                    Destroy(fishObj);
+                    fishCooler.DisplayCooler();
+                }
             }
-            else
+            else if (input < 0)
             {
                 hook.DetachHookFromSurface();
             }

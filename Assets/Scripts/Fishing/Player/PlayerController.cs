@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
@@ -14,15 +16,19 @@ public class PlayerController : MonoBehaviour
     private Animator playerAnimator;
     private Animator rodAnimator;
 
+    // UI Variables
+    private readonly float pauseTime = 0.3f;
+    //private FishingControls.UIActions uiActions;
+    [SerializeField] private GameObject pauseUI;
+    [SerializeField] private GameObject inventoryUI;
+
     // Player flags
     private bool isTurning;
     private bool isFacingRight;
-
-    //private bool isPaused;
-    //public bool IsPaused { get => isPaused; }
-
+    private bool isPaused;
     
-    
+    // Public get variable for isPaused for UI screens
+    public bool IsPaused { get => isPaused; }
 
     private void Awake()
     {
@@ -34,26 +40,48 @@ public class PlayerController : MonoBehaviour
 
         playerAnimator = bHierarchy.GetChild(1).GetComponent<Animator>();
         rodAnimator = bHierarchy.GetChild(2).GetComponent<Animator>();
-        
-        FishingControls fishingControls = new FishingControls();
-        playerActions = fishingControls.Player;
-        
+
+        playerActions = new FishingControls().Player;
         rod.SetWaterLevel(waterLevel);
+        
+        //uiActions = new FishingControls().UI;
+        pauseUI.SetActive(false);
+        inventoryUI.SetActive(false);
     }
 
     private void Start()
-    {
-        playerActions.MoveBoat.Enable();
-        // Change when line casting is added
-        playerActions.ReelLine.Enable();
+    {        
+        playerActions.Enable();
+        playerActions.ToggleInventory.performed += (ctx) => EnableScreen(inventoryUI);
+        playerActions.TogglePause.performed += (ctx) => EnableScreen(pauseUI);
         // ---------------------------------
 
         isTurning = false;
         isFacingRight = true;
+        isPaused = false;
+    }
+    
+    private void EnableScreen(GameObject screen)
+    {
+        playerActions.Disable();
+        screen.SetActive(true);
+        isPaused = true;
     }
 
+    public void DisableScreen(GameObject screen)
+    {
+        playerActions.Enable();
+        screen.SetActive(false);
+        isPaused = false;
+        StartCoroutine(TimePause.UnpauseSimulation(pauseTime));
+    }
+    
     private void Update()
     {
+        if (isPaused)
+        {
+            return;
+        }
         if (rod.line.DoesTriggerTurn(isFacingRight) && !isTurning)
         {   
             StartCoroutine(TurnPlayer());
@@ -73,11 +101,12 @@ public class PlayerController : MonoBehaviour
         isTurning = false;
     }
 
-    
     private void FixedUpdate()
     {
-        
-        // if ()
+        if (isPaused)
+        {
+            return;
+        }
         // Handle input
         var boatInput = playerActions.MoveBoat.ReadValue<float>();
         var reelInput = playerActions.ReelLine.ReadValue<float>();
@@ -89,4 +118,13 @@ public class PlayerController : MonoBehaviour
             rod.ReceiveReelInput(reelInput);
         }
     }
+
+    public void UnpauseGame()
+    {
+        isPaused = false;
+        pauseUI.SetActive(false);
+        StartCoroutine(TimePause.UnpauseSimulation(pauseTime));
+    }
+
+
 }
