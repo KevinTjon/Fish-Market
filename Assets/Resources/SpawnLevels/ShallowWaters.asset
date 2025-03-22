@@ -13,6 +13,22 @@ MonoBehaviour:
   m_Name: ShallowWaters
   m_EditorClassIdentifier: 
   levelName: Shallow Waters
-  availableFish: []
+  availableFish:
+  - fishPrefab: {fileID: 2905340178631796857, guid: 3fde2a65e79eca442b8f7e4b033bd0a6, type: 3}
+    initialCount: 5
+    maxPopulation: 5
+    spawnChance: 1
+  - fishPrefab: {fileID: 2905340178631796857, guid: 9410f5b223714e24f91c1ea6a4ff5f07, type: 3}
+    initialCount: 5
+    maxPopulation: 5
+    spawnChance: 1
+  - fishPrefab: {fileID: 2905340178631796857, guid: 643446e9c45a7314c88d646646b33600, type: 3}
+    initialCount: 5
+    maxPopulation: 5
+    spawnChance: 1
+  - fishPrefab: {fileID: 5531755810262855031, guid: 5ae5fe0f0e7779e40a6ad6c44bfc0293, type: 3}
+    initialCount: 5
+    maxPopulation: 5
+    spawnChance: 1
   minDepth: 0
   maxDepth: -20
