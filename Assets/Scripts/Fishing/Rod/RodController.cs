@@ -28,6 +28,8 @@ public class RodController : MonoBehaviour
     {
         line = gameObject.transform.GetChild(0).GetComponent<FishingLineController>();
         hook = gameObject.transform.GetChild(1).GetComponent<HookController>();
+        Debug.Log($"Here is line: {line}");
+        Debug.Log($"Here is hook: {hook}");
         rodConnection = gameObject.transform.parent.GetChild(0).GetChild(3);
 
         fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();

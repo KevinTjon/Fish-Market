@@ -45,15 +45,15 @@ public class PlayerController : MonoBehaviour
         rod.SetWaterLevel(waterLevel);
         
         //uiActions = new FishingControls().UI;
-        pauseUI.SetActive(false);
-        inventoryUI.SetActive(false);
+        //pauseUI.SetActive(false);
+        //inventoryUI.SetActive(false);
     }
 
     private void Start()
     {        
         playerActions.Enable();
-        playerActions.ToggleInventory.performed += (ctx) => EnableScreen(inventoryUI);
-        playerActions.TogglePause.performed += (ctx) => EnableScreen(pauseUI);
+        //playerActions.ToggleInventory.performed += (ctx) => EnableScreen(inventoryUI);
+        //playerActions.TogglePause.performed += (ctx) => EnableScreen(pauseUI);
         // ---------------------------------
 
         isTurning = false;

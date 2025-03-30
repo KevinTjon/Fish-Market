@@ -106,7 +106,7 @@ public class CameraController : MonoBehaviour
     
     private void OnDrawGizmos()
     {
-        if (!Application.isPlaying || target == null) return;
+        if (/*!Application.isPlaying ||*/ target == null) return;
         
         // Draw focus point
         Gizmos.color = Color.blue;
@@ -121,7 +121,7 @@ public class CameraController : MonoBehaviour
             Gizmos.DrawWireCube(bounds.center, bounds.size);
             
             // Draw effective camera bounds (with padding)
-            Gizmos.color = new Color(0f, 1f, 0f, 0.2f);
+            Gizmos.color = new Color(0f, 1f, 0f, 1f);
             Vector3 paddedSize = new Vector3(
                 bounds.size.x - (padding.x * 2 + screenHalfSize.x * 2),
                 bounds.size.y - (padding.y * 2 + screenHalfSize.y * 2),
