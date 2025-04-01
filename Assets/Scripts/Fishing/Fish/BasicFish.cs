@@ -14,25 +14,34 @@ public class BasicFish : MonoBehaviour
     [SerializeField] private float chaseSpeed = 5f; // Speed when chasing bait
     [SerializeField] private float turnSpeed = 2f;
     [SerializeField] private float boundaryInfluenceDistance = 1f;
+    [SerializeField] private float horizontalBias = 1.5f; // Bias towards horizontal movement
+    [SerializeField] private float verticalMovementRange = 2f; // How far up/down fish can move from their current position
+    [SerializeField] private float verticalMovementSpeed = 0.5f; // How fast fish move vertically
     
     [Header("Bait Detection")]
     [SerializeField] private float baitDetectionRadius = 5f;
     [SerializeField] private float minBaitChaseDistance = 0.5f; // Minimum distance to keep from bait
     
-    [Header("Schooling")]
-    [SerializeField] private bool isSchooling = false;
-    [SerializeField] private float schoolingRadius = 5f;
-    [SerializeField] private float separationWeight = 1.5f;
-    [SerializeField] private float alignmentWeight = 1f;
-    [SerializeField] private float cohesionWeight = 1f;
-    [SerializeField] private float minSeparationDistance = 1f;
+    [Header("Fish Interaction")]
+    [SerializeField] private float interactionRadius = 5f; // Radius to check for other fish
+    [SerializeField] private float minSeparationDistance = 1.5f; // Minimum distance to keep from other fish
+    [SerializeField] private float separationWeight = 2f; // Weight for separation force
+    [SerializeField] private float alignmentWeight = 1f; // Weight for alignment force
+    [SerializeField] private float cohesionWeight = 1f; // Weight for cohesion force
     [SerializeField] private float baseForwardWeight = 1.2f;  // Weight for base forward movement
     [SerializeField] private float randomMovementWeight = 0.3f;  // Weight for random movement
     [SerializeField] private float randomMovementInterval = 2f;  // How often to change random direction
     
+    [Header("Schooling")]
+    [SerializeField] private bool isSchooling = false;
+    [SerializeField] private float schoolingRadius = 5f;
+    
     [Header("Collision")]
     [SerializeField] private float emergencySeperationForce = 5f;
     [SerializeField] private float emergencySeperationDistance = 0.5f;
+    
+    [Header("Debug Visualization")]
+    [SerializeField] private bool showDebugGizmos = false;  // Default to false to hide gizmos
     
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
@@ -67,20 +76,21 @@ public class BasicFish : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         
-        // Only freeze rotation and Y position when not chasing
+        // Set up collision layers
+        // Fish should only collide with boundaries and bait, not other fish
+        gameObject.layer = LayerMask.NameToLayer("Fish");
+        
+        // Only freeze rotation when not chasing
         UpdateMovementConstraints(false);
         
-        // Set random initial direction
+        // Set random initial direction (now using random left/right)
         float randomAngle = Random.Range(-30f, 30f);
-        currentDirection = Quaternion.Euler(0, 0, randomAngle) * Vector2.right;
+        currentDirection = Quaternion.Euler(0, 0, randomAngle) * (Random.value > 0.5f ? Vector2.right : Vector2.left);
         UpdateRandomDirection();
         UpdateSpriteFacing();
 
-        // Start updating nearby fish
-        if (isSchooling)
-        {
-            InvokeRepeating(nameof(UpdateNearbyFish), 0f, 0.5f);
-        }
+        // Start updating nearby fish for all fish
+        InvokeRepeating(nameof(UpdateNearbyFish), 0f, 0.5f);
     }
 
     // New method to update movement constraints based on chasing state
@@ -93,28 +103,37 @@ public class BasicFish : MonoBehaviour
         }
         else
         {
-            // When not chasing, freeze rotation and Y position
-            rb.constraints = RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionY;
+            // Only freeze rotation, allow Y movement
+            rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         }
     }
 
     private void UpdateRandomDirection()
     {
-        // Generate a new random direction within a cone in front of the fish
-        float angle = Random.Range(-45f, 45f);
-        randomDirection = Quaternion.Euler(0, 0, angle) * currentDirection;
+        // Generate a new random direction with horizontal bias
+        float horizontalAngle = Random.Range(-45f, 45f);
+        float verticalAngle = Random.Range(-30f, 30f) / horizontalBias; // Reduced vertical angle range
+        
+        // Randomly choose between left and right as base direction
+        Vector2 baseDirection = Random.value > 0.5f ? Vector2.right : Vector2.left;
+        Vector2 newDirection = Quaternion.Euler(0, 0, horizontalAngle) * baseDirection;
+        newDirection += Vector2.up * Mathf.Sin(verticalAngle * Mathf.Deg2Rad);
+        randomDirection = newDirection.normalized;
         nextRandomTime = Time.time + randomMovementInterval;
     }
 
     private void UpdateNearbyFish()
     {
         nearbyFish.Clear();
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, schoolingRadius);
+        float checkRadius = isSchooling ? schoolingRadius : interactionRadius;
+        // Use OverlapCircleAll with a specific layer mask to only detect other fish
+        int fishLayer = LayerMask.GetMask("Fish");
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, checkRadius, fishLayer);
         
         foreach (Collider2D col in colliders)
         {
             BasicFish fish = col.GetComponent<BasicFish>();
-            if (fish != null && fish != this && fish.isSchooling)
+            if (fish != null && fish != this)
             {
                 nearbyFish.Add(fish);
             }
@@ -126,17 +145,25 @@ public class BasicFish : MonoBehaviour
         // Always include base forward movement and random movement
         Vector2 baseForward = currentDirection * baseForwardWeight;
         
+        // Apply horizontal bias to base forward movement but maintain direction sign
+        float xSign = Mathf.Sign(baseForward.x);
+        baseForward.x = Mathf.Abs(baseForward.x) * horizontalBias * xSign;
+        baseForward = baseForward.normalized;
+        
         // Update random direction periodically
         if (Time.time >= nextRandomTime)
         {
             UpdateRandomDirection();
         }
         
-        // Add random movement
+        // Add random movement with horizontal bias but maintain direction sign
         Vector2 randomMovement = randomDirection * randomMovementWeight;
+        float randomXSign = Mathf.Sign(randomMovement.x);
+        randomMovement.x = Mathf.Abs(randomMovement.x) * horizontalBias * randomXSign;
+        randomMovement = randomMovement.normalized;
 
-        // If not schooling or no nearby fish, just use base movement with randomization
-        if (!isSchooling || nearbyFish.Count == 0)
+        // If no nearby fish, just use base movement with randomization
+        if (nearbyFish.Count == 0)
             return (baseForward + randomMovement).normalized;
 
         Vector2 separation = Vector2.zero;
@@ -144,36 +171,63 @@ public class BasicFish : MonoBehaviour
         Vector2 cohesion = Vector2.zero;
         int alignmentCount = 0;
         int cohesionCount = 0;
+        float totalSeparationWeight = 0f;
 
         foreach (BasicFish fish in nearbyFish)
         {
-            if (fish == null) continue; // Skip if fish was destroyed
+            if (fish == null) continue;
 
             Vector2 toFish = fish.transform.position - transform.position;
             float distance = toFish.magnitude;
 
-            // Separation
+            // Separation - applies to all fish to maintain minimum distance
             if (distance < minSeparationDistance)
             {
-                separation -= toFish.normalized / distance;
+                // Calculate separation force based on distance
+                float separationForce = 1f - (distance / minSeparationDistance);
+                separationForce = Mathf.Pow(separationForce, 2f); // Quadratic falloff
+                
+                // Add separation force in the opposite direction of the fish
+                separation -= toFish.normalized * separationForce;
+                totalSeparationWeight += separationForce;
             }
 
-            // Alignment
-            if (distance < schoolingRadius)
+            // Alignment and Cohesion - stronger for schooling fish
+            if (isSchooling && fish.isSchooling && distance < schoolingRadius)
             {
-                alignment += (Vector2)fish.currentDirection;
-                alignmentCount++;
+                // Only consider alignment if fish are moving in similar directions
+                float dotProduct = Vector2.Dot(currentDirection, fish.currentDirection);
+                if (dotProduct > 0.5f) // Only align if moving in similar directions
+                {
+                    alignment += (Vector2)fish.currentDirection;
+                    alignmentCount++;
+                }
+                
+                cohesion += (Vector2)fish.transform.position;
+                cohesionCount++;
             }
-
-            // Cohesion
-            if (distance < schoolingRadius)
+            // Weaker alignment and cohesion for non-schooling fish
+            else if (distance < interactionRadius)
             {
+                // Only consider alignment if fish are moving in similar directions
+                float dotProduct = Vector2.Dot(currentDirection, fish.currentDirection);
+                if (dotProduct > 0.5f) // Only align if moving in similar directions
+                {
+                    alignment += (Vector2)fish.currentDirection * 0.5f;
+                    alignmentCount++;
+                }
+                
                 cohesion += (Vector2)fish.transform.position;
                 cohesionCount++;
             }
         }
 
         // Normalize and apply weights
+        if (totalSeparationWeight > 0)
+        {
+            separation = separation.normalized * separationWeight;
+        }
+
         if (alignmentCount > 0)
         {
             alignment = (alignment / alignmentCount) * alignmentWeight;
@@ -184,11 +238,26 @@ public class BasicFish : MonoBehaviour
             cohesion = ((cohesion / cohesionCount) - (Vector2)transform.position).normalized * cohesionWeight;
         }
 
-        separation = separation.normalized * separationWeight;
+        // Combine all forces with priority to separation
+        Vector2 combinedForce = baseForward + randomMovement;
+        
+        // Add separation with higher priority if there's significant separation force
+        if (totalSeparationWeight > 0.5f)
+        {
+            combinedForce = separation * 2f + combinedForce;
+        }
+        else
+        {
+            combinedForce += separation + alignment + cohesion;
+        }
 
-        // Combine all forces including base forward movement and random movement
-        Vector2 combinedForce = baseForward + separation + alignment + cohesion + randomMovement;
-        return combinedForce.normalized;
+        // Normalize and apply horizontal bias to final direction
+        combinedForce = combinedForce.normalized;
+        float finalXSign = Mathf.Sign(combinedForce.x);
+        combinedForce.x = Mathf.Abs(combinedForce.x) * horizontalBias * finalXSign;
+        combinedForce = combinedForce.normalized;
+
+        return combinedForce;
     }
 
     private void Update()
@@ -204,7 +273,7 @@ public class BasicFish : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isHooked) return;
+        if (isHooked) return; // Skip movement updates when hooked
         if (currentZone == null) return;
 
         BoxCollider2D zoneCollider = currentZone.GetComponent<BoxCollider2D>();
@@ -291,33 +360,55 @@ public class BasicFish : MonoBehaviour
                 return;
             }
         }
-
-        // Normal movement behavior when not chasing bait
-        // Calculate zone boundaries influence
-        float distanceToLeftBound = transform.position.x - zoneCollider.bounds.min.x;
-        float distanceToRightBound = zoneCollider.bounds.max.x - transform.position.x;
-
-        // Check if we're near boundaries
-        if (distanceToLeftBound < boundaryInfluenceDistance)
+        else
         {
-            float influence = 1 - (distanceToLeftBound / boundaryInfluenceDistance);
-            targetDirection += Vector2.right * influence;
-        }
-        else if (distanceToRightBound < boundaryInfluenceDistance)
-        {
-            float influence = 1 - (distanceToRightBound / boundaryInfluenceDistance);
-            targetDirection += Vector2.left * influence;
-        }
+            // Normal movement behavior when not chasing bait
+            // Calculate zone boundaries influence
+            float distanceToLeftBound = transform.position.x - zoneCollider.bounds.min.x;
+            float distanceToRightBound = zoneCollider.bounds.max.x - transform.position.x;
+            float distanceToTopBound = zoneCollider.bounds.max.y - transform.position.y;
+            float distanceToBottomBound = transform.position.y - zoneCollider.bounds.min.y;
 
-        // Apply schooling behavior if enabled
-        if (isSchooling)
-        {
+            // Check if we're near horizontal boundaries
+            if (distanceToLeftBound < boundaryInfluenceDistance)
+            {
+                float influence = 1 - (distanceToLeftBound / boundaryInfluenceDistance);
+                targetDirection += Vector2.right * influence * horizontalBias;
+            }
+            else if (distanceToRightBound < boundaryInfluenceDistance)
+            {
+                float influence = 1 - (distanceToRightBound / boundaryInfluenceDistance);
+                targetDirection += Vector2.left * influence * horizontalBias;
+            }
+
+            // Check if we're near vertical boundaries
+            if (distanceToTopBound < boundaryInfluenceDistance)
+            {
+                float influence = 1 - (distanceToTopBound / boundaryInfluenceDistance);
+                targetDirection += Vector2.down * influence;
+            }
+            else if (distanceToBottomBound < boundaryInfluenceDistance)
+            {
+                float influence = 1 - (distanceToBottomBound / boundaryInfluenceDistance);
+                targetDirection += Vector2.up * influence;
+            }
+
+            // Apply schooling behavior
             Vector2 schoolingDirection = CalculateSchoolingBehavior();
+            
+            // Apply horizontal bias to schooling direction
+            schoolingDirection.x *= horizontalBias;
+            schoolingDirection = schoolingDirection.normalized;
+            
             targetDirection = Vector2.Lerp(targetDirection, schoolingDirection, 0.5f);
         }
 
         // Normalize the target direction
         targetDirection.Normalize();
+
+        // Apply horizontal bias to final direction
+        targetDirection.x *= horizontalBias;
+        targetDirection = targetDirection.normalized;
 
         // Smoothly rotate current direction towards target direction
         currentDirection = Vector2.Lerp(currentDirection, targetDirection, turnSpeed * Time.fixedDeltaTime);
@@ -360,27 +451,39 @@ public class BasicFish : MonoBehaviour
     public void GetHooked()
     {
         isHooked = true;
-        rb.simulated = false; // Disable physics completely
+        rb.simulated = true; // Keep physics enabled for hook interaction
+        rb.velocity = Vector2.zero; // Stop current movement
         
-        // Disable fish AI behavior while hooked
-        StopAllCoroutines();
+        // Disable collider to prevent interference with hook
+        GetComponent<Collider2D>().enabled = false;
+        
+        // Cancel any ongoing movement updates
+        CancelInvoke(nameof(UpdateNearbyFish));
+        nearbyFish.Clear();
+        
+        // Clear any target bait
+        targetBait = null;
     }
 
     // Called when the fish is released from the hook
     public void GetReleased()
     {
         isHooked = false;
-        rb.simulated = true; // Re-enable physics
         rb.velocity = Vector2.zero;
         
-        // Add a small force to make the fish swim away when released
-        rb.AddForce(new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * swimSpeed, ForceMode2D.Impulse);
+        // Re-enable collider
+        GetComponent<Collider2D>().enabled = true;
         
-        // Restart schooling behavior if this fish was schooling
-        if (isSchooling)
-        {
-            InvokeRepeating(nameof(UpdateNearbyFish), 0f, 0.5f);
-        }
+        // Add a small force to make the fish swim away when released
+        Vector2 releaseDirection = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized;
+        rb.AddForce(releaseDirection * swimSpeed, ForceMode2D.Impulse);
+        
+        // Set initial direction based on release direction
+        currentDirection = releaseDirection;
+        UpdateSpriteFacing();
+        
+        // Restart fish behavior
+        InvokeRepeating(nameof(UpdateNearbyFish), 0f, 0.5f);
     }
 
     private void UpdateSpriteFacing()
@@ -410,57 +513,31 @@ public class BasicFish : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (currentZone != null)
-        {
-            // Draw influence zones
-            BoxCollider2D zoneCollider = currentZone.GetComponent<BoxCollider2D>();
-            if (zoneCollider != null)
-            {
-                Gizmos.color = Color.yellow;
-                // Left influence zone
-                Gizmos.DrawWireCube(
-                    new Vector3(zoneCollider.bounds.min.x + boundaryInfluenceDistance/2, zoneCollider.bounds.center.y, 0),
-                    new Vector3(boundaryInfluenceDistance, zoneCollider.bounds.size.y, 0)
-                );
-                // Right influence zone
-                Gizmos.DrawWireCube(
-                    new Vector3(zoneCollider.bounds.max.x - boundaryInfluenceDistance/2, zoneCollider.bounds.center.y, 0),
-                    new Vector3(boundaryInfluenceDistance, zoneCollider.bounds.size.y, 0)
-                );
-            }
-        }
+        if (!showDebugGizmos) return;  // Early return if gizmos are disabled
 
-        // Draw bait detection radius
-        Gizmos.color = Color.cyan;
+        // Draw detection radius
+        Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, baitDetectionRadius);
 
-        // Draw line to target bait if exists
-        if (targetBait != null)
+        // Draw schooling radius if schooling is enabled
+        if (isSchooling)
         {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position, targetBait.transform.position);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(transform.position, schoolingRadius);
         }
+
+        // Draw current direction
+        Gizmos.color = Color.green;
+        Vector3 direction = currentDirection.normalized;
+        Gizmos.DrawLine(transform.position, transform.position + direction);
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        BasicFish otherFish = collision.gameObject.GetComponent<BasicFish>();
-        if (otherFish != null)
-        {
-            // Calculate separation vector
-            Vector2 separationVector = transform.position - collision.transform.position;
-            float distance = separationVector.magnitude;
-            
-            if (distance < emergencySeperationDistance)
-            {
-                // Apply immediate separation force
-                Vector2 separationForce = separationVector.normalized * emergencySeperationForce;
-                rb.AddForce(separationForce, ForceMode2D.Impulse);
-                
-                // Also slightly adjust the current direction
-                currentDirection = Vector2.Lerp(currentDirection, separationVector.normalized, 0.5f);
-            }
-        }
+        // Only handle collisions with boundaries or other non-fish objects
+        if (isHooked) return;
+        
+        // You can add boundary collision handling here if needed
     }
 
     private void FindNearbyBait()

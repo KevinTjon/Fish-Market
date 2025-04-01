@@ -10,8 +10,12 @@ public enum WaterLevel
 [RequireComponent(typeof(BoxCollider2D))]
 public class LevelZone : MonoBehaviour
 {
+    [Header("Zone Settings")]
     public WaterLevel level;
     public Color zoneColor = new Color(0.5f, 0.8f, 1f, 0.2f);
+
+    [Header("Debug Visualization")]
+    [Tooltip("Toggle visibility of zone boundaries in the Scene view")]
     public bool showZone = true;
 
     private BoxCollider2D boxCollider;
@@ -57,8 +61,20 @@ public class LevelZone : MonoBehaviour
     // Helper method to check if a position is within this zone
     public bool IsInZone(Vector2 position)
     {
-        if (boxCollider == null) return false;
-        return boxCollider.bounds.Contains(position);
+        if (boxCollider == null)
+        {
+            Debug.LogWarning($"No BoxCollider2D on {gameObject.name}");
+            return false;
+        }
+
+        Bounds bounds = boxCollider.bounds;
+        bool isInside = position.x >= bounds.min.x && 
+                       position.x <= bounds.max.x && 
+                       position.y >= bounds.min.y && 
+                       position.y <= bounds.max.y;
+
+        Debug.Log($"Zone {gameObject.name} ({level}) check - Position: {position}, Bounds: {bounds.min} to {bounds.max}, IsInside: {isInside}");
+        return isInside;
     }
 
     // Helper method to get a random position within this zone

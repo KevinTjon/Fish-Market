@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5873978333549580809}
@@ -109,15 +109,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  size: 2
+  fishSize: 0
   swimSpeed: 3
+  chaseSpeed: 5
   turnSpeed: 2
-  minDepth: 0
-  maxDepth: 10
-  preferredDepth: 5
-  depthVariance: 1
-  directionChangeInterval: 3
-  maxTurnAngle: 45
+  boundaryInfluenceDistance: 1
+  horizontalBias: 1.5
+  verticalMovementRange: 2
+  verticalMovementSpeed: 0.5
+  baitDetectionRadius: 5
+  minBaitChaseDistance: 0.5
+  interactionRadius: 5
+  minSeparationDistance: 1
+  separationWeight: 1.5
+  alignmentWeight: 1
+  cohesionWeight: 1
+  baseForwardWeight: 1.2
+  randomMovementWeight: 0.3
+  randomMovementInterval: 2
+  isSchooling: 0
+  schoolingRadius: 5
+  emergencySeperationForce: 5
+  emergencySeperationDistance: 0.5
+  showDebugGizmos: 0
 --- !u!1 &5863138210477319097
 GameObject:
   m_ObjectHideFlags: 0
