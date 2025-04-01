@@ -5,24 +5,22 @@ public class CameraController : MonoBehaviour
     [Header("Target Settings")]
     [SerializeField] private SimpleRodController rodController;
     [SerializeField] private float followSpeed = 2f;
-    [SerializeField] private float verticalOffset = 2f; // Camera will stay this far above the hook
 
     [Header("Zoom Settings")]
     [SerializeField] private float minOrthoSize = 5f;  // Minimum camera size (when hook is near surface)
     [SerializeField] private float maxOrthoSize = 15f; // Maximum camera size (when hook is deep)
     [SerializeField] private float zoomSpeed = 2f;     // How fast the camera zooms
     [SerializeField] private float depthZoomStart = 5f; // Depth at which camera starts zooming out
-    
-    [Header("Bounds Settings")]
-    [SerializeField] private float minX = -20f;
-    [SerializeField] private float maxX = 20f;
-    [SerializeField] private float minY = -30f;
-    [SerializeField] private float maxY = 5f;
+
+    [Header("Level References")]
+    [SerializeField] private LevelZone shallowZone;
+    [SerializeField] private LevelZone deepZone;
 
     private Camera mainCamera;
     private Transform hookTransform;
     private Vector3 velocity = Vector3.zero;
     private float currentOrthoSize;
+    private float minX, maxX, minY, maxY;
 
     private void Start()
     {
@@ -31,6 +29,40 @@ public class CameraController : MonoBehaviour
         
         if (!rodController)
             rodController = FindObjectOfType<SimpleRodController>();
+
+        // Find level zones if not assigned
+        if (!shallowZone || !deepZone)
+        {
+            LevelZone[] zones = FindObjectsOfType<LevelZone>();
+            foreach (LevelZone zone in zones)
+            {
+                if (zone.level == WaterLevel.Shallow)
+                    shallowZone = zone;
+                else if (zone.level == WaterLevel.Deep)
+                    deepZone = zone;
+            }
+        }
+
+        // Set camera bounds based on level zones
+        if (shallowZone && deepZone)
+        {
+            BoxCollider2D shallowCollider = shallowZone.GetComponent<BoxCollider2D>();
+            BoxCollider2D deepCollider = deepZone.GetComponent<BoxCollider2D>();
+
+            if (shallowCollider && deepCollider)
+            {
+                // Get the leftmost and rightmost points from both colliders
+                minX = Mathf.Min(shallowCollider.bounds.min.x, deepCollider.bounds.min.x);
+                maxX = Mathf.Max(shallowCollider.bounds.max.x, deepCollider.bounds.max.x);
+                
+                // Top of shallow zone to bottom of deep zone
+                maxY = shallowCollider.bounds.max.y;
+                minY = deepCollider.bounds.min.y;
+
+                // Adjust depthZoomStart based on zones
+                depthZoomStart = Mathf.Abs(shallowCollider.bounds.max.y - shallowCollider.bounds.min.y);
+            }
+        }
 
         currentOrthoSize = minOrthoSize;
         mainCamera.orthographicSize = currentOrthoSize;
@@ -47,18 +79,9 @@ public class CameraController : MonoBehaviour
 
     private void UpdateCameraPosition()
     {
-        // Calculate target position
+        // Simply center on hook
         Vector3 targetPos = hookTransform.position;
-        
-        // Add vertical offset
-        targetPos.y += verticalOffset;
-        
-        // Keep camera's z position
         targetPos.z = transform.position.z;
-        
-        // Clamp position within bounds
-        targetPos.x = Mathf.Clamp(targetPos.x, minX, maxX);
-        targetPos.y = Mathf.Clamp(targetPos.y, minY, maxY);
 
         // Smoothly move camera
         transform.position = Vector3.SmoothDamp(
@@ -93,5 +116,15 @@ public class CameraController : MonoBehaviour
         Vector3 center = new Vector3((minX + maxX) * 0.5f, (minY + maxY) * 0.5f, 0f);
         Vector3 size = new Vector3(maxX - minX, maxY - minY, 1f);
         Gizmos.DrawWireCube(center, size);
+
+        // Draw zoom start line
+        if (shallowZone)
+        {
+            Gizmos.color = Color.cyan;
+            float zoomLineY = shallowZone.transform.position.y - depthZoomStart;
+            Vector3 lineStart = new Vector3(minX, zoomLineY, 0);
+            Vector3 lineEnd = new Vector3(maxX, zoomLineY, 0);
+            Gizmos.DrawLine(lineStart, lineEnd);
+        }
     }
 } 

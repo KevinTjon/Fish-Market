@@ -5,9 +5,11 @@ public class BoatController : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float moveBoundaryLeft = -8f;
-    [SerializeField] private float moveBoundaryRight = 8f;
+    
+    [Header("References")]
+    [SerializeField] private LevelZone shallowZone;
 
+    private float minX, maxX;
     private Vector2 movement;
     private Rigidbody2D rb;
 
@@ -17,6 +19,31 @@ public class BoatController : MonoBehaviour
         rb.gravityScale = 0; // Disable gravity
         rb.drag = 5; // Add some drag to stop more smoothly
         rb.constraints = RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionY; // Lock Y position and rotation
+
+        // Find shallow zone if not assigned
+        if (!shallowZone)
+        {
+            LevelZone[] zones = FindObjectsOfType<LevelZone>();
+            foreach (LevelZone zone in zones)
+            {
+                if (zone.level == WaterLevel.Shallow)
+                {
+                    shallowZone = zone;
+                    break;
+                }
+            }
+        }
+
+        // Set movement boundaries from shallow zone
+        if (shallowZone)
+        {
+            BoxCollider2D collider = shallowZone.GetComponent<BoxCollider2D>();
+            if (collider)
+            {
+                minX = collider.bounds.min.x;
+                maxX = collider.bounds.max.x;
+            }
+        }
     }
 
     private void Update()
@@ -42,7 +69,7 @@ public class BoatController : MonoBehaviour
         Vector2 newPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
         
         // Clamp position within boundaries
-        newPosition.x = Mathf.Clamp(newPosition.x, moveBoundaryLeft, moveBoundaryRight);
+        newPosition.x = Mathf.Clamp(newPosition.x, minX, maxX);
         
         // Update position
         rb.MovePosition(newPosition);
@@ -50,11 +77,12 @@ public class BoatController : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        // Draw movement boundaries in the editor
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(new Vector3(moveBoundaryLeft, transform.position.y - 1, 0), 
-                       new Vector3(moveBoundaryLeft, transform.position.y + 1, 0));
-        Gizmos.DrawLine(new Vector3(moveBoundaryRight, transform.position.y - 1, 0), 
-                       new Vector3(moveBoundaryRight, transform.position.y + 1, 0));
+        if (!shallowZone) return;
+
+        // Draw movement boundaries
+        Gizmos.color = Color.green;
+        float yPos = transform.position.y;
+        Gizmos.DrawLine(new Vector3(minX, yPos - 1, 0), new Vector3(minX, yPos + 1, 0));
+        Gizmos.DrawLine(new Vector3(maxX, yPos - 1, 0), new Vector3(maxX, yPos + 1, 0));
     }
 }
