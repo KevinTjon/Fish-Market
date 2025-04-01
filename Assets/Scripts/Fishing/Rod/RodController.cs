@@ -1,91 +1,129 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class RodController : MonoBehaviour
 {
-    public FishingLineController line { get; private set; }
-    public HookController hook { get; private set; }
-    public Transform rodConnection { get; private set; }
+    [Header("Rod Settings")]
+    [SerializeField] private float maxLineLength = 10f;
+    [SerializeField] private float castPowerMultiplier = 10f;
+    [SerializeField] private float reelSpeed = 5f;
+    [SerializeField] private float sinkSpeed = 3f;
 
-    public Cooler fishCooler { get; private set; }
-
+    [Header("References")]
+    [SerializeField] private Transform rodTip;
+    [SerializeField] private GameObject hookPrefab;
+    
+    private LineRenderer fishingLine;
+    private GameObject currentHook;
+    private Vector2 hookVelocity;
     private bool isCasting;
+    private bool isReeling;
+    private float currentLineLength;
+    private Vector2 castStartPosition;
 
-    
-
-    private const float LineWidth = .03f;
-    private const float LinePullConstant = 100f;
-    private const float LinePushConstant = 120f;
-    private const float LineDamping = 25f;
-    private const float ReelSpeed = 3f;
-    private const float ReelDownConstant = .6f;
-
-
-    // --------------------------------------------
-    private void Awake()
+    private void Start()
     {
-        line = gameObject.transform.GetChild(0).GetComponent<FishingLineController>();
-        hook = gameObject.transform.GetChild(1).GetComponent<HookController>();
-        Debug.Log($"Here is line: {line}");
-        Debug.Log($"Here is hook: {hook}");
-        rodConnection = gameObject.transform.parent.GetChild(0).GetChild(3);
+        // Setup line renderer
+        fishingLine = gameObject.AddComponent<LineRenderer>();
+        fishingLine.startWidth = 0.05f;
+        fishingLine.endWidth = 0.05f;
+        fishingLine.material = new Material(Shader.Find("Sprites/Default"));
+        fishingLine.startColor = Color.black;
+        fishingLine.endColor = Color.black;
+        fishingLine.positionCount = 2;
 
-        fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
-
-        isCasting = true;    
-    }
-    
-    // Start is called before the first frame update
-    void Start()
-    {
-        line.InitializeLine(rodConnection, hook.transform, LineWidth);
-        hook.InitializeHook(hook.GetComponent<Rigidbody2D>());
+        SpawnHook();
     }
 
-    public void SetWaterLevel(float waterLevel)
+    private void SpawnHook()
     {
-        hook.SetWaterLevel(waterLevel);
+        // Spawn hook at rod tip
+        if (currentHook != null) Destroy(currentHook);
+        currentHook = Instantiate(hookPrefab, rodTip.position, Quaternion.identity);
+        currentHook.transform.SetParent(transform);
+        hookVelocity = Vector2.zero;
+        currentLineLength = 0;
+        UpdateLinePositions();
     }
 
-    public void ReceiveReelInput(float input)
+    private void Update()
     {
-        // Apply force to hook
-        var tensionForce = line.CalculateHookForce(!isCasting);
-        hook.AddForce(tensionForce);
+        HandleInput();
+        UpdateHookMovement();
+        UpdateLinePositions();
+    }
 
-        if (hook.onWaterSurface) 
+    private void HandleInput()
+    {
+        // Start casting
+        if (Input.GetMouseButtonDown(0) && !isCasting)
         {
-            //Debug.Log("Hook is on the water surface");
-            if (input > 0)
-            {
-                var fishObj = hook.attachedObject;
-                if (fishObj != null)
-                {
-                    Debug.Log(fishObj.name + " caught!");
-                    fishCooler.AddFish(fishObj.GetComponent<FishHookable>());
-                    Destroy(fishObj);
-                    fishCooler.DisplayCooler();
-                }
-            }
-            else if (input < 0)
-            {
-                hook.DetachHookFromSurface();
-            }
+            castStartPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            isCasting = true;
+            isReeling = false;
+        }
+        
+        // Release cast
+        if (Input.GetMouseButtonUp(0) && isCasting)
+        {
+            Vector2 castEndPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 castDirection = (castStartPosition - castEndPosition).normalized;
+            float castPower = Mathf.Clamp(Vector2.Distance(castStartPosition, castEndPosition), 0, 2);
+            
+            hookVelocity = castDirection * castPower * castPowerMultiplier;
+            isCasting = false;
+        }
+
+        // Reeling
+        if (Input.GetKey(KeyCode.Space))
+        {
+            isReeling = true;
         }
         else
         {
-            line.AlterLength(input);
-            
-            var hookY = hook.hookRB.position.y;
-            if ((isCasting && hookY < hook.waterLevel) ||
-                (!isCasting && hookY > hook.waterLevel))
-            {
-                line.SetLength(line.currLength);
-                hook.AttachHookToSurface();
-                isCasting = false;
-            }
+            isReeling = false;
         }
+    }
+
+    private void UpdateHookMovement()
+    {
+        if (currentHook == null) return;
+
+        if (!isCasting)
+        {
+            // Apply gravity when not being cast
+            if (!isReeling)
+            {
+                hookVelocity.y -= sinkSpeed * Time.deltaTime;
+            }
+            else
+            {
+                // Reel in hook
+                Vector2 hookToRod = (Vector2)rodTip.position - (Vector2)currentHook.transform.position;
+                hookVelocity = hookToRod.normalized * reelSpeed;
+            }
+
+            // Update hook position
+            Vector2 newPosition = currentHook.transform.position;
+            newPosition += hookVelocity * Time.deltaTime;
+
+            // Constrain to max line length
+            Vector2 toHook = newPosition - (Vector2)rodTip.position;
+            if (toHook.magnitude > maxLineLength)
+            {
+                newPosition = (Vector2)rodTip.position + toHook.normalized * maxLineLength;
+                hookVelocity = Vector2.zero;
+            }
+
+            currentHook.transform.position = newPosition;
+            currentLineLength = toHook.magnitude;
+        }
+    }
+
+    private void UpdateLinePositions()
+    {
+        if (fishingLine == null || currentHook == null) return;
+        
+        fishingLine.SetPosition(0, rodTip.position);
+        fishingLine.SetPosition(1, currentHook.transform.position);
     }
 }

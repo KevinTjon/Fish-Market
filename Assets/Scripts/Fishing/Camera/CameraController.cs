@@ -3,130 +3,95 @@ using UnityEngine;
 public class CameraController : MonoBehaviour
 {
     [Header("Target Settings")]
-    public HookController target;
-    public float followSpeed = 5f;
-    
+    [SerializeField] private SimpleRodController rodController;
+    [SerializeField] private float followSpeed = 2f;
+    [SerializeField] private float verticalOffset = 2f; // Camera will stay this far above the hook
+
     [Header("Zoom Settings")]
-    public float orthoSize = 3f;    // Fixed camera size
+    [SerializeField] private float minOrthoSize = 5f;  // Minimum camera size (when hook is near surface)
+    [SerializeField] private float maxOrthoSize = 15f; // Maximum camera size (when hook is deep)
+    [SerializeField] private float zoomSpeed = 2f;     // How fast the camera zooms
+    [SerializeField] private float depthZoomStart = 5f; // Depth at which camera starts zooming out
     
     [Header("Bounds Settings")]
-    public BoxCollider2D cameraBounds;
-    public Vector2 padding = new Vector2(2f, 2f);
-    
+    [SerializeField] private float minX = -20f;
+    [SerializeField] private float maxX = 20f;
+    [SerializeField] private float minY = -30f;
+    [SerializeField] private float maxY = 5f;
+
     private Camera mainCamera;
+    private Transform hookTransform;
     private Vector3 velocity = Vector3.zero;
-    private Vector3 targetPosition;
-    private Vector2 screenHalfSize;
-    
+    private float currentOrthoSize;
+
     private void Start()
     {
         mainCamera = GetComponent<Camera>();
-        if (mainCamera == null)
-        {
-            mainCamera = Camera.main;
-            if (mainCamera == null)
-            {
-                Debug.LogError("No camera found!");
-                enabled = false;
-                return;
-            }
-        }
+        if (!mainCamera) mainCamera = Camera.main;
         
-        // Find target if not assigned
-        if (target == null)
-        {
-            target = FindObjectOfType<HookController>();
-            if (target == null)
-            {
-                var rodController = FindObjectOfType<RodController>();
-                if (rodController != null && rodController.hook != null)
-                {
-                    target = rodController.hook;
-                    Debug.Log("Found hook through RodController");
-                }
-            }
-        }
-        
-        // Set fixed camera size
-        mainCamera.orthographicSize = orthoSize;
-        
-        // Calculate screen half size
-        screenHalfSize.y = mainCamera.orthographicSize;
-        screenHalfSize.x = screenHalfSize.y * mainCamera.aspect;
-        
-        // Find camera bounds if not assigned
-        if (cameraBounds == null)
-        {
-            cameraBounds = FindObjectOfType<BoxCollider2D>();
-            if (cameraBounds != null && cameraBounds.gameObject.name.Contains("Boundary"))
-            {
-                Debug.Log("Found boundary collider for camera bounds");
-            }
-        }
-        
-        // Initial position
-        if (target != null)
-        {
-            UpdateCameraPosition();
-        }
+        if (!rodController)
+            rodController = FindObjectOfType<SimpleRodController>();
+
+        currentOrthoSize = minOrthoSize;
+        mainCamera.orthographicSize = currentOrthoSize;
     }
-    
+
     private void LateUpdate()
     {
-        if (target == null) return;
+        if (!rodController || !rodController.CurrentHook) return;
+
+        hookTransform = rodController.CurrentHook.transform;
         UpdateCameraPosition();
+        UpdateCameraZoom();
     }
-    
+
     private void UpdateCameraPosition()
     {
-        // Set target position to hook position
-        targetPosition = target.transform.position;
-        targetPosition.z = transform.position.z;
+        // Calculate target position
+        Vector3 targetPos = hookTransform.position;
         
-        // Apply bounds if we have them
-        if (cameraBounds != null)
-        {
-            Bounds bounds = cameraBounds.bounds;
-            
-            // Calculate camera bounds with padding
-            float minX = bounds.min.x + screenHalfSize.x + padding.x;
-            float maxX = bounds.max.x - screenHalfSize.x - padding.x;
-            float minY = bounds.min.y + screenHalfSize.y + padding.y;
-            float maxY = bounds.max.y - screenHalfSize.y - padding.y;
-            
-            // Clamp target position
-            targetPosition.x = Mathf.Clamp(targetPosition.x, minX, maxX);
-            targetPosition.y = Mathf.Clamp(targetPosition.y, minY, maxY);
-        }
+        // Add vertical offset
+        targetPos.y += verticalOffset;
         
+        // Keep camera's z position
+        targetPos.z = transform.position.z;
+        
+        // Clamp position within bounds
+        targetPos.x = Mathf.Clamp(targetPos.x, minX, maxX);
+        targetPos.y = Mathf.Clamp(targetPos.y, minY, maxY);
+
         // Smoothly move camera
-        transform.position = Vector3.SmoothDamp(transform.position, targetPosition, 
-            ref velocity, 0.2f, followSpeed);
+        transform.position = Vector3.SmoothDamp(
+            transform.position,
+            targetPos,
+            ref velocity,
+            1f / followSpeed
+        );
     }
-    
+
+    private void UpdateCameraZoom()
+    {
+        // Calculate desired zoom based on hook depth
+        float hookDepth = Mathf.Abs(hookTransform.position.y);
+        float depthRatio = Mathf.Clamp01((hookDepth - depthZoomStart) / (maxY - depthZoomStart));
+        float targetOrthoSize = Mathf.Lerp(minOrthoSize, maxOrthoSize, depthRatio);
+
+        // Smoothly adjust camera size
+        currentOrthoSize = Mathf.Lerp(
+            currentOrthoSize,
+            targetOrthoSize,
+            Time.deltaTime * zoomSpeed
+        );
+        
+        mainCamera.orthographicSize = currentOrthoSize;
+    }
+
     private void OnDrawGizmos()
     {
-        if (/*!Application.isPlaying ||*/ target == null) return;
-        
-        // Draw focus point
-        Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(targetPosition, 0.5f);
-        
-        // Draw camera bounds if available
-        if (cameraBounds != null)
-        {
-            // Draw camera bounds
-            Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
-            Bounds bounds = cameraBounds.bounds;
-            Gizmos.DrawWireCube(bounds.center, bounds.size);
-            
-            // Draw effective camera bounds (with padding)
-            Gizmos.color = new Color(0f, 1f, 0f, 1f);
-            Vector3 paddedSize = new Vector3(
-                bounds.size.x - (padding.x * 2 + screenHalfSize.x * 2),
-                bounds.size.y - (padding.y * 2 + screenHalfSize.y * 2),
-                bounds.size.z);
-            Gizmos.DrawWireCube(bounds.center, paddedSize);
-        }
+        // Draw camera bounds
+        Gizmos.color = Color.yellow;
+        Vector3 center = new Vector3((minX + maxX) * 0.5f, (minY + maxY) * 0.5f, 0f);
+        Vector3 size = new Vector3(maxX - minX, maxY - minY, 1f);
+        Gizmos.DrawWireCube(center, size);
     }
 } 

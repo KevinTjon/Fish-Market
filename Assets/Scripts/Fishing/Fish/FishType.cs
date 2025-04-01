@@ -5,48 +5,43 @@ public enum FishSize
     Tiny,
     Small,
     Medium,
-    Large,
-    Huge
+    Large
 }
 
-[CreateAssetMenu(fileName = "FishType", menuName = "Fish/Type")]
+[CreateAssetMenu(fileName = "New Fish Type", menuName = "Fish Market/Fish Type")]
 public class FishType : ScriptableObject
 {
-    [Header("Fish Properties")]
+    [Header("Basic Info")]
     public string fishName;
     public FishSize size;
-    public GameObject prefab; // Reference to the fish prefab
-    
-    [Header("Value Settings")]
-    public float baseValue; // Base monetary value of the fish
-    public float minValue; // Minimum value the fish can be worth
-    public float maxValue; // Maximum value the fish can be worth
-    
+    public GameObject prefab;
+    public float baseValue = 10f;
+
+    [Header("Spawn Settings")]
+    public float minDepth = 0f;
+    public float maxDepth = 10f;
+    public float spawnWeight = 1f;  // Higher weight = more common
+    [Range(0f, 1f)]
+    public float spawnChance = 1f;
+
     [Header("Behavior Settings")]
-    public bool canEat; // Whether this fish can eat other fish
-    public FishSize[] preySize; // What sizes of fish this can eat
-    public LayerMask preyLayer; // Layer mask for potential prey
-    public float preyDetectionRange = 5f; // How far this fish can detect prey
-    public float preyChaseSpeed = 1.5f; // Speed multiplier when chasing prey
+    public float minSpeed = 1f;
+    public float maxSpeed = 3f;
+    public float preyChaseSpeed = 1.5f;  // Multiplier when chasing prey
+    public float fleeSpeed = 2f;         // Multiplier when fleeing
+    public float turnSpeed = 3f;
+
+    [Header("Depth Behavior")]
+    public float preferredDepth;         // The depth this fish prefers to swim at
+    public float depthVariance = 2f;     // How far from preferred depth they'll stray
     
-    [Header("Spawning Settings")]
-    public int maxPopulation = 10; // Maximum number of this fish type allowed
-    public float spawnRate = 1f; // How frequently this fish spawns
-    public float spawnChance = 0.5f; // Chance of spawning when conditions are met
+    [Header("Interaction Settings")]
+    public bool canEat = false;          // Can this fish eat other fish?
+    public FishSize[] preySizes;         // What sizes of fish can this fish eat?
+    public float visionRange = 5f;       // How far can this fish see?
+    public float personalSpace = 1f;     // Minimum distance from other fish
     
-    [Header("Detection Settings")]
-    public float personalSpace = 1f; // Minimum distance to maintain from other fish
-    public float visionRange = 5f; // How far this fish can see other fish and bait
-    
-    // Helper method to check if this fish can eat a specific size
-    public bool CanEatSize(FishSize targetSize)
-    {
-        if (!canEat || preySize == null) return false;
-        
-        foreach (var size in preySize)
-        {
-            if (size == targetSize) return true;
-        }
-        return false;
-    }
+    [Header("Time Settings")]
+    public bool isDayActive = true;      // Active during day?
+    public bool isNightActive = true;    // Active during night?
 } 

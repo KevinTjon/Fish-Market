@@ -95,9 +95,7 @@ GameObject:
   - component: {fileID: 4072759635433348335}
   - component: {fileID: 5364922222954493600}
   - component: {fileID: 4652309225509852366}
-  - component: {fileID: 1807373200667331053}
-  - component: {fileID: 6958259174778090722}
-  - component: {fileID: 7946131636537483675}
+  - component: {fileID: 4369532763132823071}
   m_Layer: 9
   m_Name: 81
   m_TagString: Fish
@@ -114,8 +112,8 @@ Transform:
   m_GameObject: {fileID: 2893555311494358574}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
+  m_LocalPosition: {x: -0.043, y: -0.006, z: 0}
+  m_LocalScale: {x: 2, y: 2, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1811297907323038943}
@@ -180,10 +178,10 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: -0.44960582, y: -0.05517886}
   serializedVersion: 2
-  m_Radius: 0.75
---- !u!114 &1807373200667331053
+  m_Radius: 0.04084949
+--- !u!114 &4369532763132823071
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -192,65 +190,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 2893555311494358574}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 420f6b7e1cadf6945862b5a80d70c68a, type: 3}
+  m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishType: {fileID: 0}
-  behavior: {fileID: 11400000, guid: cb2eb3fd30fe7aa4d8679293079e9439, type: 2}
-  fishLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  baitLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  showDebugRanges: 1
---- !u!114 &6958259174778090722
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2893555311494358574}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7594212a842a0cd438761e6c935ecd3a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawner: {fileID: 0}
-  boundaryArea: {fileID: 0}
-  boundaryForce: 5
-  boundaryTurnSpeed: 2
-  edgeBuffer: 2
-  hardBoundaryBuffer: 0.5
-  returnToCenterForce: 2
-  boundaryExponent: 2
-  baitChaseSpeedMultiplier: 2
-  baitChaseTurnSpeedMultiplier: 4
-  directionChangeSpeed: 0.1
-  minSpeedMultiplier: 0.5
-  maxSpeedMultiplier: 1.5
-  maxTurnSpeed: 2
-  minimumSpeed: 1
---- !u!114 &7946131636537483675
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2893555311494358574}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18a38fb2c43dc92479381b60d1379a98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  schoolRadius: 5
-  separationRadius: 1
-  maxSchoolSize: 10
-  optimalSchoolDistance: 2
-  predatorDetectionRadius: 2
-  panicSpeed: 2
-  minPredatorSize: 1.2
-  cohesionWeight: 1.5
-  alignmentWeight: 1.2
-  separationWeight: 1.5
-  predatorAvoidWeight: 3

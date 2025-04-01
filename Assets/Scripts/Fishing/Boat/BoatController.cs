@@ -1,40 +1,60 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class BoatController : MonoBehaviour
 {
-    // Intrinsic Attributes (Add to ScriptableObject later)
-    private const float BoatSpeed = 2500f;
+    [Header("Movement Settings")]
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float moveBoundaryLeft = -8f;
+    [SerializeField] private float moveBoundaryRight = 8f;
 
+    private Vector2 movement;
+    private Rigidbody2D rb;
 
-    // Physical Attribute
-    public Rigidbody2D rb { get; private set; }
-    
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = 0; // Disable gravity
+        rb.drag = 5; // Add some drag to stop more smoothly
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionY; // Lock Y position and rotation
     }
 
-
-    void Start()
+    private void Update()
     {
+        // Get input from keyboard
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null) return;
+
+        // Check for A/D or Left/Right arrow keys
+        float moveInput = 0;
+        if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
+            moveInput = 1;
+        else if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
+            moveInput = -1;
+
+        // Update movement vector
+        movement = new Vector2(moveInput, 0);
+    }
+
+    private void FixedUpdate()
+    {
+        // Move the boat
+        Vector2 newPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
         
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
+        // Clamp position within boundaries
+        newPosition.x = Mathf.Clamp(newPosition.x, moveBoundaryLeft, moveBoundaryRight);
         
-    }
-    public void SetBoatForce(float rawInput)
-    {
-        rb.AddForce(new Vector2(rawInput * BoatSpeed, 0));
-        // TODO: Add feature to limit boat speed
+        // Update position
+        rb.MovePosition(newPosition);
     }
 
-    public void Flip()
+    private void OnDrawGizmos()
     {
-        var newScale = transform.localScale;
-        newScale.x *= -1;
-        transform.localScale = newScale;
+        // Draw movement boundaries in the editor
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(new Vector3(moveBoundaryLeft, transform.position.y - 1, 0), 
+                       new Vector3(moveBoundaryLeft, transform.position.y + 1, 0));
+        Gizmos.DrawLine(new Vector3(moveBoundaryRight, transform.position.y - 1, 0), 
+                       new Vector3(moveBoundaryRight, transform.position.y + 1, 0));
     }
 }
