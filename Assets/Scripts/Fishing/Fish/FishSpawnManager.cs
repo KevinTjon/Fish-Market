@@ -8,6 +8,11 @@ public class FishSpawnData
     public WaterLevel level;
     [Min(1)]
     public int amountToSpawn = 3;
+    [Tooltip("If true, fish of this type will school together")]
+    public bool isSchooling = false;
+    [Tooltip("The radius within which fish will look for schoolmates")]
+    [Min(0)]
+    public float schoolingRadius = 5f;
 }
 
 public class FishSpawnManager : MonoBehaviour
@@ -21,6 +26,8 @@ public class FishSpawnManager : MonoBehaviour
     [SerializeField] private List<FishSpawnData> fishTypes = new List<FishSpawnData>();
     
     private Camera mainCamera;
+    private const float MIN_SPAWN_DISTANCE = 1f; // Minimum distance between spawned fish
+    private List<Vector2> spawnedPositions = new List<Vector2>();
 
     private void Start()
     {
@@ -69,8 +76,64 @@ public class FishSpawnManager : MonoBehaviour
         return new Vector2(randomX, randomY);
     }
 
+    private Vector2 GetRandomPositionNearPoint(Vector2 centerPoint, float maxDistance)
+    {
+        float randomAngle = Random.Range(0f, 360f);
+        float randomDistance = Random.Range(0f, maxDistance);
+        Vector2 offset = Quaternion.Euler(0, 0, randomAngle) * Vector2.right * randomDistance;
+        return centerPoint + offset;
+    }
+
+    private Vector2 GetValidSpawnPosition(BoxCollider2D zoneCollider, Vector2? nearPoint = null, float? maxDistance = null)
+    {
+        const int MAX_ATTEMPTS = 10;
+        Vector2 spawnPos = nearPoint.HasValue && maxDistance.HasValue 
+            ? GetRandomPositionNearPoint(nearPoint.Value, maxDistance.Value) 
+            : GetRandomPositionInZone(zoneCollider);
+        
+        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
+        {
+            // Get a potential spawn position
+            if (nearPoint.HasValue && maxDistance.HasValue)
+            {
+                spawnPos = GetRandomPositionNearPoint(nearPoint.Value, maxDistance.Value);
+                // Clamp to zone bounds
+                spawnPos.x = Mathf.Clamp(spawnPos.x, zoneCollider.bounds.min.x, zoneCollider.bounds.max.x);
+                spawnPos.y = Mathf.Clamp(spawnPos.y, zoneCollider.bounds.min.y, zoneCollider.bounds.max.y);
+            }
+            else
+            {
+                spawnPos = GetRandomPositionInZone(zoneCollider);
+            }
+
+            // Check if this position is far enough from all other spawned fish
+            bool isTooClose = false;
+            foreach (Vector2 existingPos in spawnedPositions)
+            {
+                if (Vector2.Distance(spawnPos, existingPos) < MIN_SPAWN_DISTANCE)
+                {
+                    isTooClose = true;
+                    break;
+                }
+            }
+
+            // If position is valid, use it
+            if (!isTooClose)
+            {
+                spawnedPositions.Add(spawnPos);
+                return spawnPos;
+            }
+        }
+
+        // If we couldn't find a valid position after MAX_ATTEMPTS, just use the last attempted position
+        spawnedPositions.Add(spawnPos);
+        return spawnPos;
+    }
+
     private void SpawnAllFish()
     {
+        spawnedPositions.Clear(); // Clear the list at the start of spawning
+
         foreach (var fishData in fishTypes)
         {
             // Get the corresponding level zone
@@ -88,14 +151,37 @@ public class FishSpawnManager : MonoBehaviour
                 continue;
             }
 
-            // Spawn the specified amount of fish
-            for (int i = 0; i < fishData.amountToSpawn; i++)
+            if (fishData.isSchooling)
             {
-                // Get random position within the zone's bounds
-                Vector2 spawnPos = GetRandomPositionInZone(zoneCollider);
-                
-                // Spawn the fish
-                Instantiate(fishData.fishPrefab, spawnPos, Quaternion.identity);
+                // For schooling fish, first get a center point for the school
+                Vector2 schoolCenter = GetValidSpawnPosition(zoneCollider);
+                float schoolSpawnRadius = fishData.schoolingRadius * 0.5f; // Spawn within half the schooling radius
+
+                // Spawn fish around the center point
+                for (int i = 0; i < fishData.amountToSpawn; i++)
+                {
+                    // Get position near the school center with minimum distance check
+                    Vector2 spawnPos = GetValidSpawnPosition(zoneCollider, schoolCenter, schoolSpawnRadius);
+                    
+                    // Spawn the fish
+                    GameObject fishObject = Instantiate(fishData.fishPrefab, spawnPos, Quaternion.identity);
+                    
+                    // Set schooling behavior
+                    BasicFish fishComponent = fishObject.GetComponent<BasicFish>();
+                    if (fishComponent != null)
+                    {
+                        fishComponent.SetSchooling(true, fishData.schoolingRadius);
+                    }
+                }
+            }
+            else
+            {
+                // For non-schooling fish, spawn them randomly across the zone
+                for (int i = 0; i < fishData.amountToSpawn; i++)
+                {
+                    Vector2 spawnPos = GetValidSpawnPosition(zoneCollider);
+                    GameObject fishObject = Instantiate(fishData.fishPrefab, spawnPos, Quaternion.identity);
+                }
             }
         }
     }
