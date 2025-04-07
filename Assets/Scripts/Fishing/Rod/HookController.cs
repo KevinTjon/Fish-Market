@@ -4,9 +4,10 @@ using UnityEngine;
 [RequireComponent(typeof(CircleCollider2D))]
 public class HookController : MonoBehaviour
 {
-    public float waterLevel { get; private set; }
+    private float waterLevel;
+    public float WaterLevel => waterLevel;
     public bool onWaterSurface { get; private set; }
-    public bool isFishing { get; private set; } 
+    private bool isFishing; 
 
     [SerializeField] private float hookRadius = 0.2f;
     [SerializeField] private float hookOffset = 0.5f; // Distance fish follows below hook
@@ -36,7 +37,8 @@ public class HookController : MonoBehaviour
         // Set the hook to a specific layer
         gameObject.layer = LayerMask.NameToLayer("Hook");
 
-        //hookRB.gravityScale = 0; // Disable gravity for the hook if not initialized
+        hookRB = GetComponent<Rigidbody2D>();
+        hookRB.gravityScale = 0; // Disable gravity for the hook if not initialized
     }
 
     public void InitializeHook(Transform rodConnection)
@@ -45,7 +47,6 @@ public class HookController : MonoBehaviour
         hookRB = GetComponent<Rigidbody2D>();
         hookRB.drag = 0.5f;
         hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;
-        hookRB.gravityScale = 0; // Disable gravity for the hook
         //hookRB.AddForce(new Vector2(0, 0));
         
         hookCollider = GetComponent<CircleCollider2D>();
@@ -69,9 +70,9 @@ public class HookController : MonoBehaviour
     // Only runs if we currently aren't fishing
     private void Update()
     {
-        if (!isFishing && hookRB != null)
+        if (!isFishing && hookRB != null && rodConnection != null)
         {
-            hookRB.position = rodConnection.position; // Keep the hook at the rod tip position
+            hookRB.position = rodConnection.position;
         }
     }
 
@@ -90,7 +91,7 @@ public class HookController : MonoBehaviour
 
         // Double check we have compatible bait
         Bait currentBait = GetComponentInChildren<Bait>();
-        if (currentBait != null && currentBait.IsCompatibleWithFish(fish.FishSize))
+        if (currentBait != null && currentBait.IsCompatibleWithFish(fish.Size))
         {
             // Catch the fish!
             hasHookedFish = true;
@@ -151,10 +152,10 @@ public class HookController : MonoBehaviour
         onWaterSurface = true;
     }
 
-    public void DetachHookFromSurface()
+    public void DetachHookFromSurface(float detachForce = 0f)
     {
         hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;  // Keep rotation locked but allow movement
-        hookRB.AddForce(Vector2.down * 10, ForceMode2D.Impulse);
+        hookRB.AddForce(Vector2.down * detachForce, ForceMode2D.Impulse);
         onWaterSurface = false;
         hasHookedFish = false;  // Reset hooked state when detaching from surface
     }

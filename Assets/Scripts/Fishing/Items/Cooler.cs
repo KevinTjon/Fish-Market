@@ -1,4 +1,3 @@
-/*
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,7 +17,7 @@ public class Cooler : MonoBehaviour
     public void AddFish(BasicFish fish)
     {
 
-        var newWeight = currentWeight + fish.fishWeight;
+        var newWeight = currentWeight + fish.Weight;
         if (newWeight > maxWeight)
         {
             Debug.Log("Item cannot be added to cooler, it is full");
@@ -26,7 +25,7 @@ public class Cooler : MonoBehaviour
         }
 
         CoolerItem item = new CoolerItem();
-        item.Initialize(fish.fishType, fish.fishWeight);
+        item.Initialize(fish);
         coolerItems.AddLast(item);
         //Destroy(item);
     }
@@ -38,7 +37,7 @@ public class Cooler : MonoBehaviour
             item.DisplayFish();
         }
     }
-
+    
     public List<CaughtFishData> SendCoolerToMarket()
     {
         var coolerMarket = new List<CaughtFishData>();
@@ -49,4 +48,3 @@ public class Cooler : MonoBehaviour
         return coolerMarket;
     }
 }
-*/

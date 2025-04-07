@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEditor;
 
 public class CoolerItem
 {
@@ -6,40 +7,32 @@ public class CoolerItem
     // Integer of the fish's entry in the local database
     // This should be instantiated during load time
     // Allows us to easily convert the fish between its various contexts
-    private string fishName;
-    private FishSize fishSize;
+    private string name;
+    private FishSize size;
     //private string fishRarity;
-    //private string fishAssetPath;
-    private float fishWeight;
+    private Sprite sprite;
+    private float weight;
+    
     // Public get variables
-    public string Name { get {return fishName;} }
-    public FishSize Size { get {return fishSize;} }
-    //public string Rarity { get {return fishRarity;} }
-    //public string AssetPath { get {return fishAssetPath;} }
-    public float Weight { get {return fishWeight;} }
+    public string Name => name;
+    public FishSize Size => size;
+    public Sprite Sprite => sprite;
+    public float Weight => weight;
 
-    public void Initialize(FishType fishType)
+    public void Initialize(BasicFish fish)
     {
-        fishName = fishType.fishName;
-        fishSize = fishType.size;
-        //fishAssetPath = fishType.prefab.name;
-        fishWeight = 1f;
-    }
-
-    public void Initialize(FishType fishType, float weight)
-    {
-        fishName = fishType.fishName;
-        fishSize = fishType.size;
-        //fishAssetPath = fishType.prefab.name;
-        fishWeight = weight;
+        name = fish.Name;
+        size = fish.Size;
+        sprite = fish.Sprite;
+        weight = fish.Weight > 0 ? fish.Weight : 1f;
     }
 
     public CaughtFishData GetCaughtFishData()
     {
         return new CaughtFishData
         {
-            Name = fishName,
-            Weight = fishWeight,
+            Name = name,
+            Weight = weight,
             IsDiscovered = "yes"
         };
     } 
@@ -47,10 +40,10 @@ public class CoolerItem
     // Change this to display with UI
     public void DisplayFish()
     {
-        Debug.Log("Fish Name: " + fishName);
-        Debug.Log("Fish Size: " + fishSize);
-        //Debug.Log("Fish Asset Path: " + fishAssetPath);
-        Debug.Log("Fish Weight: " + fishWeight);
+        Debug.Log("Fish Name: " + name);
+        Debug.Log("Fish Size: " + size);
+        Debug.Log(AssetDatabase.GetAssetPath(sprite));
+        Debug.Log("Fish Weight: " + weight);
     }
     
 }

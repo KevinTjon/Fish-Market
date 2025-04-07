@@ -3,16 +3,20 @@ using UnityEngine;
 public class RodController : MonoBehaviour
 {
     [Header("Line Settings")]
-    [SerializeField] private Color lineColor = Color.black;
-    [SerializeField] private float lineWidth = 0.05f;
-    [SerializeField] private float maxLineLength = 100f;
-    [SerializeField] private float pullConstant = 300f;
-    [SerializeField] private float pushConstant = 350f;
-    [SerializeField] private float damping = 25f;
-    [SerializeField] private float reelSpeed = 5f;
-    [SerializeField] private float sinkSpeed = 3f;
-    [SerializeField] private float turnTriggerLength = 1.5f;
+    [SerializeField] private readonly Color lineColor = Color.black;
+    [SerializeField] private readonly float lineWidth = 0.05f;
+    [SerializeField] private readonly float maxLineLength = 100f;
+    [SerializeField] private readonly float pullConstant = 300f;
+    [SerializeField] private readonly float pushConstant = 350f;
+    [SerializeField] private readonly float damping = 25f;
+    [SerializeField] private readonly float reelSpeed = 5f;
+    [SerializeField] private readonly float sinkSpeed = 3f;
+    [SerializeField] private readonly float turnTriggerLength = 1.5f;
     private Material lineMaterial;
+
+    [Header("Hook Surface Settings")]
+    [SerializeField] private readonly float detachForce = 2f;
+    [SerializeField] private readonly float detachLengthChange = 0.5f;
 
     [Header("Charge Settings")]
     [SerializeField] private readonly float castPowerMultiplier = 10f;
@@ -27,7 +31,7 @@ public class RodController : MonoBehaviour
     
     public FishingLineController line { get; private set; }
     public HookController hook { get; private set; }
-    //private Cooler fishCooler;
+    private Cooler fishCooler;
 
     public enum RodState
     {
@@ -62,7 +66,7 @@ public class RodController : MonoBehaviour
         Debug.Log($"Here is line: {line}");
         Debug.Log($"Here is hook: {hook}");
 
-        //fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
+        fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
     }
 
     /// <summary>
@@ -84,15 +88,11 @@ public class RodController : MonoBehaviour
             turnTriggerLength = turnTriggerLength
         };
 
-        line.InitializeLine(rodConnection, hook.transform, settings);
+        line.InitializeLine(rodConnection, hook, settings);
         hook.InitializeHook(rodConnection);
         rodState = RodState.Idle;
 
         chargeTime = 0f;
-
-        //isCharging = false;
-        //isCasting = false;
-        //isFishing = false;
     }
 
     /// <summary>
@@ -113,27 +113,32 @@ public class RodController : MonoBehaviour
     /// <param name="charge"></param>
     public void HandleChargeInput(bool charge)
     {
-        if (!IsFishing)
+        switch (rodState)
         {
-            if (charge)
-            {
-                rodState = RodState.Charging;
-                return;
-            }
-            else
-            {
-                //Vector2 castEndPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                //Vector2 castDirection = (castStartPosition - castEndPosition).normalized;
-                float chargePower = Mathf.Clamp(chargeTime, 0, maxChargeTime);
+            case RodState.Idle:
+                if (charge)
+                {
+                    rodState = RodState.Charging;
+                }
+                break;
+            case RodState.Charging:
+                if (!charge)
+                {
+                    //Vector2 castEndPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                    //Vector2 castDirection = (castStartPosition - castEndPosition).normalized;
+                    float chargePower = Mathf.Clamp(chargeTime, 0, maxChargeTime);
 
-                var hookVelocity = chargeTime * chargePower * castPowerMultiplier * castAngle;
-                line.StartFishing();
-                hook.StartFishing(hookVelocity);
-                
-                chargeTime = 0f;
+                    var hookVelocity = chargeTime * chargePower * castPowerMultiplier * castAngle;
+                    line.StartFishing();
+                    hook.StartFishing(hookVelocity);
+                    
+                    chargeTime = 0f;
 
-                rodState = RodState.Casting;
-            }
+                    rodState = RodState.Casting;
+                }
+                break;
+            default:
+                break;
         }
     }
 
@@ -150,21 +155,24 @@ public class RodController : MonoBehaviour
         
         if (hook.onWaterSurface) 
         {
-            //Debug.Log("Hook is on the water surface");
+            Debug.Log("Hook is on the water surface");
+            Debug.Log(line.PrintLength());
+
             if (input > 0)
             {
                 var fishObj = hook.caughtFish;
                 if (fishObj != null)
                 {
                     Debug.Log(fishObj.name + " caught!");
-                    //fishCooler.AddFish(fishObj.GetComponent<FishHookable>());
+                    fishCooler.AddFish(fishObj.GetComponent<BasicFish>());
                     Destroy(fishObj);
-                    //fishCooler.DisplayCooler();
+                    fishCooler.DisplayCooler();
                 }
             }
             else if (input < 0)
             {
-                hook.DetachHookFromSurface();
+                hook.DetachHookFromSurface(detachForce);
+                line.DetachHookFromSurface(detachLengthChange);
             }
         }
         else
@@ -174,7 +182,7 @@ public class RodController : MonoBehaviour
             switch (rodState)
             {
                 case RodState.Casting:
-                    if (hookY < hook.waterLevel)
+                    if (hookY < hook.WaterLevel)
                     {
                         line.SetLengthOnWaterSurface();
                         hook.AttachHookToSurface();
@@ -182,7 +190,7 @@ public class RodController : MonoBehaviour
                     }
                     break;
                 case RodState.Fishing:
-                    if (hookY > hook.waterLevel)
+                    if (hookY > hook.WaterLevel)
                     {
                         line.SetLengthOnWaterSurface();
                         hook.AttachHookToSurface();

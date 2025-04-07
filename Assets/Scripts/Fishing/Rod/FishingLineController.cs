@@ -33,25 +33,31 @@ public class FishingLineController : MonoBehaviour
     //private LineSettings lineSettings;
 
     // Current line state
-    public Vector2 currVector { get; private set; }
-    public float baseLength { get; private set; }
-    public float currLength { get; private set; }
+    private Vector2 currVector;
+    private float baseLength;
+    private float currLength;
 
 
     // References to other Components/GameObjects
     private LineRenderer lineRenderer;
     private Transform rod;
     private Transform hook;
-    
-    public void InitializeLine(Transform rod, Transform hook, LineSettings lineSettings)
+
+    private void Awake()
     {
+        // Setup the line renderer
         lineRenderer = GetComponent<LineRenderer>();
         if (lineRenderer == null)
         {
             lineRenderer = gameObject.AddComponent<LineRenderer>();
         }
-
-        this.rod = rod; this.hook = hook;
+        // Initialize the line length as zero
+        currLength = baseLength = 0;
+    }
+    
+    public void InitializeLine(Transform rod, HookController hookCon, LineSettings lineSettings)
+    {
+        this.rod = rod; hook = hookCon.transform;
         // Instantiate the line renderer
         lineRenderer.positionCount = 2;
         lineRenderer.startColor = lineSettings.lineColor;
@@ -68,12 +74,10 @@ public class FishingLineController : MonoBehaviour
         reelSpeed = lineSettings.reelSpeed;
         sinkSpeed = lineSettings.sinkSpeed;
         turnTriggerLength = lineSettings.turnTriggerLength;
-        
-        // Initialize the line length as zero
-        currLength = baseLength = 0;
 
         // Calculate onWaterSurface height
-        lengthOnWater = rod.position.y - hook.position.y;
+        lengthOnWater = rod.position.y - hookCon.WaterLevel;
+        Debug.Log($"Line length on water surface: {lengthOnWater}");
     }
 
     /**
@@ -88,18 +92,23 @@ public class FishingLineController : MonoBehaviour
         }
     }
 
-    // Starts fishing
     public void StartFishing()
     {
         // Set the line length to the distance between the rod and hook
         baseLength = maxLineLength/2f;
     }
 
-    public void SetLength(float length)
+    private void SetLength(float length)
     {
         baseLength = length;
     }
     
+    /// <summary>
+    /// Sets the length of the fishing line based on the user input value.
+    ///     Multiplied by the reel speed or sink speed, depending on the direction.
+    ///     Clamped between 0 and the maximumLineLength.
+    /// </summary>
+    /// <param name="input">Input value to adjust the line length (positive = up | negative = down)</param>
     public void AlterLength(float input)
     {
         float dLength;
@@ -186,5 +195,18 @@ public class FishingLineController : MonoBehaviour
     {
         // Set the line length to the distance between the rod and hook
         SetLength(lengthOnWater);
+    }
+
+    public void DetachHookFromSurface(float detachLengthChange = 0.1f)
+    {
+        // Set the line length to the distance between the rod and hook
+        SetLength(baseLength + detachLengthChange);
+    }
+
+    public string PrintLength()
+    {
+        return $"Fishing Line Data:\nCurrent length - {currLength} | " +
+                                    $"Base length - {baseLength} | " +
+                                    $"Max length - {maxLineLength}";
     }
 }

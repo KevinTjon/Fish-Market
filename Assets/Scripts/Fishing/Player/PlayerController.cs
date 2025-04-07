@@ -128,7 +128,6 @@ public class PlayerController : MonoBehaviour
         // Handle input
         var boatInput = playerActions.MoveBoat.ReadValue<float>();
         var reelInput = playerActions.ReelLine.ReadValue<float>();
-        Debug.Log($"Boat Input: {boatInput}, Reel Input: {reelInput}");
         
         //boat.SetBoatForce(boatInput);
         boat.SetBoatForce(boatInput);

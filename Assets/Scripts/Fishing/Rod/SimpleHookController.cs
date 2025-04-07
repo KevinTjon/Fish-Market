@@ -36,7 +36,7 @@ public class SimpleHookController : MonoBehaviour
 
         // Double check we have compatible bait
         Bait currentBait = GetComponentInChildren<Bait>();
-        if (currentBait != null && currentBait.IsCompatibleWithFish(fish.FishSize))
+        if (currentBait != null && currentBait.IsCompatibleWithFish(fish.Size))
         {
             // Catch the fish!
             hasCaughtFish = true;

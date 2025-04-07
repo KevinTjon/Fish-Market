@@ -1,15 +1,22 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Collections;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class BasicFish : MonoBehaviour
 {
-    
-    
+    // TODO: Add to a ScriptableObject
     [Header("Fish Properties")]
-    [SerializeField] private FishSize fishSize = FishSize.Small;
-    public FishSize FishSize => fishSize;  // Public read-only access to fish size
+    private new string name;
+    [SerializeField] private FishSize size = FishSize.Small;
+    private Sprite sprite;
+    
+    public string Name => name;
+    public FishSize Size => size;  // Public read-only access to fish size
+    public Sprite Sprite => sprite; // Public read-only access to fish asset
+
+    // Should be separate from ScriptableObject
+    private float weight = 1f; // Weight of the fish, used for fishing mechanics
+    public float Weight => weight;
     
     [Header("Movement")]
     [SerializeField] private float swimSpeed = 3f;
@@ -58,9 +65,9 @@ public class BasicFish : MonoBehaviour
 
     private void Start()
     {
-        rb = GetComponent<Rigidbody2D>();
+        // Sets up fish properties
+        name = gameObject.name;
         
-        // Find the Sprite child object
         spriteTransform = transform.Find("Sprite");
         if (spriteTransform != null)
         {
@@ -73,7 +80,10 @@ public class BasicFish : MonoBehaviour
             return;
         }
 
+        sprite = spriteRenderer.sprite;
+
         // Set up physics
+        rb = GetComponent<Rigidbody2D>();
         rb.gravityScale = 0;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
@@ -436,7 +446,7 @@ public class BasicFish : MonoBehaviour
         if (bait != null && !isHooked)
         {
             // Check if the bait is compatible with this fish's size
-            if (bait.IsCompatibleWithFish(fishSize))
+            if (bait.IsCompatibleWithFish(size))
             {
                 // Prefer regular hook over simple hook controller
                 var hook = bait.GetComponentInParent<HookController>();
@@ -444,13 +454,14 @@ public class BasicFish : MonoBehaviour
                 {
                     hook.OnFishContact(this);
                 }
-
+                /*
                 var simpleHook = bait.GetComponentInParent<SimpleHookController>();
                 if (simpleHook != null)
                 {
                     // Let the hook handle the catching logic
                     simpleHook.OnFishContact(this);
                 }
+                */
             }
         }
     }
@@ -559,7 +570,7 @@ public class BasicFish : MonoBehaviour
         foreach (Collider2D col in colliders)
         {
             Bait bait = col.GetComponent<Bait>();
-            if (bait != null && bait.IsCompatibleWithFish(fishSize))
+            if (bait != null && bait.IsCompatibleWithFish(size))
             {
                 float distance = Vector2.Distance(transform.position, bait.transform.position);
                 if (distance < closestDistance)
