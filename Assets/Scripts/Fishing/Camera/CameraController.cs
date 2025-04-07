@@ -7,7 +7,8 @@ public class CameraController : MonoBehaviour
     [SerializeField] private bool showDebugGizmos = true;
 
     [Header("Target Settings")]
-    [SerializeField] private SimpleRodController rodController;
+    // [SerializeField] private SimpleRodController rodController;
+    [SerializeField] private RodController rodController;
     [SerializeField] private float followSpeed = 2f;
 
     [Header("Zoom Settings")]
@@ -44,7 +45,8 @@ public class CameraController : MonoBehaviour
         
         if (!rodController)
         {
-            rodController = FindObjectOfType<SimpleRodController>();
+            rodController = FindObjectOfType<RodController>();
+            //rodController = FindObjectOfType<SimpleRodController>();
             Debug.Log($"Found Rod Controller: {rodController != null}");
         }
 
@@ -162,7 +164,8 @@ public class CameraController : MonoBehaviour
             Debug.LogWarning("Rod Controller is missing!");
             return;
         }
-
+        
+        /*
         if (!rodController.CurrentHook)
         {
             Debug.LogWarning("Current Hook is null!");
@@ -170,6 +173,14 @@ public class CameraController : MonoBehaviour
         }
 
         hookTransform = rodController.CurrentHook.transform;
+        */
+        if (!rodController.hook)
+        {
+            Debug.LogWarning("Current Hook is null!");
+            return;
+        }
+
+        hookTransform = rodController.hook.transform;
         UpdateCameraPosition();
         UpdateCameraZoom();
         

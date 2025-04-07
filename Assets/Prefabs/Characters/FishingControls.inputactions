@@ -24,7 +24,7 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "CastRod",
+                    "name": "ChargeRod",
                     "type": "Button",
                     "id": "8e5585f2-4ace-4e58-91fe-01d00e0eaf34",
                     "expectedControlType": "",
@@ -90,7 +90,7 @@
                     "id": "88bef1fd-bbfa-4467-bd5d-f23055292926",
                     "path": "<Gamepad>/leftStick/x",
                     "interactions": "",
-                    "processors": "",
+                    "processors": "AxisDeadzone",
                     "groups": ";Gamepad",
                     "action": "MoveBoat",
                     "isComposite": false,
@@ -156,7 +156,7 @@
                     "id": "3defa62f-734a-41dd-a8de-157a4b08bd7a",
                     "path": "<Gamepad>/rightStick/y",
                     "interactions": "",
-                    "processors": "",
+                    "processors": "AxisDeadzone",
                     "groups": ";Gamepad",
                     "action": "ReelLine",
                     "isComposite": false,
@@ -169,7 +169,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "CastRod",
+                    "action": "ChargeRod",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -180,7 +180,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": ";Gamepad",
-                    "action": "CastRod",
+                    "action": "ChargeRod",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

@@ -1,307 +1,161 @@
-// using UnityEngine;
+using UnityEngine;
 
-// public class HookController : MonoBehaviour
-// {
-//     // Determines if the hook is on the water surface
-//     public bool onWaterSurface { get; private set; }
-//     public bool inSwingbackMode { get; private set; }
-//     public bool hasHookedObject { get; private set; }  // Track if we have something hooked
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(CircleCollider2D))]
+public class HookController : MonoBehaviour
+{
+    public float waterLevel { get; private set; }
+    public bool onWaterSurface { get; private set; }
+    public bool isFishing { get; private set; } 
 
-//     public Rigidbody2D hookRB { get; private set; }
-//     public GameObject attachedObject { get; private set; }
-//     //public GameObject baitObject { get; private set; }
-//     public BaitObject currentBait { get; private set; }
+    [SerializeField] private float hookRadius = 0.2f;
+    [SerializeField] private float hookOffset = 0.5f; // Distance fish follows below hook
     
-//     public float baitOffset = 0.5f;
-//     public float waterLevel { get; private set; }
-    
-//     private CircleCollider2D hookCollider;
-//     private float targetRotation = 0f;
-//     private float rotationSmoothSpeed = 5f;
-//     private Transform rodTransform;
-    
-//     private void Awake()
-//     {
-//         // Get or add a small collider for the hook
-//         hookCollider = GetComponent<CircleCollider2D>();
-//         if (hookCollider == null)
-//         {
-//             hookCollider = gameObject.AddComponent<CircleCollider2D>();
-//         }
-//         // Make the hook collider larger and ensure it's not a trigger
-//         hookCollider.radius = 0.3f;
-//         hookCollider.isTrigger = false;
-        
-//         // Set the hook to the Hook layer (we'll need to create this layer in Unity)
-//         gameObject.layer = LayerMask.NameToLayer("Hook");
-        
-//         // Initialize hooked state
-//         hasHookedObject = false;
-//     }
-    
-//     public void InitializeHook(Rigidbody2D rb)
-//     {
-//         hookRB = rb;
-//         hookRB.AddForce(new Vector2(0, 0));
-        
-//         // Configure rigidbody for better hook behavior
-//         hookRB.angularDrag = 2f;
-//         hookRB.drag = 0.5f;
-//         // Lock rotation to keep hook vertical
-//         hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;
-        
-//         // Get reference to rod
-//         rodTransform = transform.parent.parent.GetChild(0).GetChild(3);
-        
-//         // Ensure the Hook layer exists and set up layer collision matrix
-//         SetupHookLayer();
-        
-//         onWaterSurface = false;
-//         inSwingbackMode = false;
-//     }
+    public bool hasHookedFish { get; private set; }  // Track if we have something hooked
+    public GameObject caughtFish { get; private set; }
 
-//     private void SetupHookLayer()
-//     {
-//         // This is just a debug check - layer setup should be done in Unity Editor
-//         if (LayerMask.NameToLayer("Hook") == -1)
-//         {
-//             Debug.LogWarning("Hook layer not found! Please create a 'Hook' layer in Unity:\n" +
-//                            "1. Edit > Project Settings > Tags and Layers\n" +
-//                            "2. Under 'Layers', add 'Hook' in an empty slot\n" +
-//                            "3. Set up the Physics2D collision matrix to allow Hook to collide with Hookable");
-//         }
-//     }
-
+    public Rigidbody2D hookRB { get; private set; }
+    private CircleCollider2D hookCollider;
+    private Transform rodConnection;
+    private SpriteRenderer spriteRenderer;
     
-//     public void AttachBait(GameObject baitPrefab)
-//     {
-//         // Remove any existing bait
-//         if (attachedObject != null)
-//         {
-//             Destroy(attachedObject);
-//         }
+    private void Awake()
+    {
+        // Setup collider
+        hookCollider = GetComponent<CircleCollider2D>();
+        hookCollider.radius = hookRadius;
+        hookCollider.isTrigger = true;
 
-//         // Create and attach new bait
-//         if (baitPrefab != null)
-//         {
-//             // Create bait at hook's position with offset
-//             Vector3 baitPosition = transform.position - transform.up * baitOffset;
-//             attachedObject = Instantiate(baitPrefab, baitPosition, Quaternion.identity);
-//             currentBait = attachedObject.GetComponent<BaitObject>();
+        // Setup sprite
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
+        }
+
+        // Set the hook to a specific layer
+        gameObject.layer = LayerMask.NameToLayer("Hook");
+
+        //hookRB.gravityScale = 0; // Disable gravity for the hook if not initialized
+    }
+
+    public void InitializeHook(Transform rodConnection)
+    {
+        // Setup the hook's Rigidbody2D and Collider2D
+        hookRB = GetComponent<Rigidbody2D>();
+        hookRB.drag = 0.5f;
+        hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;
+        hookRB.gravityScale = 0; // Disable gravity for the hook
+        //hookRB.AddForce(new Vector2(0, 0));
+        
+        hookCollider = GetComponent<CircleCollider2D>();
+        this.rodConnection = rodConnection;
+        
+        // Ensure the Hook layer exists and set up layer collision matrix        
+        // This is just a debug check - layer setup should be done in Unity Editor
+        if (LayerMask.NameToLayer("Hook") == -1)
+        {
+            Debug.LogWarning("Hook layer not found! Please create a 'Hook' layer in Unity:\n" +
+                           "1. Edit > Project Settings > Tags and Layers\n" +
+                           "2. Under 'Layers', add 'Hook' in an empty slot\n" +
+                           "3. Set up the Physics2D collision matrix to allow Hook to collide with Hookable");
+        }
+        
+        hasHookedFish = false;
+        onWaterSurface = false;
+        isFishing = false;
+    }
+
+    // Only runs if we currently aren't fishing
+    private void Update()
+    {
+        if (!isFishing && hookRB != null)
+        {
+            hookRB.position = rodConnection.position; // Keep the hook at the rod tip position
+        }
+    }
+
+    // Called when we start fishing
+    public void StartFishing(Vector2 velocity)
+    {
+        isFishing = true;
+        hookRB.gravityScale = 1;
+        hookRB.velocity = velocity;
+    }
+    
+    // Called by the fish when it contacts compatible bait
+    public void OnFishContact(BasicFish fish)
+    {
+        if (hasHookedFish || fish == null) return;
+
+        // Double check we have compatible bait
+        Bait currentBait = GetComponentInChildren<Bait>();
+        if (currentBait != null && currentBait.IsCompatibleWithFish(fish.FishSize))
+        {
+            // Catch the fish!
+            hasHookedFish = true;
             
-//             // Debug log bait data
-//             if (currentBait != null && currentBait.baitData != null)
-//             {
-//                 string targetSizes = currentBait.baitData.targetFishSizes != null ? 
-//                     string.Join(", ", currentBait.baitData.targetFishSizes) : "none";
-//                 Debug.Log($"Attached bait: {currentBait.baitData.name} with target sizes: [{targetSizes}]");
-//             }
-//             else
-//             {
-//                 Debug.LogError($"Failed to load bait data for {baitPrefab.name}");
-//             }
-            
-//             // Parent the bait to the hook
-//             attachedObject.transform.SetParent(transform);
-//             attachedObject.transform.localPosition = -Vector3.up * baitOffset;
-//             attachedObject.transform.localRotation = Quaternion.identity;
-//         }
-//     }
-//     /*
-//     public void AttachBait(GameObject baitPrefab)
-//     {
-//         // Remove any existing bait
-//         if (baitObject != null)
-//         {
-//             Destroy(baitObject);
-//         }
+            // Destroy the bait
+            Destroy(currentBait.gameObject);
 
-//         // Create and attach new bait
-//         if (baitPrefab != null)
-//         {
-//             // Create bait at hook's position with offset
-//             Vector3 baitPosition = transform.position - transform.up * baitOffset;
-//             baitObject = Instantiate(baitPrefab, baitPosition, Quaternion.identity);
-//             currentBait = baitObject.GetComponent<BaitObject>();
-            
-//             // Debug log bait data
-//             if (currentBait != null && currentBait.baitData != null)
-//             {
-//                 string targetSizes = currentBait.baitData.targetFishSizes != null ? 
-//                     string.Join(", ", currentBait.baitData.targetFishSizes) : "none";
-//                 Debug.Log($"Attached bait: {currentBait.baitData.name} with target sizes: [{targetSizes}]");
-//             }
-//             else
-//             {
-//                 Debug.LogError($"Failed to load bait data for {baitPrefab.name}");
-//             }
-            
-//             // Parent the bait to the hook
-//             baitObject.transform.SetParent(transform);
-//             baitObject.transform.localPosition = -Vector3.up * baitOffset;
-//             baitObject.transform.localRotation = Quaternion.identity;
-//         }
-//     }
-//     */
+            // Tell the fish it's hooked
+            fish.GetHooked();
 
+            // Parent the fish to the hook and position it below
+            fish.transform.SetParent(transform);
+            fish.transform.localPosition = Vector3.down * hookOffset;
+            fish.transform.localRotation = Quaternion.identity;
 
-//     // Determines if the hook collides with an IHookable object
-//     public void OnCollisionEnter2D(Collision2D col)
-//     {
-//         // If we already have something hooked, ignore new collisions
-//         if (hasHookedObject) return;
+            caughtFish = fish.gameObject;
+            Debug.Log($"Caught fish: {fish.gameObject.name}");
+        }
+    }
+
+    public void ReleaseCaughtFish()
+    {
+        if (caughtFish != null)
+        {
+            // Tell the fish it's released
+            BasicFish fish = caughtFish.GetComponent<BasicFish>();
+            if (fish != null)
+            {
+                fish.GetReleased();
+            }
+
+            // Unparent and release the object
+            caughtFish.transform.SetParent(null);
+            caughtFish = null;
+            hasHookedFish = false;
+        }
+    }
+
+    public void AddForce(Vector2 force)
+    {
+        hookRB.AddForce(force);
+    }
+
+    public void SetWaterLevel(float level)
+    {
+        waterLevel = level;
+    }
+
+    public void AttachHookToSurface()
+    {
+        // Keep rotation vertical
+        transform.rotation = Quaternion.identity;
+        //targetRotation = 0f;  // Commented out as part of rotation logic
         
-//         // Check if we're colliding with a hookable object
-//         if (col.collider != null && col.gameObject.layer == LayerMask.NameToLayer("Hookable"))
-//         {
-//             var fishObj = col.gameObject;
-//             var hookable = fishObj.GetComponent<ObjectHookable>();
-//             var fishHookable = hookable as FishHookable;  // Try to cast to FishHookable
-            
-//             // First check if it's a fish
-//             if (fishHookable != null)
-//             {
-//                 // For fish, we need compatible bait
-//                 if (currentBait == null)
-//                 {
-//                     Debug.Log("Cannot hook fish without bait");
-//                     return;
-//                 }
+        // Freeze y movement in ocean and rotation
+        hookRB.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
+        hookRB.position = new Vector2(hookRB.position.x, waterLevel);
+        onWaterSurface = true;
+    }
 
-//                 if (!IsBaitCompatibleWithFish(fishHookable))
-//                 {
-//                     Debug.Log($"Fish is not attracted to current bait type");
-//                     return;
-//                 }
-//             }
-
-//             // If we get here, either:
-//             // 1. It's not a fish (hook anything)
-//             // 2. It's a fish and we have compatible bait
-//             if (hookable != null && !hookable.IsHooked)
-//             {
-//                 Debug.Log($"Attempting to hook: {col.gameObject.name}");
-                
-//                 // Calculate hook position based on collision point
-//                 Vector2 collisionPoint = col.GetContact(0).point;
-//                 Vector2 hookPos = transform.position;
-//                 Vector2 direction = (collisionPoint - hookPos).normalized;
-                
-//                 // Hook position is slightly offset from collision point
-//                 Vector2 newPos = collisionPoint - direction * 0.2f;
-                
-//                 // Hook the object
-//                 hookable.Hook(newPos);
-//                 hasHookedObject = true;  // Mark that we have something hooked
-                
-//                 // For fish, set the position relative to hook
-//                 if (fishHookable != null)
-//                 {
-//                     fishHookable.SetHookPosition(transform);
-//                 }
-                
-//                 // Remove bait if we caught something
-//                 if (attachedObject != null)
-//                 {
-//                     Destroy(attachedObject);
-//                     attachedObject = fishObj;
-//                     currentBait = null;
-//                 }
-                        
-//                 // Remove any existing joints
-//                 var joints = GetComponents<Joint2D>();
-//                 foreach (var joint in joints)
-//                 {
-//                     Destroy(joint);
-//                 }
-                
-//                 // Add joint to connect the caught object
-//                 var newJoint = gameObject.AddComponent<FixedJoint2D>();
-//                 newJoint.connectedBody = col.rigidbody;
-//                 newJoint.autoConfigureConnectedAnchor = false;
-//                 newJoint.anchor = Vector2.zero;
-                
-//                 // For fish, connect the joint at the top of the fish sprite
-//                 if (fishHookable != null)
-//                 {
-//                     // Set the anchor point at the top of the fish
-//                     newJoint.connectedAnchor = Vector2.up * 0.5f;
-                    
-//                     // Make the joint more flexible
-//                     newJoint.dampingRatio = 0.5f;
-//                     newJoint.frequency = 2f;
-//                 }
-//                 else
-//                 {
-//                     // For non-fish objects, use the collision point
-//                     newJoint.connectedAnchor = col.transform.InverseTransformPoint(collisionPoint);
-//                 }
-                
-//                 Debug.Log($"Successfully hooked: {col.gameObject.name}");
-//             }
-//         }
-//     }
-    
-//     private FishSize GetFishSize(FishHookable fish)
-//     {
-//         // Get the fish size from its type
-//         if (fish == null || fish.fishType == null)
-//             return FishSize.Medium; // Default to medium if no type
-        
-//         return fish.fishType.size;
-//     }
-
-//     private bool IsBaitCompatibleWithFish(FishHookable fish)
-//     {
-//         // If we have no bait, nothing can be caught
-//         if (currentBait == null || currentBait.baitData == null || fish == null || fish.fishType == null)
-//         {
-//             Debug.LogWarning($"Bait compatibility check failed: currentBait={currentBait != null}, baitData={currentBait?.baitData != null}, fish={fish != null}, fishType={fish?.fishType != null}");
-//             return false;
-//         }
-        
-//         // Get the fish size using the existing GetFishSize method
-//         FishSize fishSize = GetFishSize(fish);
-        
-//         Debug.Log($"Fish size check - Size: {fishSize}");
-        
-//         // Check if this fish size is compatible with our bait
-//         bool isCompatible = currentBait.IsAttractedToFish(fishSize);
-//         if (!isCompatible)
-//         {
-//             Debug.Log($"Bait {currentBait.baitData.name} is not compatible with fish size {fishSize}");
-//         }
-        
-//         return isCompatible;
-//     }
-
-//     public void AddForce(Vector2 force)
-//     {
-//         hookRB.AddForce(force);
-//     }
-
-//     public void SetWaterLevel(float level)
-//     {
-//         waterLevel = level;
-//     }
-
-//     public void AttachHookToSurface()
-//     {
-//         // Keep rotation vertical
-//         transform.rotation = Quaternion.identity;
-//         //targetRotation = 0f;  // Commented out as part of rotation logic
-        
-//         // Freeze y movement in ocean and rotation
-//         hookRB.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
-//         hookRB.position = new Vector2(hookRB.position.x, waterLevel);
-//         onWaterSurface = true;
-//     }
-
-//     public void DetachHookFromSurface()
-//     {
-//         hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;  // Keep rotation locked but allow movement
-//         hookRB.AddForce(Vector2.down * 10, ForceMode2D.Impulse);
-//         onWaterSurface = false;
-//         hasHookedObject = false;  // Reset hooked state when detaching from surface
-//     }
-// }
+    public void DetachHookFromSurface()
+    {
+        hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;  // Keep rotation locked but allow movement
+        hookRB.AddForce(Vector2.down * 10, ForceMode2D.Impulse);
+        onWaterSurface = false;
+        hasHookedFish = false;  // Reset hooked state when detaching from surface
+    }
+}

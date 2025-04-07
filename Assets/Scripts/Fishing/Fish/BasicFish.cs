@@ -5,6 +5,8 @@ using System.Collections;
 [RequireComponent(typeof(Rigidbody2D))]
 public class BasicFish : MonoBehaviour
 {
+    
+    
     [Header("Fish Properties")]
     [SerializeField] private FishSize fishSize = FishSize.Small;
     public FishSize FishSize => fishSize;  // Public read-only access to fish size
@@ -436,12 +438,18 @@ public class BasicFish : MonoBehaviour
             // Check if the bait is compatible with this fish's size
             if (bait.IsCompatibleWithFish(fishSize))
             {
-                // Get the hook controller from the bait's parent
-                SimpleHookController hook = bait.GetComponentInParent<SimpleHookController>();
+                // Prefer regular hook over simple hook controller
+                var hook = bait.GetComponentInParent<HookController>();
                 if (hook != null)
                 {
-                    // Let the hook handle the catching logic
                     hook.OnFishContact(this);
+                }
+
+                var simpleHook = bait.GetComponentInParent<SimpleHookController>();
+                if (simpleHook != null)
+                {
+                    // Let the hook handle the catching logic
+                    simpleHook.OnFishContact(this);
                 }
             }
         }

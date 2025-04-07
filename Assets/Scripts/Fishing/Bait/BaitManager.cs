@@ -9,7 +9,10 @@ public class BaitManager : MonoBehaviour
     [SerializeField] private GameObject largeBaitPrefab;
 
     [Header("References")]
+    /*
     [SerializeField] private SimpleRodController rodController;
+    */
+    [SerializeField] private RodController rodController;
 
     private void Update()
     {
@@ -35,10 +38,16 @@ public class BaitManager : MonoBehaviour
 
     private void SpawnBait(GameObject baitPrefab)
     {
-        if (rodController != null && rodController.CurrentHook != null)
+        /*if (rodController != null && rodController.CurrentHook != null)
         {
             // Get the SimpleHookController component
             SimpleHookController hookController = rodController.CurrentHook.GetComponent<SimpleHookController>();
+        */
+        if (rodController != null && rodController.hook != null)
+        {
+            // Get the SimpleHookController component
+            HookController hookController = rodController.hook.GetComponent<HookController>();
+
             if (hookController != null)
             {
                 // Create and attach the bait

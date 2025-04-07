@@ -2,128 +2,202 @@ using UnityEngine;
 
 public class RodController : MonoBehaviour
 {
-    [Header("Rod Settings")]
-    [SerializeField] private float maxLineLength = 10f;
-    [SerializeField] private float castPowerMultiplier = 10f;
+    [Header("Line Settings")]
+    [SerializeField] private Color lineColor = Color.black;
+    [SerializeField] private float lineWidth = 0.05f;
+    [SerializeField] private float maxLineLength = 100f;
+    [SerializeField] private float pullConstant = 300f;
+    [SerializeField] private float pushConstant = 350f;
+    [SerializeField] private float damping = 25f;
     [SerializeField] private float reelSpeed = 5f;
     [SerializeField] private float sinkSpeed = 3f;
+    [SerializeField] private float turnTriggerLength = 1.5f;
+    private Material lineMaterial;
+
+    [Header("Charge Settings")]
+    [SerializeField] private readonly float castPowerMultiplier = 10f;
+    [SerializeField] private readonly float maxChargeTime = 5f;
+    [SerializeField] private readonly Vector2 castAngle = new Vector2(0.5f, 0.5f);
+    private float chargeTime;
 
     [Header("References")]
-    [SerializeField] private Transform rodTip;
-    [SerializeField] private GameObject hookPrefab;
+    //[SerializeField] private Transform player;
+    [SerializeField] private Transform rodConnection;
+    [SerializeField] private GameObject hookPrefab; // Reference to hook object
     
-    private LineRenderer fishingLine;
-    private GameObject currentHook;
-    private Vector2 hookVelocity;
-    private bool isCasting;
-    private bool isReeling;
-    private float currentLineLength;
-    private Vector2 castStartPosition;
+    public FishingLineController line { get; private set; }
+    public HookController hook { get; private set; }
+    //private Cooler fishCooler;
 
+    public enum RodState
+    {
+        Idle,
+        Charging,
+        Casting,
+        Fishing
+    }
+    public RodState rodState { get; private set; }
+
+    public bool IsFishing => rodState == RodState.Fishing || rodState == RodState.Casting; // Public get
+
+    private void Awake()
+    {
+        // Initialize line and hook
+        if (line != null)
+        {
+            Destroy(line);
+        }
+        line = new GameObject("FishingLine").AddComponent<FishingLineController>();
+        lineMaterial = new Material(Shader.Find("Sprites/Default"));
+        line.transform.SetParent(transform);
+
+
+        if (hook != null)
+        {
+            Destroy(hook);
+        }
+        hook = Instantiate(hookPrefab, rodConnection.position, Quaternion.identity).GetComponent<HookController>();
+        hook.transform.SetParent(transform);
+
+        Debug.Log($"Here is line: {line}");
+        Debug.Log($"Here is hook: {hook}");
+
+        //fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
+    }
+
+    /// <summary>
+    /// Instantiates the fishing line and hook and sets up the flags
+    /// </summary>
     private void Start()
     {
-        // Setup line renderer
-        fishingLine = gameObject.AddComponent<LineRenderer>();
-        fishingLine.startWidth = 0.05f;
-        fishingLine.endWidth = 0.05f;
-        fishingLine.material = new Material(Shader.Find("Sprites/Default"));
-        fishingLine.startColor = Color.black;
-        fishingLine.endColor = Color.black;
-        fishingLine.positionCount = 2;
+        LineSettings settings = new LineSettings
+        {
+            lineColor = lineColor,
+            lineWidth = lineWidth,
+            lineMaterial = lineMaterial,
+            maxLineLength = maxLineLength,
+            pullConstant = pullConstant,
+            pushConstant = pushConstant,
+            damping = damping,
+            reelSpeed = reelSpeed,
+            sinkSpeed = sinkSpeed,
+            turnTriggerLength = turnTriggerLength
+        };
 
-        SpawnHook();
+        line.InitializeLine(rodConnection, hook.transform, settings);
+        hook.InitializeHook(rodConnection);
+        rodState = RodState.Idle;
+
+        chargeTime = 0f;
+
+        //isCharging = false;
+        //isCasting = false;
+        //isFishing = false;
     }
 
-    private void SpawnHook()
-    {
-        // Spawn hook at rod tip
-        if (currentHook != null) Destroy(currentHook);
-        currentHook = Instantiate(hookPrefab, rodTip.position, Quaternion.identity);
-        currentHook.transform.SetParent(transform);
-        hookVelocity = Vector2.zero;
-        currentLineLength = 0;
-        UpdateLinePositions();
-    }
-
+    /// <summary>
+    /// Handles charge logic
+    /// </summary>
     private void Update()
     {
-        HandleInput();
-        UpdateHookMovement();
-        UpdateLinePositions();
-    }
-
-    private void HandleInput()
-    {
-        // Start casting
-        if (Input.GetMouseButtonDown(0) && !isCasting)
+        if(rodState == RodState.Charging)
         {
-            castStartPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            isCasting = true;
-            isReeling = false;
-        }
-        
-        // Release cast
-        if (Input.GetMouseButtonUp(0) && isCasting)
-        {
-            Vector2 castEndPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Vector2 castDirection = (castStartPosition - castEndPosition).normalized;
-            float castPower = Mathf.Clamp(Vector2.Distance(castStartPosition, castEndPosition), 0, 2);
-            
-            hookVelocity = castDirection * castPower * castPowerMultiplier;
-            isCasting = false;
-        }
-
-        // Reeling
-        if (Input.GetKey(KeyCode.Space))
-        {
-            isReeling = true;
-        }
-        else
-        {
-            isReeling = false;
+            chargeTime += Time.deltaTime;
+            Camera.main.ScreenToWorldPoint(rodConnection.position);
         }
     }
 
-    private void UpdateHookMovement()
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="charge"></param>
+    public void HandleChargeInput(bool charge)
     {
-        if (currentHook == null) return;
-
-        if (!isCasting)
+        if (!IsFishing)
         {
-            // Apply gravity when not being cast
-            if (!isReeling)
+            if (charge)
             {
-                hookVelocity.y -= sinkSpeed * Time.deltaTime;
+                rodState = RodState.Charging;
+                return;
             }
             else
             {
-                // Reel in hook
-                Vector2 hookToRod = (Vector2)rodTip.position - (Vector2)currentHook.transform.position;
-                hookVelocity = hookToRod.normalized * reelSpeed;
+                //Vector2 castEndPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                //Vector2 castDirection = (castStartPosition - castEndPosition).normalized;
+                float chargePower = Mathf.Clamp(chargeTime, 0, maxChargeTime);
+
+                var hookVelocity = chargeTime * chargePower * castPowerMultiplier * castAngle;
+                line.StartFishing();
+                hook.StartFishing(hookVelocity);
+                
+                chargeTime = 0f;
+
+                rodState = RodState.Casting;
             }
-
-            // Update hook position
-            Vector2 newPosition = currentHook.transform.position;
-            newPosition += hookVelocity * Time.deltaTime;
-
-            // Constrain to max line length
-            Vector2 toHook = newPosition - (Vector2)rodTip.position;
-            if (toHook.magnitude > maxLineLength)
-            {
-                newPosition = (Vector2)rodTip.position + toHook.normalized * maxLineLength;
-                hookVelocity = Vector2.zero;
-            }
-
-            currentHook.transform.position = newPosition;
-            currentLineLength = toHook.magnitude;
         }
     }
 
-    private void UpdateLinePositions()
+    /// <summary>
+    /// Self-contained logic to handle reel input
+    /// Alters length, attaches hook to water surface, and adds items to the cooler
+    /// </summary>
+    /// <param name="input">Player input</param>
+    public void ReceiveReelInput(float input)
     {
-        if (fishingLine == null || currentHook == null) return;
+        // Apply force to hook
+        var tensionForce = line.CalculateHookForce(rodState == RodState.Fishing);
+        hook.AddForce(tensionForce);
         
-        fishingLine.SetPosition(0, rodTip.position);
-        fishingLine.SetPosition(1, currentHook.transform.position);
+        if (hook.onWaterSurface) 
+        {
+            //Debug.Log("Hook is on the water surface");
+            if (input > 0)
+            {
+                var fishObj = hook.caughtFish;
+                if (fishObj != null)
+                {
+                    Debug.Log(fishObj.name + " caught!");
+                    //fishCooler.AddFish(fishObj.GetComponent<FishHookable>());
+                    Destroy(fishObj);
+                    //fishCooler.DisplayCooler();
+                }
+            }
+            else if (input < 0)
+            {
+                hook.DetachHookFromSurface();
+            }
+        }
+        else
+        {
+            line.AlterLength(input);
+            var hookY = hook.hookRB.position.y;
+            switch (rodState)
+            {
+                case RodState.Casting:
+                    if (hookY < hook.waterLevel)
+                    {
+                        line.SetLengthOnWaterSurface();
+                        hook.AttachHookToSurface();
+                        rodState = RodState.Fishing;
+                    }
+                    break;
+                case RodState.Fishing:
+                    if (hookY > hook.waterLevel)
+                    {
+                        line.SetLengthOnWaterSurface();
+                        hook.AttachHookToSurface();
+                    }
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="waterLevel"></param>
+    public void SetWaterLevel(float waterLevel)
+    {
+        hook.SetWaterLevel(waterLevel);
     }
 }

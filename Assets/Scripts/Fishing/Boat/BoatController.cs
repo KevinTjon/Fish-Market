@@ -1,23 +1,24 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class BoatController : MonoBehaviour
 {
     [Header("Movement Settings")]
-    [SerializeField] private float moveSpeed = 5f;
-    
+    [SerializeField] private float moveSpeed = 1250f;
+
     [Header("References")]
     [SerializeField] private LevelZone shallowZone;
 
     private float minX, maxX;
-    private Vector2 movement;
-    private Rigidbody2D rb;
 
+
+    // Physical Attribute
+    public Rigidbody2D rb { get; private set; }
+    
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         rb.gravityScale = 0; // Disable gravity
-        rb.drag = 5; // Add some drag to stop more smoothly
+        rb.drag = 1; // Add some drag to stop more smoothly
         rb.constraints = RigidbodyConstraints2D.FreezeRotation | RigidbodyConstraints2D.FreezePositionY; // Lock Y position and rotation
 
         // Find shallow zone if not assigned
@@ -44,35 +45,40 @@ public class BoatController : MonoBehaviour
                 maxX = collider.bounds.max.x;
             }
         }
+        rb = GetComponent<Rigidbody2D>();
     }
 
-    private void Update()
+
+    void Start()
     {
-        // Get input from keyboard
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-
-        // Check for A/D or Left/Right arrow keys
-        float moveInput = 0;
-        if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
-            moveInput = 1;
-        else if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
-            moveInput = -1;
-
-        // Update movement vector
-        movement = new Vector2(moveInput, 0);
+        
     }
 
-    private void FixedUpdate()
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+
+    public void SetBoatForce(float input)
     {
         // Move the boat
-        Vector2 newPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
+        Vector2 movement = new Vector2(input, 0);
+        rb.AddForce(movement * moveSpeed);
         
         // Clamp position within boundaries
-        newPosition.x = Mathf.Clamp(newPosition.x, minX, maxX);
+        
+        //newPosition.x = Mathf.Clamp(newPosition.x, minX, maxX);
         
         // Update position
-        rb.MovePosition(newPosition);
+        //rb.MovePosition(newPosition);
+    }
+
+    public void Flip()
+    {
+        var newScale = transform.localScale;
+        newScale.x *= -1;
+        transform.localScale = newScale;
     }
 
     private void OnDrawGizmos()

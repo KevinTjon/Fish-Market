@@ -406,12 +406,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1764846e4c5cb9a43ada085c5ecd9d47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wormBaitPrefab: {fileID: 9072978472554262629, guid: 8cb8c8f4cafc2c34883ddb02d9cb5647, type: 3}
-  minnowBaitPrefab: {fileID: 1806843621904359111, guid: 757a2e97f38222241b92075de7a2f23e, type: 3}
-  shrimpBaitPrefab: {fileID: 6906663241323229307, guid: dd539718a51e951478182e1203a52bba, type: 3}
-  wormButton: {fileID: 746493711}
-  minnowButton: {fileID: 1028722650}
-  shrimpButton: {fileID: 84584149}
+  smallBaitPrefab: {fileID: 0}
+  mediumBaitPrefab: {fileID: 0}
+  largeBaitPrefab: {fileID: 0}
+  rodController: {fileID: 1215518942}
 --- !u!4 &128083331
 Transform:
   m_ObjectHideFlags: 0
@@ -689,16 +687,26 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45f0b500562b06a41bdcdba198930820, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {fileID: 685601919}
+  showDebugGizmos: 1
+  rodController: {fileID: 0}
   followSpeed: 5
-  orthoSize: 3
-  cameraBounds: {fileID: 517236522}
-  padding: {x: 2, y: 2}
+  minOrthoSize: 5
+  maxOrthoSize: 15
+  zoomSpeed: 2
+  depthZoomStart: 5
+  enableDarknessOverlay: 1
+  transitionSpeed: 8
+  darknessColor: {r: 0, g: 0, b: 0, a: 1}
+  middleZoneDarkness: 0.85
+  deepZoneDarkness: 1
+  shallowZone: {fileID: 0}
+  middleZone: {fileID: 0}
+  deepZone: {fileID: 0}
 --- !u!1 &591573914
 GameObject:
   m_ObjectHideFlags: 0
@@ -45478,9 +45486,8 @@ GameObject:
   - component: {fileID: 685601915}
   - component: {fileID: 685601916}
   - component: {fileID: 685601918}
-  - component: {fileID: 685601917}
-  - component: {fileID: 685601919}
   - component: {fileID: 685601921}
+  - component: {fileID: 685601919}
   m_Layer: 9
   m_Name: Hook_Test
   m_TagString: Untagged
@@ -45555,41 +45562,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!70 &685601917
-CapsuleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 685601914}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0, y: -0.1}
-  m_Size: {x: 0.3, y: 0.5}
-  m_Direction: 0
 --- !u!50 &685601918
 Rigidbody2D:
   serializedVersion: 4
@@ -45603,7 +45575,7 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
-  m_LinearDrag: 2.5
+  m_LinearDrag: 0
   m_AngularDrag: 3
   m_GravityScale: 1
   m_Material: {fileID: 0}
@@ -45616,7 +45588,7 @@ Rigidbody2D:
   m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 0
-  m_Constraints: 0
+  m_Constraints: 4
 --- !u!114 &685601919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -45629,7 +45601,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e65b5615a6c5fc947b6ba8d4f0bbb6b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baitOffset: 0.3
+  hookRadius: 0.2
+  hookOffset: 0.5
 --- !u!58 &685601921
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -45949,14 +45922,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f68823233c2c99741bb0b69f4baf9e9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishTypes:
-  - fishPrefab: {fileID: 0}
-    initialCount: 0
-    maxCount: 10
-    spawnChance: 0
-  spawnInterval: 5
-  spawnArea: {fileID: 0}
-  showDebugVisuals: 1
 --- !u!4 &774878994
 Transform:
   m_ObjectHideFlags: 0
@@ -46409,7 +46374,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1249352891}
   - {fileID: 685601915}
   m_Father: {fileID: 1399730259}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -46425,155 +46389,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 264c2dac023da104f996461d1d0d80b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &1249352890
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1249352891}
-  - component: {fileID: 1249352892}
-  - component: {fileID: 1249352893}
-  m_Layer: 0
-  m_Name: Line
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1249352891
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1249352890}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -3.9669313, y: 0.0028715692, z: 1.0230914}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1215518941}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!120 &1249352892
-LineRenderer:
-  serializedVersion: 2
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1249352890}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 0
-  m_LightProbeUsage: 0
-  m_ReflectionProbeUsage: 0
-  m_RayTracingMode: 0
-  m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 10306, guid: 0000000000000000f000000000000000, type: 0}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_Positions:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 2, z: 1}
-  m_Parameters:
-    serializedVersion: 3
-    widthMultiplier: 0.5
-    widthCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0.012939453
-        value: 0.03181839
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    colorGradient:
-      serializedVersion: 2
-      key0: {r: 0, g: 0, b: 0, a: 1}
-      key1: {r: 0, g: 0, b: 0, a: 1}
-      key2: {r: 0, g: 0, b: 0, a: 1}
-      key3: {r: 0, g: 0, b: 0, a: 0}
-      key4: {r: 0, g: 0, b: 0, a: 0}
-      key5: {r: 0, g: 0, b: 0, a: 0}
-      key6: {r: 0, g: 0, b: 0, a: 0}
-      key7: {r: 0, g: 0, b: 0, a: 0}
-      ctime0: 0
-      ctime1: 65535
-      ctime2: 0
-      ctime3: 0
-      ctime4: 0
-      ctime5: 0
-      ctime6: 0
-      ctime7: 0
-      atime0: 41094
-      atime1: 65535
-      atime2: 65535
-      atime3: 0
-      atime4: 0
-      atime5: 0
-      atime6: 0
-      atime7: 0
-      m_Mode: 0
-      m_ColorSpace: 0
-      m_NumColorKeys: 2
-      m_NumAlphaKeys: 2
-    numCornerVertices: 0
-    numCapVertices: 2
-    alignment: 0
-    textureMode: 0
-    textureScale: {x: 1, y: 1}
-    shadowBias: 0.5
-    generateLightingData: 0
-  m_MaskInteraction: 0
-  m_UseWorldSpace: 1
-  m_Loop: 0
-  m_ApplyActiveColorSpace: 1
---- !u!114 &1249352893
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1249352890}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4bf244752e1a8f1479fb5397151dff4b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  lineColor: {r: 0, g: 0, b: 0, a: 1}
+  lineWidth: 0.05
+  maxLineLength: 10
+  pullConstant: 300
+  pushConstant: 350
+  damping: 25
+  reelSpeed: 5
+  sinkSpeed: 3
+  turnTriggerLength: 1.5
+  rodConnection: {fileID: 293583745}
+  hookPrefab: {fileID: 685601914}
 --- !u!1 &1399730256
 GameObject:
   m_ObjectHideFlags: 0
@@ -47121,8 +46947,8 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 500
-  m_LinearDrag: 2
+  m_Mass: 3
+  m_LinearDrag: 1
   m_AngularDrag: 0
   m_GravityScale: 1
   m_Material: {fileID: 0}
@@ -47148,6 +46974,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ced3a30717708c149b10c239988da356, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  moveSpeed: 5
+  shallowZone: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

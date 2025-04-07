@@ -46,7 +46,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": true
                 },
                 {
-                    ""name"": ""CastRod"",
+                    ""name"": ""ChargeRod"",
                     ""type"": ""Button"",
                     ""id"": ""8e5585f2-4ace-4e58-91fe-01d00e0eaf34"",
                     ""expectedControlType"": """",
@@ -112,7 +112,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""id"": ""88bef1fd-bbfa-4467-bd5d-f23055292926"",
                     ""path"": ""<Gamepad>/leftStick/x"",
                     ""interactions"": """",
-                    ""processors"": """",
+                    ""processors"": ""AxisDeadzone"",
                     ""groups"": "";Gamepad"",
                     ""action"": ""MoveBoat"",
                     ""isComposite"": false,
@@ -178,7 +178,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""id"": ""3defa62f-734a-41dd-a8de-157a4b08bd7a"",
                     ""path"": ""<Gamepad>/rightStick/y"",
                     ""interactions"": """",
-                    ""processors"": """",
+                    ""processors"": ""AxisDeadzone"",
                     ""groups"": "";Gamepad"",
                     ""action"": ""ReelLine"",
                     ""isComposite"": false,
@@ -191,7 +191,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""CastRod"",
+                    ""action"": ""ChargeRod"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -202,7 +202,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Gamepad"",
-                    ""action"": ""CastRod"",
+                    ""action"": ""ChargeRod"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -763,7 +763,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
         m_Player_MoveBoat = m_Player.FindAction("MoveBoat", throwIfNotFound: true);
         m_Player_ReelLine = m_Player.FindAction("ReelLine", throwIfNotFound: true);
-        m_Player_CastRod = m_Player.FindAction("CastRod", throwIfNotFound: true);
+        m_Player_ChargeRod = m_Player.FindAction("ChargeRod", throwIfNotFound: true);
         m_Player_ToggleInventory = m_Player.FindAction("ToggleInventory", throwIfNotFound: true);
         m_Player_TogglePause = m_Player.FindAction("TogglePause", throwIfNotFound: true);
         // UI
@@ -845,7 +845,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
     private List<IPlayerActions> m_PlayerActionsCallbackInterfaces = new List<IPlayerActions>();
     private readonly InputAction m_Player_MoveBoat;
     private readonly InputAction m_Player_ReelLine;
-    private readonly InputAction m_Player_CastRod;
+    private readonly InputAction m_Player_ChargeRod;
     private readonly InputAction m_Player_ToggleInventory;
     private readonly InputAction m_Player_TogglePause;
     public struct PlayerActions
@@ -854,7 +854,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
         public PlayerActions(@FishingControls wrapper) { m_Wrapper = wrapper; }
         public InputAction @MoveBoat => m_Wrapper.m_Player_MoveBoat;
         public InputAction @ReelLine => m_Wrapper.m_Player_ReelLine;
-        public InputAction @CastRod => m_Wrapper.m_Player_CastRod;
+        public InputAction @ChargeRod => m_Wrapper.m_Player_ChargeRod;
         public InputAction @ToggleInventory => m_Wrapper.m_Player_ToggleInventory;
         public InputAction @TogglePause => m_Wrapper.m_Player_TogglePause;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
@@ -872,9 +872,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @ReelLine.started += instance.OnReelLine;
             @ReelLine.performed += instance.OnReelLine;
             @ReelLine.canceled += instance.OnReelLine;
-            @CastRod.started += instance.OnCastRod;
-            @CastRod.performed += instance.OnCastRod;
-            @CastRod.canceled += instance.OnCastRod;
+            @ChargeRod.started += instance.OnChargeRod;
+            @ChargeRod.performed += instance.OnChargeRod;
+            @ChargeRod.canceled += instance.OnChargeRod;
             @ToggleInventory.started += instance.OnToggleInventory;
             @ToggleInventory.performed += instance.OnToggleInventory;
             @ToggleInventory.canceled += instance.OnToggleInventory;
@@ -891,9 +891,9 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
             @ReelLine.started -= instance.OnReelLine;
             @ReelLine.performed -= instance.OnReelLine;
             @ReelLine.canceled -= instance.OnReelLine;
-            @CastRod.started -= instance.OnCastRod;
-            @CastRod.performed -= instance.OnCastRod;
-            @CastRod.canceled -= instance.OnCastRod;
+            @ChargeRod.started -= instance.OnChargeRod;
+            @ChargeRod.performed -= instance.OnChargeRod;
+            @ChargeRod.canceled -= instance.OnChargeRod;
             @ToggleInventory.started -= instance.OnToggleInventory;
             @ToggleInventory.performed -= instance.OnToggleInventory;
             @ToggleInventory.canceled -= instance.OnToggleInventory;
@@ -1041,7 +1041,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
     {
         void OnMoveBoat(InputAction.CallbackContext context);
         void OnReelLine(InputAction.CallbackContext context);
-        void OnCastRod(InputAction.CallbackContext context);
+        void OnChargeRod(InputAction.CallbackContext context);
         void OnToggleInventory(InputAction.CallbackContext context);
         void OnTogglePause(InputAction.CallbackContext context);
     }
