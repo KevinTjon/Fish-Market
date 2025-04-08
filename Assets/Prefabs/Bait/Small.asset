@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Small
   m_EditorClassIdentifier: 
   baitName: Small Bait
-  baitSprite: {fileID: 0}
-  targetFishSize: 0  # 0 = Small fish
+  baitColor: {r: 1, g: 1, b: 1, a: 1}
+  targetFishSize: 1

@@ -18,6 +18,11 @@ public class HookController : MonoBehaviour
     private CircleCollider2D hookCollider;
     private Transform rodConnection;
     private SpriteRenderer spriteRenderer;
+
+    // Add FishSize variable to help with detection
+    // Adjust the catching logic to happen here
+
+    
     
     private void Awake()
     {

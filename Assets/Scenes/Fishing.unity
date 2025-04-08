@@ -131619,7 +131619,7 @@ GameObject:
   - component: {fileID: 1069706591}
   - component: {fileID: 1069706590}
   m_Layer: 0
-  m_Name: BaitManager (1)
+  m_Name: BaitManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -131640,7 +131640,7 @@ MonoBehaviour:
   smallBaitPrefab: {fileID: 85406083902851210, guid: a02a729018c17164988c6360f1f0e818, type: 3}
   mediumBaitPrefab: {fileID: 8188545193961027655, guid: 4cdb62e8d1045b54191ddc136927f476, type: 3}
   largeBaitPrefab: {fileID: 154339689218108813, guid: 68f296c9cfd858d479b4dd74c49ced45, type: 3}
-  rodController: {fileID: 0}
+  rodController: {fileID: 1215518942}
 --- !u!4 &1069706591
 Transform:
   m_ObjectHideFlags: 0
@@ -131771,6 +131771,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1191079933}
+  - component: {fileID: 1191079934}
   m_Layer: 0
   m_Name: CoolerController
   m_TagString: Cooler
@@ -131793,6 +131794,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1191079934
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1191079932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d396d91bb49097409dfccbd6818d9b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1215518940
 GameObject:
   m_ObjectHideFlags: 0
