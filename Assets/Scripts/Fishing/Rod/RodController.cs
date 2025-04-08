@@ -156,7 +156,7 @@ public class RodController : MonoBehaviour
         if (hook.onWaterSurface) 
         {
             Debug.Log("Hook is on the water surface");
-            Debug.Log(line.PrintLength());
+            //Debug.Log(line.PrintLength());
 
             if (input > 0)
             {

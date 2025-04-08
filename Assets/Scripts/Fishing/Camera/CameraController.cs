@@ -7,7 +7,6 @@ public class CameraController : MonoBehaviour
     [SerializeField] private bool showDebugGizmos = true;
 
     [Header("Target Settings")]
-    // [SerializeField] private SimpleRodController rodController;
     [SerializeField] private RodController rodController;
     [SerializeField] private float followSpeed = 2f;
 
@@ -29,6 +28,11 @@ public class CameraController : MonoBehaviour
     [SerializeField] private LevelZone middleZone;
     [SerializeField] private LevelZone deepZone;
 
+    [Header("Camera Bounds")]
+    [SerializeField] private Transform boundsReference; // Reference transform to define bounds
+    [SerializeField] private Vector2 boundsSize = new Vector2(20f, 20f); // Size of the bounds
+    [SerializeField] private float boundsMargin = 1f; // Margin around the bounds
+
     private Camera mainCamera;
     private Transform hookTransform;
     private Vector3 velocity = Vector3.zero;
@@ -46,7 +50,6 @@ public class CameraController : MonoBehaviour
         if (!rodController)
         {
             rodController = FindObjectOfType<RodController>();
-            //rodController = FindObjectOfType<SimpleRodController>();
             Debug.Log($"Found Rod Controller: {rodController != null}");
         }
 
@@ -75,26 +78,28 @@ public class CameraController : MonoBehaviour
             }
         }
 
-        // Log zone status
-        Debug.Log($"Zones assigned - Shallow: {shallowZone != null}, Middle: {middleZone != null}, Deep: {deepZone != null}");
-
-        // Set camera bounds based on level zones
-        if (shallowZone && deepZone)
+        // Set up camera bounds
+        if (boundsReference != null)
         {
+            // Use bounds reference position and size
+            Vector2 center = boundsReference.position;
+            minX = center.x - boundsSize.x * 0.5f + boundsMargin;
+            maxX = center.x + boundsSize.x * 0.5f - boundsMargin;
+            minY = center.y - boundsSize.y * 0.5f + boundsMargin;
+            maxY = center.y + boundsSize.y * 0.5f - boundsMargin;
+        }
+        else if (shallowZone && deepZone)
+        {
+            // Fallback to level zone bounds
             BoxCollider2D shallowCollider = shallowZone.GetComponent<BoxCollider2D>();
             BoxCollider2D deepCollider = deepZone.GetComponent<BoxCollider2D>();
 
             if (shallowCollider && deepCollider)
             {
-                // Get the leftmost and rightmost points from both colliders
                 minX = Mathf.Min(shallowCollider.bounds.min.x, deepCollider.bounds.min.x);
                 maxX = Mathf.Max(shallowCollider.bounds.max.x, deepCollider.bounds.max.x);
-                
-                // Top of shallow zone to bottom of deep zone
                 maxY = shallowCollider.bounds.max.y;
                 minY = deepCollider.bounds.min.y;
-
-                // Adjust depthZoomStart based on zones
                 depthZoomStart = Mathf.Abs(shallowCollider.bounds.max.y - shallowCollider.bounds.min.y);
             }
         }
@@ -109,93 +114,21 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    private void CreateDarknessOverlay()
-    {
-        // Create a new Canvas for the overlay
-        GameObject overlayCanvas = new GameObject("DarknessOverlay");
-        overlayCanvas.transform.SetParent(transform); // Parent to camera to keep it organized
-        Canvas canvas = overlayCanvas.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceCamera;
-        canvas.worldCamera = mainCamera;
-        canvas.sortingOrder = 999; // Ensure it renders on top of everything
-        canvas.planeDistance = 1; // Render very close to camera
-        
-        // Add a Canvas Scaler for proper scaling
-        CanvasScaler scaler = overlayCanvas.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        
-        // Create the darkness overlay image
-        GameObject overlayObj = new GameObject("Darkness");
-        overlayObj.transform.SetParent(overlayCanvas.transform, false);
-        darknessOverlay = overlayObj.AddComponent<UnityEngine.UI.Image>();
-        
-        // Make it completely solid black
-        darknessOverlay.color = new Color(0, 0, 0, 0);
-        darknessOverlay.raycastTarget = false; // Prevent it from blocking input
-
-        // Add a second layer of darkness for complete opacity
-        GameObject overlayObj2 = new GameObject("Darkness2");
-        overlayObj2.transform.SetParent(overlayCanvas.transform, false);
-        Image darknessOverlay2 = overlayObj2.AddComponent<UnityEngine.UI.Image>();
-        darknessOverlay2.color = new Color(0, 0, 0, 0);
-        darknessOverlay2.raycastTarget = false;
-        
-        // Set both overlays to cover the entire screen
-        RectTransform rect = darknessOverlay.rectTransform;
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.sizeDelta = Vector2.zero;
-        rect.anchoredPosition = Vector2.zero;
-
-        RectTransform rect2 = darknessOverlay2.rectTransform;
-        rect2.anchorMin = Vector2.zero;
-        rect2.anchorMax = Vector2.one;
-        rect2.sizeDelta = Vector2.zero;
-        rect2.anchoredPosition = Vector2.zero;
-
-        Debug.Log("Double-layer darkness overlay created successfully!");
-    }
-
-    private void LateUpdate()
-    {
-        if (!rodController)
-        {
-            Debug.LogWarning("Rod Controller is missing!");
-            return;
-        }
-        
-        /*
-        if (!rodController.CurrentHook)
-        {
-            Debug.LogWarning("Current Hook is null!");
-            return;
-        }
-
-        hookTransform = rodController.CurrentHook.transform;
-        */
-        if (!rodController.hook)
-        {
-            Debug.LogWarning("Current Hook is null!");
-            return;
-        }
-
-        hookTransform = rodController.hook.transform;
-        UpdateCameraPosition();
-        UpdateCameraZoom();
-        
-        // Only update darkness if enabled
-        if (enableDarknessOverlay && darknessOverlay != null)
-        {
-            UpdateDarknessOverlay();
-        }
-    }
-
     private void UpdateCameraPosition()
     {
-        // Simply center on hook
+        if (!hookTransform) return;
+
+        // Calculate target position
         Vector3 targetPos = hookTransform.position;
         targetPos.z = transform.position.z;
+
+        // Calculate camera viewport size
+        float orthographicWidth = mainCamera.orthographicSize * mainCamera.aspect;
+        float orthographicHeight = mainCamera.orthographicSize;
+
+        // Clamp target position to keep camera within bounds
+        targetPos.x = Mathf.Clamp(targetPos.x, minX + orthographicWidth, maxX - orthographicWidth);
+        targetPos.y = Mathf.Clamp(targetPos.y, minY + orthographicHeight, maxY - orthographicHeight);
 
         // Smoothly move camera
         transform.position = Vector3.SmoothDamp(
@@ -298,6 +231,16 @@ public class CameraController : MonoBehaviour
         Vector3 size = new Vector3(maxX - minX, maxY - minY, 1f);
         Gizmos.DrawWireCube(center, size);
 
+        // Draw camera viewport bounds
+        if (mainCamera != null)
+        {
+            Gizmos.color = Color.cyan;
+            float orthographicWidth = mainCamera.orthographicSize * mainCamera.aspect;
+            float orthographicHeight = mainCamera.orthographicSize;
+            Vector3 viewportSize = new Vector3(orthographicWidth * 2, orthographicHeight * 2, 1f);
+            Gizmos.DrawWireCube(transform.position, viewportSize);
+        }
+
         // Draw zoom start line
         if (shallowZone)
         {
@@ -335,5 +278,78 @@ public class CameraController : MonoBehaviour
         if (shallowZone) shallowZone.showZone = showDebugGizmos;
         if (middleZone) middleZone.showZone = showDebugGizmos;
         if (deepZone) deepZone.showZone = showDebugGizmos;
+    }
+
+    private void CreateDarknessOverlay()
+    {
+        // Create a new Canvas for the overlay
+        GameObject overlayCanvas = new GameObject("DarknessOverlay");
+        overlayCanvas.transform.SetParent(transform); // Parent to camera to keep it organized
+        Canvas canvas = overlayCanvas.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = mainCamera;
+        canvas.sortingOrder = 999; // Ensure it renders on top of everything
+        canvas.planeDistance = 1; // Render very close to camera
+        
+        // Add a Canvas Scaler for proper scaling
+        CanvasScaler scaler = overlayCanvas.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        
+        // Create the darkness overlay image
+        GameObject overlayObj = new GameObject("Darkness");
+        overlayObj.transform.SetParent(overlayCanvas.transform, false);
+        darknessOverlay = overlayObj.AddComponent<UnityEngine.UI.Image>();
+        
+        // Make it completely solid black
+        darknessOverlay.color = new Color(0, 0, 0, 0);
+        darknessOverlay.raycastTarget = false; // Prevent it from blocking input
+
+        // Add a second layer of darkness for complete opacity
+        GameObject overlayObj2 = new GameObject("Darkness2");
+        overlayObj2.transform.SetParent(overlayCanvas.transform, false);
+        Image darknessOverlay2 = overlayObj2.AddComponent<UnityEngine.UI.Image>();
+        darknessOverlay2.color = new Color(0, 0, 0, 0);
+        darknessOverlay2.raycastTarget = false;
+        
+        // Set both overlays to cover the entire screen
+        RectTransform rect = darknessOverlay.rectTransform;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.sizeDelta = Vector2.zero;
+        rect.anchoredPosition = Vector2.zero;
+
+        RectTransform rect2 = darknessOverlay2.rectTransform;
+        rect2.anchorMin = Vector2.zero;
+        rect2.anchorMax = Vector2.one;
+        rect2.sizeDelta = Vector2.zero;
+        rect2.anchoredPosition = Vector2.zero;
+
+        Debug.Log("Double-layer darkness overlay created successfully!");
+    }
+
+    private void LateUpdate()
+    {
+        if (!rodController)
+        {
+            Debug.LogWarning("Rod Controller is missing!");
+            return;
+        }
+
+        if (!rodController.hook)
+        {
+            Debug.LogWarning("Current Hook is null!");
+            return;
+        }
+
+        hookTransform = rodController.hook.transform;
+        UpdateCameraPosition();
+        UpdateCameraZoom();
+        
+        // Only update darkness if enabled
+        if (enableDarknessOverlay && darknessOverlay != null)
+        {
+            UpdateDarknessOverlay();
+        }
     }
 } 

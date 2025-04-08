@@ -73,7 +73,7 @@ public class LevelZone : MonoBehaviour
                        position.y >= bounds.min.y && 
                        position.y <= bounds.max.y;
 
-        Debug.Log($"Zone {gameObject.name} ({level}) check - Position: {position}, Bounds: {bounds.min} to {bounds.max}, IsInside: {isInside}");
+        //Debug.Log($"Zone {gameObject.name} ({level}) check - Position: {position}, Bounds: {bounds.min} to {bounds.max}, IsInside: {isInside}");
         return isInside;
     }
 

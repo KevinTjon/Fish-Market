@@ -90,7 +90,16 @@ public class BasicFish : MonoBehaviour
         
         // Set up collision layers
         // Fish should only collide with boundaries and bait, not other fish
-        gameObject.layer = LayerMask.NameToLayer("Fish");
+        int fishLayer = LayerMask.NameToLayer("Fish");
+        if (fishLayer == -1)
+        {
+            Debug.LogWarning("'Fish' layer not found. Using default layer (0) instead.");
+            gameObject.layer = 0; // Default layer
+        }
+        else
+        {
+            gameObject.layer = fishLayer;
+        }
         
         // Only freeze rotation when not chasing
         UpdateMovementConstraints(false);
