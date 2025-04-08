@@ -5,10 +5,19 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/FishTestScene.unity
     guid: bff937d0842a7e540aa9d07ae557a2b9
   - enabled: 1
-    path: Assets/Scenes/MarketUI.unity
+    path: Assets/Scenes/OldMarketUI.unity
     guid: 043c44b8ff655104bac9bfabef2b3a78
+  - enabled: 1
+    path: Assets/Scenes/Fishing.unity
+    guid: bb0c68ecef7c41346af44bd5c455efac
+  - enabled: 1
+    path: Assets/Scenes/Options.unity
+    guid: 33dd615e2c427494f821d7ab2960ed24
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 8277ac08481f5204ebb79321d0cc5315
   m_configObjects: {}

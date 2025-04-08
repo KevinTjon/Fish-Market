@@ -285,7 +285,36 @@ public class BasicFish : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isHooked) return; // Skip movement updates when hooked
+        if (isHooked) return;
+
+        // Get current zone if we don't have one
+        if (currentZone == null)
+        {
+            FindCurrentZone();
+        }
+
+        // Restrict vertical movement based on current zone
+        if (currentZone != null)
+        {
+            Bounds zoneBounds = currentZone.GetComponent<BoxCollider2D>().bounds;
+            float currentY = transform.position.y;
+            float maxY = zoneBounds.max.y;
+            
+            // If we're above the zone's top boundary, move down
+            if (currentY > maxY)
+            {
+                Vector2 newPosition = transform.position;
+                newPosition.y = maxY;
+                transform.position = newPosition;
+                
+                // Reverse vertical component of movement
+                if (rb.velocity.y > 0)
+                {
+                    rb.velocity = new Vector2(rb.velocity.x, -rb.velocity.y * 0.5f);
+                }
+            }
+        }
+
         if (currentZone == null) return;
 
         BoxCollider2D zoneCollider = currentZone.GetComponent<BoxCollider2D>();
@@ -586,6 +615,41 @@ public class BasicFish : MonoBehaviour
             targetBait = closestBait;
             // Update movement constraints when starting/stopping chase
             UpdateMovementConstraints(targetBait != null);
+        }
+    }
+
+    private void FindCurrentZone()
+    {
+        // Find all LevelZone components in the scene
+        LevelZone[] zones = FindObjectsOfType<LevelZone>();
+        
+        // Check each zone to see if the fish is inside it
+        foreach (LevelZone zone in zones)
+        {
+            if (zone.IsInZone(transform.position))
+            {
+                currentZone = zone;
+                return;
+            }
+        }
+        
+        // If no zone found, try to find the closest zone
+        if (zones.Length > 0)
+        {
+            float minDistance = float.MaxValue;
+            LevelZone closestZone = null;
+            
+            foreach (LevelZone zone in zones)
+            {
+                float distance = Vector2.Distance(transform.position, zone.transform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestZone = zone;
+                }
+            }
+            
+            currentZone = closestZone;
         }
     }
 } 
