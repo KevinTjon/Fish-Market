@@ -27,6 +27,16 @@ public class BasicFish : MonoBehaviour
     [SerializeField] private float verticalMovementRange = 2f; // How far up/down fish can move from their current position
     [SerializeField] private float verticalMovementSpeed = 0.5f; // How fast fish move vertically
     
+    // Movement constraints struct
+    private struct MovementConstraints
+    {
+        public float minX;
+        public float maxX;
+        public float minY;
+        public float maxY;
+    }
+    private MovementConstraints movementConstraints;
+    
     [Header("Bait Detection")]
     [SerializeField] private float baitDetectionRadius = 5f;
     [SerializeField] private float minBaitChaseDistance = 0.5f; // Minimum distance to keep from bait
@@ -100,6 +110,14 @@ public class BasicFish : MonoBehaviour
         {
             gameObject.layer = fishLayer;
         }
+
+        // Set up collider
+        Collider2D collider = GetComponent<Collider2D>();
+        if (collider != null)
+        {
+            // Make sure the collider is set to trigger to prevent physical collisions
+            collider.isTrigger = true;
+        }
         
         // Only freeze rotation when not chasing
         UpdateMovementConstraints(false);
@@ -112,6 +130,25 @@ public class BasicFish : MonoBehaviour
 
         // Start updating nearby fish for all fish
         InvokeRepeating(nameof(UpdateNearbyFish), 0f, 0.5f);
+
+        // Subscribe to bait used event
+        Bait.OnBaitUsed += HandleBaitUsed;
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from bait used event
+        Bait.OnBaitUsed -= HandleBaitUsed;
+    }
+
+    private void HandleBaitUsed(Bait usedBait)
+    {
+        // If this fish was targeting the used bait, clear its target
+        if (targetBait == usedBait)
+        {
+            targetBait = null;
+            UpdateMovementConstraints(false);
+        }
     }
 
     // New method to update movement constraints based on chasing state
@@ -283,10 +320,42 @@ public class BasicFish : MonoBehaviour
 
     private void Update()
     {
-        if (!isHooked && !isChasing)
+        if (currentZone == null)
         {
-            // Look for compatible bait
+            FindCurrentZone();
+        }
+        else if (!currentZone.IsInZone(transform.position))
+        {
+            // Check zone every few frames if we're not in our current zone
+            if (Time.frameCount % 30 == 0)
+            {
+                FindCurrentZone();
+            }
+        }
+
+        if (currentZone == null)
+        {
+            Debug.LogWarning($"{gameObject.name} has no valid zone!");
+            return;
+        }
+
+        // Update movement constraints based on current zone
+        UpdateMovementConstraints();
+
+        // Check for nearby bait
+        if (targetBait == null)
+        {
             FindNearbyBait();
+        }
+
+        // Update movement based on current state
+        if (targetBait != null)
+        {
+            ChaseBait();
+        }
+        else
+        {
+            MoveRandomly();
         }
     }
 
@@ -483,23 +552,51 @@ public class BasicFish : MonoBehaviour
         Bait bait = other.GetComponent<Bait>();
         if (bait != null && !isHooked)
         {
-            // Check if the bait is compatible with this fish's size
-            if (bait.IsCompatibleWithFish(size))
+            // Check if the bait is compatible with this fish's size and hasn't been used yet
+            if (bait.IsCompatibleWithFish(size) && !bait.IsUsed)
             {
-                // Prefer regular hook over simple hook controller
-                var hook = bait.GetComponentInParent<HookController>();
+                // Get the hook controller from the bait
+                HookController hook = bait.GetComponentInParent<HookController>();
                 if (hook != null)
                 {
-                    hook.OnFishContact(this);
-                }
-                /*
-                var simpleHook = bait.GetComponentInParent<SimpleHookController>();
-                if (simpleHook != null)
-                {
+                    // Immediately mark the bait as used and notify all fish
+                    bait.MarkAsUsed();
+                    
+                    // Immediately disable the bait's components to prevent other fish from being hooked
+                    if (bait.GetComponent<SpriteRenderer>() != null)
+                    {
+                        bait.GetComponent<SpriteRenderer>().enabled = false;
+                    }
+                    if (bait.GetComponent<Collider2D>() != null)
+                    {
+                        bait.GetComponent<Collider2D>().enabled = false;
+                    }
+                    if (bait.GetComponent<Rigidbody2D>() != null)
+                    {
+                        bait.GetComponent<Rigidbody2D>().simulated = false;
+                    }
+                    
                     // Let the hook handle the catching logic
-                    simpleHook.OnFishContact(this);
+                    hook.OnFishContact(this);
+                    // Mark this fish as hooked
+                    isHooked = true;
+                    // Stop any current movement
+                    if (rb != null)
+                    {
+                        rb.velocity = Vector2.zero;
+                    }
+                    // Clear any target bait
+                    targetBait = null;
+                    
+                    // Transform the fish into the bait
+                    transform.SetParent(hook.transform);
+                    transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
+                    
+                    // Disable the fish's components
+                    if (rb != null) rb.simulated = false;
+                    if (GetComponent<Collider2D>() != null) GetComponent<Collider2D>().enabled = false;
                 }
-                */
             }
         }
     }
@@ -599,16 +696,26 @@ public class BasicFish : MonoBehaviour
 
     private void FindNearbyBait()
     {
-        if (targetBait != null) return; // Already chasing bait
+        if (targetBait != null || isHooked) return; // Don't look for bait if already chasing one or if hooked
 
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, baitDetectionRadius);
+        // Create layer mask for bait layer
+        int baitLayer = LayerMask.GetMask("Bait");
+        if (baitLayer == 0)
+        {
+            Debug.LogWarning("'Bait' layer not found! Please create a 'Bait' layer in Unity.");
+            return;
+        }
+
+        // Only check colliders on the bait layer
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, baitDetectionRadius, baitLayer);
         float closestDistance = float.MaxValue;
         Bait closestBait = null;
 
         foreach (Collider2D col in colliders)
         {
             Bait bait = col.GetComponent<Bait>();
-            if (bait != null && bait.IsCompatibleWithFish(size))
+            // Check if bait is compatible, not used, and in the same level zone
+            if (bait != null && bait.IsCompatibleWithFish(size) && !bait.IsUsed && bait.CurrentZone == currentZone)
             {
                 float distance = Vector2.Distance(transform.position, bait.transform.position);
                 if (distance < closestDistance)
@@ -631,7 +738,18 @@ public class BasicFish : MonoBehaviour
     {
         // Find all LevelZone components in the scene
         LevelZone[] zones = FindObjectsOfType<LevelZone>();
-        
+        if (zones.Length == 0)
+        {
+            Debug.LogWarning("No LevelZone found in scene!");
+            return;
+        }
+
+        // First check if we're still in our current zone
+        if (currentZone != null && currentZone.IsInZone(transform.position))
+        {
+            return; // Still in the same zone
+        }
+
         // Check each zone to see if the fish is inside it
         foreach (LevelZone zone in zones)
         {
@@ -643,22 +761,127 @@ public class BasicFish : MonoBehaviour
         }
         
         // If no zone found, try to find the closest zone
-        if (zones.Length > 0)
+        float minDistance = float.MaxValue;
+        LevelZone closestZone = null;
+        
+        foreach (LevelZone zone in zones)
         {
-            float minDistance = float.MaxValue;
-            LevelZone closestZone = null;
-            
-            foreach (LevelZone zone in zones)
+            float distance = Vector2.Distance(transform.position, zone.transform.position);
+            if (distance < minDistance)
             {
-                float distance = Vector2.Distance(transform.position, zone.transform.position);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                    closestZone = zone;
-                }
+                minDistance = distance;
+                closestZone = zone;
             }
-            
-            currentZone = closestZone;
         }
+        
+        currentZone = closestZone;
+        if (currentZone == null)
+        {
+            Debug.LogWarning("Fish could not find any valid zone!");
+        }
+    }
+
+    private void UpdateMovementConstraints()
+    {
+        if (currentZone == null) return;
+
+        // Get the zone's bounds from its BoxCollider2D
+        BoxCollider2D zoneCollider = currentZone.GetComponent<BoxCollider2D>();
+        if (zoneCollider == null) return;
+
+        Bounds bounds = zoneCollider.bounds;
+        Vector2 zoneMin = bounds.min;
+        Vector2 zoneMax = bounds.max;
+
+        // Add a small buffer to prevent fish from getting stuck at edges
+        float buffer = 0.5f;
+        zoneMin += new Vector2(buffer, buffer);
+        zoneMax -= new Vector2(buffer, buffer);
+
+        // Update the movement constraints
+        movementConstraints.minX = zoneMin.x;
+        movementConstraints.maxX = zoneMax.x;
+        movementConstraints.minY = zoneMin.y;
+        movementConstraints.maxY = zoneMax.y;
+
+        // If fish is outside bounds, move it back in
+        Vector2 currentPos = transform.position;
+        bool wasOutOfBounds = false;
+
+        if (currentPos.x < movementConstraints.minX)
+        {
+            currentPos.x = movementConstraints.minX;
+            wasOutOfBounds = true;
+        }
+        else if (currentPos.x > movementConstraints.maxX)
+        {
+            currentPos.x = movementConstraints.maxX;
+            wasOutOfBounds = true;
+        }
+
+        if (currentPos.y < movementConstraints.minY)
+        {
+            currentPos.y = movementConstraints.minY;
+            wasOutOfBounds = true;
+        }
+        else if (currentPos.y > movementConstraints.maxY)
+        {
+            currentPos.y = movementConstraints.maxY;
+            wasOutOfBounds = true;
+        }
+
+        if (wasOutOfBounds)
+        {
+            transform.position = currentPos;
+            // Reset velocity when hitting bounds
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+            }
+        }
+    }
+
+    private void ChaseBait()
+    {
+        if (targetBait == null) return;
+
+        // Calculate direction to bait
+        Vector2 directionToBait = (targetBait.transform.position - transform.position).normalized;
+        
+        // Apply chase speed
+        if (rb != null)
+        {
+            rb.velocity = directionToBait * chaseSpeed;
+        }
+
+        // Update sprite facing based on movement direction
+        UpdateSpriteFacing();
+
+        // Check if we've reached the bait
+        float distanceToBait = Vector2.Distance(transform.position, targetBait.transform.position);
+        if (distanceToBait < 0.1f)
+        {
+            // We've reached the bait, stop chasing
+            targetBait = null;
+            if (rb != null)
+            {
+                rb.velocity = Vector2.zero;
+            }
+        }
+    }
+
+    private void MoveRandomly()
+    {
+        if (rb == null) return;
+
+        // Generate a random direction
+        float randomAngle = Random.Range(0f, 360f);
+        Vector2 randomDirection = new Vector2(Mathf.Cos(randomAngle * Mathf.Deg2Rad), Mathf.Sin(randomAngle * Mathf.Deg2Rad));
+
+        // Apply swim speed
+        rb.velocity = randomDirection * swimSpeed;
+
+        // Update sprite facing based on movement direction
+        UpdateSpriteFacing();
     }
 } 

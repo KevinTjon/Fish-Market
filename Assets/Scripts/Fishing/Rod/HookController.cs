@@ -10,7 +10,6 @@ public class HookController : MonoBehaviour
     private bool isFishing; 
 
     [SerializeField] private float hookRadius = 0.2f;
-    [SerializeField] private float hookOffset = 0.5f; // Distance fish follows below hook
     
     public bool hasHookedFish { get; private set; }  // Track if we have something hooked
     public GameObject caughtFish { get; private set; }
@@ -47,7 +46,6 @@ public class HookController : MonoBehaviour
         hookRB = GetComponent<Rigidbody2D>();
         hookRB.drag = 0.5f;
         hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;
-        //hookRB.AddForce(new Vector2(0, 0));
         
         hookCollider = GetComponent<CircleCollider2D>();
         this.rodConnection = rodConnection;
@@ -56,10 +54,7 @@ public class HookController : MonoBehaviour
         // This is just a debug check - layer setup should be done in Unity Editor
         if (LayerMask.NameToLayer("Hook") == -1)
         {
-            Debug.LogWarning("Hook layer not found! Please create a 'Hook' layer in Unity:\n" +
-                           "1. Edit > Project Settings > Tags and Layers\n" +
-                           "2. Under 'Layers', add 'Hook' in an empty slot\n" +
-                           "3. Set up the Physics2D collision matrix to allow Hook to collide with Hookable");
+            Debug.LogWarning("Hook layer not found");
         }
         
         hasHookedFish = false;
@@ -102,9 +97,9 @@ public class HookController : MonoBehaviour
             // Tell the fish it's hooked
             fish.GetHooked();
 
-            // Parent the fish to the hook and position it below
+            // Parent the fish to the hook
             fish.transform.SetParent(transform);
-            fish.transform.localPosition = Vector3.down * hookOffset;
+            fish.transform.localPosition = Vector3.zero;
             fish.transform.localRotation = Quaternion.identity;
 
             caughtFish = fish.gameObject;
@@ -144,7 +139,6 @@ public class HookController : MonoBehaviour
     {
         // Keep rotation vertical
         transform.rotation = Quaternion.identity;
-        //targetRotation = 0f;  // Commented out as part of rotation logic
         
         // Freeze y movement in ocean and rotation
         hookRB.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;

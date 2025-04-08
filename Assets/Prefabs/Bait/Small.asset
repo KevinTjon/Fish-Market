@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5809c0c2d9868a488c835126a10fcfe, type: 3}
   m_Name: Small
   m_EditorClassIdentifier: 
-  baitName: 
+  baitName: Small Bait
   baitSprite: {fileID: 0}
-  targetFishSize: 0
+  targetFishSize: 0  # 0 = Small fish

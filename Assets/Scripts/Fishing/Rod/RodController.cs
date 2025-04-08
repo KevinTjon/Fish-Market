@@ -74,6 +74,9 @@ public class RodController : MonoBehaviour
     /// </summary>
     private void Start()
     {
+        // Initialize hook first
+        hook.InitializeHook(rodConnection);
+
         LineSettings settings = new LineSettings
         {
             lineColor = lineColor,
@@ -89,7 +92,6 @@ public class RodController : MonoBehaviour
         };
 
         line.InitializeLine(rodConnection, hook, settings);
-        hook.InitializeHook(rodConnection);
         rodState = RodState.Idle;
 
         chargeTime = 0f;

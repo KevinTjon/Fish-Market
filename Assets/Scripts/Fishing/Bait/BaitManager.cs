@@ -9,51 +9,50 @@ public class BaitManager : MonoBehaviour
     [SerializeField] private GameObject largeBaitPrefab;
 
     [Header("References")]
-    /*
-    [SerializeField] private SimpleRodController rodController;
-    */
     [SerializeField] private RodController rodController;
 
     private void Update()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-
-        // Default small bait with 'B' key
-        if (keyboard.bKey.wasPressedThisFrame)
+        // Check if we have a valid hook
+        if (rodController != null && rodController.hook != null)
         {
-            SpawnBait(smallBaitPrefab);
-        }
-        // Medium bait with 'N' key
-        else if (keyboard.nKey.wasPressedThisFrame)
-        {
-            SpawnBait(mediumBaitPrefab);
-        }
-        // Large bait with 'M' key
-        else if (keyboard.mKey.wasPressedThisFrame)
-        {
-            SpawnBait(largeBaitPrefab);
+            HookController hookController = rodController.hook.GetComponent<HookController>();
+            BaitSpawnArea spawnArea = rodController.hook.GetComponent<BaitSpawnArea>();
+            
+            if (hookController != null && spawnArea != null)
+            {
+                // Check if there's already bait on the hook
+                Bait existingBait = hookController.GetComponentInChildren<Bait>();
+                
+                // If no bait exists, spawn small bait
+                if (existingBait == null)
+                {
+                    SpawnBait(smallBaitPrefab);
+                }
+            }
         }
     }
 
     private void SpawnBait(GameObject baitPrefab)
     {
-        /*if (rodController != null && rodController.CurrentHook != null)
-        {
-            // Get the SimpleHookController component
-            SimpleHookController hookController = rodController.CurrentHook.GetComponent<SimpleHookController>();
-        */
         if (rodController != null && rodController.hook != null)
         {
-            // Get the SimpleHookController component
             HookController hookController = rodController.hook.GetComponent<HookController>();
-
-            if (hookController != null)
+            BaitSpawnArea spawnArea = rodController.hook.GetComponent<BaitSpawnArea>();
+            
+            if (hookController != null && spawnArea != null)
             {
-                // Create and attach the bait
-                GameObject baitObject = Instantiate(baitPrefab, hookController.transform.position, Quaternion.identity);
+                // Get a random position within the spawn area
+                Vector2 spawnPosition = spawnArea.GetRandomSpawnPosition();
+                
+                // Create the bait at the random position
+                GameObject baitObject = Instantiate(baitPrefab, spawnPosition, Quaternion.identity);
+                
+                // Parent it to the hook
                 baitObject.transform.SetParent(hookController.transform);
-                baitObject.transform.localPosition = Vector3.down * 0.5f; // Offset the bait below the hook
+                
+                // Ensure the bait faces the same direction as the hook
+                baitObject.transform.localRotation = Quaternion.identity;
             }
         }
     }
