@@ -77,7 +77,6 @@ public class FishingLineController : MonoBehaviour
 
         // Calculate onWaterSurface height
         lengthOnWater = rod.position.y - hookCon.WaterLevel;
-        Debug.Log($"Line length on water surface: {lengthOnWater}");
     }
 
     /**

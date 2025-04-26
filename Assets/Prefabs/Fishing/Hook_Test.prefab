@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 6473319966557681685}
   - component: {fileID: 3871777484510088023}
   - component: {fileID: 4244427940021364320}
-  - component: {fileID: 6358194200144488504}
   m_Layer: 9
   m_Name: Hook_Test
   m_TagString: Untagged
@@ -162,20 +161,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e65b5615a6c5fc947b6ba8d4f0bbb6b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hookRadius: 0.2
---- !u!114 &6358194200144488504
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 616501395811800350}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35d42a1647db3554ca5c49e084a3a53e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
   spawnOffset: {x: 0.15, y: -0.2}
   spawnRadius: 0.09
-  showGizmos: 0
+  showGizmos: 1
   gizmoColor: {r: 0, g: 1, b: 0, a: 0.3}
+  hookRadius: 0.2

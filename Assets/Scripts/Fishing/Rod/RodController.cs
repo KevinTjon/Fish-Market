@@ -40,6 +40,7 @@ public class RodController : MonoBehaviour
         Casting,
         Fishing
     }
+
     public RodState rodState { get; private set; }
 
     public bool IsFishing => rodState == RodState.Fishing || rodState == RodState.Casting; // Public get
@@ -62,9 +63,6 @@ public class RodController : MonoBehaviour
         }
         hook = Instantiate(hookPrefab, rodConnection.position, Quaternion.identity).GetComponent<HookController>();
         hook.transform.SetParent(transform);
-
-        Debug.Log($"Here is line: {line}");
-        Debug.Log($"Here is hook: {hook}");
 
         fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
     }
@@ -155,20 +153,27 @@ public class RodController : MonoBehaviour
         var tensionForce = line.CalculateHookForce(rodState == RodState.Fishing);
         hook.AddForce(tensionForce);
         
-        if (hook.onWaterSurface) 
+        if (hook.OnWaterSurface) 
         {
             Debug.Log("Hook is on the water surface");
             //Debug.Log(line.PrintLength());
 
             if (input > 0)
             {
-                var fishObj = hook.caughtFish;
-                if (fishObj != null)
+                var fish = hook.attachedObject.GetComponent<BasicFish>();
+                if (fish)
                 {
-                    Debug.Log(fishObj.name + " caught!");
-                    fishCooler.AddFish(fishObj.GetComponent<BasicFish>());
-                    Destroy(fishObj);
-                    fishCooler.DisplayCooler();
+                    // Debug
+                    if (fishCooler.AddFish(fish))
+                    {
+                        fishCooler.DisplayCooler();
+                        Debug.Log(fish.name + " caught!");
+                        hook.CatchObject();
+                    }
+                    else
+                    {
+                        Debug.Log("Item cannot be added to cooler, it is full");
+                    }
                 }
             }
             else if (input < 0)

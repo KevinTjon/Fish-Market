@@ -12,21 +12,26 @@ public class Cooler : MonoBehaviour
     {
         currentWeight = 0f;
     }
-
-    public void AddFish(BasicFish fish)
+    /// <summary>
+    /// Adds a fish to the cooler if there is enough space.
+    /// </summary>
+    /// <param name="fish">The fish to be added to the cooler.</param>
+    /// <returns>True if the fish was added successfully, false if the cooler is full.</returns>
+    public bool AddFish(BasicFish fish)
     {
 
         var newWeight = currentWeight + fish.Weight;
         if (newWeight > maxWeight)
         {
             Debug.Log("Item cannot be added to cooler, it is full");
-            return;
+            return false;
         }
 
+        currentWeight = newWeight;
         CoolerItem item = new CoolerItem();
         item.Initialize(fish);
         coolerItems.AddLast(item);
-        //Destroy(item);
+        return true;
     }
 
     public void DisplayCooler()

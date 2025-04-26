@@ -5,40 +5,42 @@ using FishSizeNamespace;
 [RequireComponent(typeof(CircleCollider2D))]
 public class HookController : MonoBehaviour
 {
-    private float waterLevel;
-    public float WaterLevel => waterLevel;
-    public bool onWaterSurface { get; private set; }
-    private bool isFishing; 
-
+    // Position parameters
+    public float WaterLevel { get; private set; }
+    public bool OnWaterSurface { get; private set; }
+    public bool IsFishing { get; private set; }
+    // Attached object parameters
+    public bool HasHookedObject { get; private set; }  // Track if we have something hooked
+    public FishSize AttractedSize { get; private set; }
+    
+    // Serialized parameters
+    [Header("Spawn Area")]
+    [SerializeField] private Vector2 spawnOffset = Vector2.zero;
+    [SerializeField] private float spawnRadius = 0.5f;
+    
+    // Gizmo visualization
+    [Header("Debug")]
+    [SerializeField] private bool showGizmos = true;
+    [SerializeField] private Color gizmoColor = new Color(0, 1, 0, 0.3f); // Green with transparency
     [SerializeField] private float hookRadius = 0.2f;
     
-    public bool hasHookedFish { get; private set; }  // Track if we have something hooked
-    public FishSize attractedSize { get; private set; }
-    public GameObject caughtFish { get; private set; }
+    // Unity References
+    
+    public GameObject attachedObject { get; private set; }
 
     public Rigidbody2D hookRB { get; private set; }
     private CircleCollider2D hookCollider;
     private Transform rodConnection;
-    private SpriteRenderer spriteRenderer;
+
 
     // Add FishSize variable to help with detection
     // Adjust the catching logic to happen here
-
-    
-    
     private void Awake()
     {
         // Setup collider
         hookCollider = GetComponent<CircleCollider2D>();
         hookCollider.radius = hookRadius;
         hookCollider.isTrigger = true;
-
-        // Setup sprite
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null)
-        {
-            spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
-        }
 
         // Set the hook to a specific layer
         gameObject.layer = LayerMask.NameToLayer("Hook");
@@ -64,15 +66,15 @@ public class HookController : MonoBehaviour
             Debug.LogWarning("Hook layer not found");
         }
         
-        hasHookedFish = false;
-        onWaterSurface = false;
-        isFishing = false;
+        HasHookedObject = false;
+        OnWaterSurface = false;
+        IsFishing = false;
     }
 
     // Only runs if we currently aren't fishing
     private void Update()
     {
-        if (!isFishing && hookRB != null && rodConnection != null)
+        if (!IsFishing && hookRB != null && rodConnection != null)
         {
             hookRB.position = rodConnection.position;
         }
@@ -81,11 +83,12 @@ public class HookController : MonoBehaviour
     // Called when we start fishing
     public void StartFishing(Vector2 velocity)
     {
-        isFishing = true;
+        IsFishing = true;
         hookRB.gravityScale = 1;
         hookRB.velocity = velocity;
     }
     
+    /*
     private void OnTriggerEnter2D(Collider2D other)
     {
         // Check if the hook has collided with a fish
@@ -96,17 +99,22 @@ public class HookController : MonoBehaviour
             OnFishContact(fish);
         }
     }
+    */
+
+
+    #region Hooking Logic
     // Called by the fish when it contacts compatible bait
     public void OnFishContact(BasicFish fish)
     {
-        if (hasHookedFish || fish == null) return;
+        if (fish == null) return;
 
         // Double check we have compatible bait
+        
         Bait currentBait = GetComponentInChildren<Bait>();
         if (currentBait != null && currentBait.IsCompatibleWithFish(fish.Size))
         {
             // Catch the fish!
-            hasHookedFish = true;
+            HasHookedObject = true;
             
             // Destroy the bait
             Destroy(currentBait.gameObject);
@@ -119,28 +127,68 @@ public class HookController : MonoBehaviour
             fish.transform.localPosition = Vector3.zero;
             fish.transform.localRotation = Quaternion.identity;
 
-            caughtFish = fish.gameObject;
+            attachedObject = fish.gameObject;
             Debug.Log($"Caught fish: {fish.gameObject.name}");
         }
     }
 
-    public void ReleaseCaughtFish()
+    public void AttachFish(BasicFish fish)
     {
-        if (caughtFish != null)
+        AttractedSize = fish.Size; AttractedSize++;
+        fish.GetHooked();
+        AttachObject(fish.gameObject);
+    }
+
+    public void AttachBait(Bait bait)
+    {
+        AttractedSize = bait.baitData.targetFishSize;
+        AttachObject(bait.gameObject);
+    }
+
+    private void AttachObject(GameObject obj)
+    {
+        if (obj == null) return;
+
+        // Set position
+        Vector2 randomPoint = Random.insideUnitCircle * spawnRadius;
+        obj.transform.position = (Vector2)transform.position + spawnOffset + randomPoint;
+        obj.transform.localRotation = Quaternion.identity;
+        
+        // Attach object
+        if (HasHookedObject) Destroy(attachedObject); attachedObject = null;
+        obj.transform.SetParent(transform);
+        HasHookedObject = true;
+        attachedObject = obj;
+    }
+
+    public void CatchObject()
+    {
+        // Runs when the fish is caught and added to cooler
+        Destroy(attachedObject); attachedObject = null;
+        HasHookedObject = false;
+    }
+
+    public void ReleaseObject()
+    {
+        // Runs when the fish is released in the water
+        var attachedFish = attachedObject.GetComponent<BasicFish>();  // Reset the attached object
+        if (attachedObject != null)
         {
             // Tell the fish it's released
-            BasicFish fish = caughtFish.GetComponent<BasicFish>();
+            BasicFish fish = attachedObject.GetComponent<BasicFish>();
             if (fish != null)
             {
                 fish.GetReleased();
+                // Unparent and release the object
+                attachedObject.transform.SetParent(null);
+                attachedObject = null;
+                HasHookedObject = false;
             }
 
-            // Unparent and release the object
-            caughtFish.transform.SetParent(null);
-            caughtFish = null;
-            hasHookedFish = false;
+            
         }
     }
+    #endregion
 
     public void AddForce(Vector2 force)
     {
@@ -149,7 +197,7 @@ public class HookController : MonoBehaviour
 
     public void SetWaterLevel(float level)
     {
-        waterLevel = level;
+        WaterLevel = level;
     }
 
     public void AttachHookToSurface()
@@ -159,15 +207,28 @@ public class HookController : MonoBehaviour
         
         // Freeze y movement in ocean and rotation
         hookRB.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
-        hookRB.position = new Vector2(hookRB.position.x, waterLevel);
-        onWaterSurface = true;
+        hookRB.position = new Vector2(hookRB.position.x, WaterLevel);
+        OnWaterSurface = true;
     }
 
     public void DetachHookFromSurface(float detachForce = 0f)
     {
         hookRB.constraints = RigidbodyConstraints2D.FreezeRotation;  // Keep rotation locked but allow movement
         hookRB.AddForce(Vector2.down * detachForce, ForceMode2D.Impulse);
-        onWaterSurface = false;
-        hasHookedFish = false;  // Reset hooked state when detaching from surface
+        OnWaterSurface = false;
+        //hasHookedObject = false;  // Reset hooked state when detaching from surface
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!showGizmos) return;
+
+        // Draw the spawn area
+        Gizmos.color = gizmoColor;
+        Gizmos.DrawWireSphere((Vector2)transform.position + spawnOffset, spawnRadius);
+        
+        // Draw a line from the hook to the center of the spawn area
+        Gizmos.color = Color.green;
+        Gizmos.DrawLine(transform.position, (Vector2)transform.position + spawnOffset);
     }
 }

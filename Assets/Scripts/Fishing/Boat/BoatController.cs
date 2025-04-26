@@ -4,7 +4,7 @@ using UnityEngine.Tilemaps;
 public class BoatController : MonoBehaviour
 {
     [Header("Movement Settings")]
-    [SerializeField] private float moveSpeed = 1250f;
+    [SerializeField] private float moveSpeed = 5f;
 
     [Header("References")]
     [SerializeField] private LevelZone shallowZone;
@@ -88,17 +88,6 @@ public class BoatController : MonoBehaviour
         }
     }
 
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
     public void SetBoatForce(float input)
     {
         if (tilemapCollision == null)
@@ -122,11 +111,9 @@ public class BoatController : MonoBehaviour
             }
         }
 
-        // Debug input value
-        Debug.Log($"Boat input: {input}");
-
         // Calculate movement direction
         Vector2 movement = new Vector2(input, 0);
+        
         
         // Check if we're moving
         if (input != 0)
@@ -138,17 +125,8 @@ public class BoatController : MonoBehaviour
             bool willCollide = tilemapCollision.IsColliding(nextPosition);
             //Debug.Log($"Next position: {nextPosition}, Will collide: {willCollide}");
             
-            // Only apply force if we won't collide
-            if (!willCollide)
-            {
-                // Apply force directly for more responsive movement
-                rb.velocity = new Vector2(movement.x * moveSpeed * Time.fixedDeltaTime, rb.velocity.y);
-            }
-            else
-            {
-                // If we would collide, stop horizontal movement
-                rb.velocity = new Vector2(0, rb.velocity.y);
-            }
+            var xVelocity = willCollide ? 0 : input * moveSpeed;
+            rb.velocity = new Vector2(xVelocity, rb.velocity.y);
         }
         else
         {

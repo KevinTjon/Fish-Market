@@ -40,7 +40,7 @@ public class CameraController : MonoBehaviour
     private float minX, maxX, minY, maxY;
 
     // Darkness overlay
-    private UnityEngine.UI.Image darknessOverlay;
+    private Image darknessOverlay;
 
     private void Start()
     {

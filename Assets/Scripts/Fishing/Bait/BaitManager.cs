@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class BaitManager : MonoBehaviour
 {
@@ -9,51 +8,40 @@ public class BaitManager : MonoBehaviour
     [SerializeField] private GameObject largeBaitPrefab;
 
     [Header("References")]
-    [SerializeField] private RodController rodController;
+    [SerializeField] private RodController rod;
 
+    private HookController hook;
+
+    private void Awake()
+    {
+        // Check if the rod is assigned
+        if (rod == null)
+        {
+            Debug.LogError("RodController reference is missing in BaitManager.");
+            return;
+        }
+    }
+    
     private void Update()
     {
+        // Adds bait to the hook if nothing is attached to the hook
         // Check if we have a valid hook
-        if (rodController != null && rodController.hook != null)
-        {
-            HookController hookController = rodController.hook.GetComponent<HookController>();
-            BaitSpawnArea spawnArea = rodController.hook.GetComponent<BaitSpawnArea>();
+        hook = rod.hook.GetComponent<HookController>();
             
-            if (hookController != null && spawnArea != null)
+        if (hook)
+        {
+            // Check if there's nothing attached to the hook
+            if (hook.HasHookedObject == false)
             {
-                // Check if there's already bait on the hook
-                Bait existingBait = hookController.GetComponentInChildren<Bait>();
-                
-                // If no bait exists, spawn small bait
-                if (existingBait == null)
-                {
-                    SpawnBait(smallBaitPrefab);
-                }
+                SpawnBait(smallBaitPrefab);
             }
         }
     }
 
     private void SpawnBait(GameObject baitPrefab)
     {
-        if (rodController != null && rodController.hook != null)
-        {
-            HookController hookController = rodController.hook.GetComponent<HookController>();
-            BaitSpawnArea spawnArea = rodController.hook.GetComponent<BaitSpawnArea>();
-            
-            if (hookController != null && spawnArea != null)
-            {
-                // Get a random position within the spawn area
-                Vector2 spawnPosition = spawnArea.GetRandomSpawnPosition();
-                
-                // Create the bait at the random position
-                GameObject baitObject = Instantiate(baitPrefab, spawnPosition, Quaternion.identity);
-                
-                // Parent it to the hook
-                baitObject.transform.SetParent(hookController.transform);
-                
-                // Ensure the bait faces the same direction as the hook
-                baitObject.transform.localRotation = Quaternion.identity;
-            }
-        }
+        var newBait = Instantiate(baitPrefab).GetComponent<Bait>();
+        hook.AttachBait(newBait); // Attach the bait to the hook
     }
-} 
+}
+ 

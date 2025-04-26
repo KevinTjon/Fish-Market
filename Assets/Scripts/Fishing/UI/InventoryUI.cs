@@ -14,14 +14,13 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Cooler cooler;
     
     // Children references
-    [SerializeField] private TMP_Text coolerList;
-    
-    [SerializeField] private GameObject rDetails; // Right side of the screen
-    [SerializeField] private Image rFishSprite;
-    [SerializeField] private TMP_Text rFishName;
-    [SerializeField] private TMP_Text rFishRarity;
-    [SerializeField] private TMP_Text rFishWeight;
-    [SerializeField] private TMP_Text rFishDescription;
+    private TMP_Text coolerList;
+    private GameObject rDetails; // Right side of the screen
+    private Image rFishSprite;
+    private TMP_Text rFishName;
+    private TMP_Text rFishRarity;
+    private TMP_Text rFishWeight;
+    private TMP_Text rFishDescription;
 
     // Start is called before the first frame update
     private void Awake()
