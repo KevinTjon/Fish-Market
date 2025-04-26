@@ -1,4 +1,5 @@
 using UnityEngine;
+using FishSizeNamespace;
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(CircleCollider2D))]
@@ -162,6 +163,8 @@ public class Bait : MonoBehaviour
 
     public bool IsCompatibleWithFish(FishSize fishSize)
     {
+        //Debug.Log(baitData.targetFishSize == fishSize);
+        Debug.Log($"Bait: {baitData.baitName}, Target Fish Size: {baitData.targetFishSize}, Fish Size: {fishSize}");
         return baitData != null && baitData.targetFishSize == fishSize;
     }
 

@@ -1,12 +1,5 @@
 using UnityEngine;
-
-public enum FishSize
-{
-    Tiny,
-    Small,
-    Medium,
-    Large
-}
+using FishSizeNamespace;
 
 [CreateAssetMenu(fileName = "New Fish Type", menuName = "Fish Market/Fish Type")]
 public class FishType : ScriptableObject

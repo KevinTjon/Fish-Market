@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -46,5 +45,15 @@ public class Cooler : MonoBehaviour
             coolerMarket.Add(item.GetCaughtFishData());
         }
         return coolerMarket;
+    }
+
+    public LinkedList<string> GetListEntries()
+    {
+        var entries = new LinkedList<string>();
+        foreach (CoolerItem item in coolerItems)
+        {
+            entries.AddLast(item.GetCoolerListEntry());
+        }
+        return entries;
     }
 }

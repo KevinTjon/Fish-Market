@@ -44,8 +44,8 @@ public class PlayerController : MonoBehaviour
         rod.SetWaterLevel(waterLevel);
         
         //uiActions = new FishingControls().UI;
-        //pauseUI.SetActive(false);
-        //inventoryUI.SetActive(false);
+        pauseUI.SetActive(false);
+        inventoryUI.SetActive(false);
     }
 
     private void Start()
@@ -53,8 +53,8 @@ public class PlayerController : MonoBehaviour
         playerActions.Enable();
         playerActions.ChargeRod.performed += (ctx) => SetCharging(true);
         playerActions.ChargeRod.canceled += (ctx) => SetCharging(false);
-        //playerActions.ToggleInventory.performed += (ctx) => EnableScreen(inventoryUI);
-        //playerActions.TogglePause.performed += (ctx) => EnableScreen(pauseUI);
+        playerActions.ToggleInventory.performed += (ctx) => EnableScreen(inventoryUI);
+        playerActions.TogglePause.performed += (ctx) => EnableScreen(pauseUI);
         // ---------------------------------
         
         isTurning = false;
@@ -136,12 +136,5 @@ public class PlayerController : MonoBehaviour
         {  
             rod.ReceiveReelInput(reelInput);
         }
-    }
-
-    public void UnpauseGame()
-    {
-        isPaused = false;
-        pauseUI.SetActive(false);
-        StartCoroutine(TimePause.UnpauseSimulation(pauseTime));
     }
 }

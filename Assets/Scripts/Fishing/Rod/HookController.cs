@@ -1,4 +1,5 @@
 using UnityEngine;
+using FishSizeNamespace;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(CircleCollider2D))]
@@ -12,6 +13,7 @@ public class HookController : MonoBehaviour
     [SerializeField] private float hookRadius = 0.2f;
     
     public bool hasHookedFish { get; private set; }  // Track if we have something hooked
+    public FishSize attractedSize { get; private set; }
     public GameObject caughtFish { get; private set; }
 
     public Rigidbody2D hookRB { get; private set; }
@@ -84,6 +86,16 @@ public class HookController : MonoBehaviour
         hookRB.velocity = velocity;
     }
     
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        // Check if the hook has collided with a fish
+        BasicFish fish = other.GetComponent<BasicFish>();
+        if (fish != null && !hasHookedFish)
+        {
+            // Check if the fish is compatible with the bait
+            OnFishContact(fish);
+        }
+    }
     // Called by the fish when it contacts compatible bait
     public void OnFishContact(BasicFish fish)
     {

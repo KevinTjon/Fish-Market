@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c5809c0c2d9868a488c835126a10fcfe, type: 3}
-  m_Name: Medium
+  m_Name: Tiny
   m_EditorClassIdentifier: 
-  baitName: Medium Bait
+  baitName: Tiny Bait
   baitColor: {r: 1, g: 1, b: 1, a: 1}
-  targetFishSize: 3
+  targetFishSize: 1

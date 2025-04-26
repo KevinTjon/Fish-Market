@@ -1,13 +1,16 @@
 using UnityEngine;
 using System.Collections.Generic;
+using FishSizeNamespace;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class BasicFish : MonoBehaviour
 {
+    //private Size defaultSize = FishSizeNamespace.Size.Small; // Default size for fish
     // TODO: Add to a ScriptableObject
     [Header("Fish Properties")]
     private new string name;
-    [SerializeField] private FishSize size = FishSize.Small;
+    [SerializeField] private ESize serializedSize = ESize.Small;
+    private FishSize size; 
     private Sprite sprite;
     
     public string Name => name;
@@ -15,7 +18,7 @@ public class BasicFish : MonoBehaviour
     public Sprite Sprite => sprite; // Public read-only access to fish asset
 
     // Should be separate from ScriptableObject
-    private float weight = 1f; // Weight of the fish, used for fishing mechanics
+    [SerializeField] private float weight = 1f; // Weight of the fish, used for fishing mechanics
     public float Weight => weight;
     
     [Header("Movement")]
@@ -75,8 +78,10 @@ public class BasicFish : MonoBehaviour
 
     private void Start()
     {
+        
         // Sets up fish properties
         name = gameObject.name;
+        size = serializedSize;
         
         spriteTransform = transform.Find("Sprite");
         if (spriteTransform != null)

@@ -3,8 +3,7 @@ using UnityEngine;
 
 public class TimePause : MonoBehaviour
 {
-    private bool isPaused;
-    public bool IsPaused { get => isPaused; }
+    private readonly float pauseTime = 0.3f;
 
     // Pauses game
     // Slows down simulation gradually when activated

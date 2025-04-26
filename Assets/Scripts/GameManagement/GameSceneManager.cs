@@ -42,7 +42,7 @@ public class GameSceneManager : MonoBehaviour
         {
             string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
             // Debug.Log($"Attempting to load database from: {dbPath}");
-
+            
             using (IDbConnection connection = new SqliteConnection(dbPath))
             {
                 connection.Open();

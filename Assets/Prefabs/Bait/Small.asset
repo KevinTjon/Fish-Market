@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baitName: Small Bait
   baitColor: {r: 1, g: 1, b: 1, a: 1}
-  targetFishSize: 1
+  targetFishSize: 2

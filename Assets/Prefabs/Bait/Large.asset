@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5809c0c2d9868a488c835126a10fcfe, type: 3}
   m_Name: Large
   m_EditorClassIdentifier: 
-  baitName: 
-  baitSprite: {fileID: 0}
-  targetFishSize: 0
+  baitName: Large Bait
+  baitColor: {r: 1, g: 1, b: 1, a: 1}
+  targetFishSize: 4
