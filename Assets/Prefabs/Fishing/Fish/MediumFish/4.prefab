@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 207950335581133221}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -1}
   m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -94,9 +94,9 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: -0.24579135, y: -0.017940981}
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.028152449
 --- !u!114 &1144552125274551612
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -109,7 +109,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishSize: 0
+  displayName: Spotted sorubim
+  serializedSize: 2
+  weight: 1
   swimSpeed: 3
   chaseSpeed: 5
   turnSpeed: 2

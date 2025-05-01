@@ -94,9 +94,9 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.012534317, y: -0.070744365}
+  m_Offset: {x: 0.0017553046, y: -0.04258542}
   serializedVersion: 2
-  m_Radius: 0.030881224
+  m_Radius: 0.02205528
 --- !u!114 &3974594779209057497
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -109,15 +109,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  size: 0
+  displayName: Haddock
+  serializedSize: 2
+  weight: 1
   swimSpeed: 3
+  chaseSpeed: 5
   turnSpeed: 2
-  minDepth: 0
-  maxDepth: 10
-  preferredDepth: 5
-  depthVariance: 1
-  directionChangeInterval: 3
-  maxTurnAngle: 45
+  boundaryInfluenceDistance: 1
+  horizontalBias: 1.5
+  verticalMovementRange: 2
+  verticalMovementSpeed: 0.5
+  baitDetectionRadius: 5
+  minBaitChaseDistance: 0.5
+  interactionRadius: 5
+  minSeparationDistance: 1.5
+  separationWeight: 2
+  alignmentWeight: 1
+  cohesionWeight: 1
+  baseForwardWeight: 1.2
+  randomMovementWeight: 0.3
+  randomMovementInterval: 2
+  isSchooling: 0
+  schoolingRadius: 5
+  emergencySeperationForce: 5
+  emergencySeperationDistance: 0.5
+  showDebugGizmos: 0
 --- !u!1 &8526922780008096033
 GameObject:
   m_ObjectHideFlags: 0

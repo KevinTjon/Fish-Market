@@ -109,21 +109,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishSize: 0
+  displayName: Spanish mackerel
+  serializedSize: 2
+  weight: 1
   swimSpeed: 3
+  chaseSpeed: 5
   turnSpeed: 2
   boundaryInfluenceDistance: 1
-  isSchooling: 0
-  schoolingRadius: 5
+  horizontalBias: 1.5
+  verticalMovementRange: 2
+  verticalMovementSpeed: 0.5
+  baitDetectionRadius: 5
+  minBaitChaseDistance: 0.5
+  interactionRadius: 5
+  minSeparationDistance: 1
   separationWeight: 1.5
   alignmentWeight: 1
   cohesionWeight: 1
-  minSeparationDistance: 1
   baseForwardWeight: 1.2
   randomMovementWeight: 0.3
   randomMovementInterval: 2
+  isSchooling: 0
+  schoolingRadius: 5
   emergencySeperationForce: 5
   emergencySeperationDistance: 0.5
+  showDebugGizmos: 0
 --- !u!1 &8526922780008096033
 GameObject:
   m_ObjectHideFlags: 0
