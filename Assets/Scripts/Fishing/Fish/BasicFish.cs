@@ -14,6 +14,11 @@ public class BasicFish : MonoBehaviour
     private FishSize size; 
     private Sprite sprite;
     
+    // Database-driven properties
+    private float minWeight;
+    private float maxWeight;
+    private float topSpeed;
+
     public string Name => !string.IsNullOrEmpty(displayName) ? displayName : name;
     public FishSize Size => size;  // Public read-only access to fish size
     public Sprite Sprite => sprite; // Public read-only access to fish asset
@@ -888,5 +893,28 @@ public class BasicFish : MonoBehaviour
 
         // Update sprite facing based on movement direction
         UpdateSpriteFacing();
+    }
+
+    public void SetDatabaseProperties(Fish dbFish)
+    {
+        if (dbFish == null) return;
+
+        // Set the name if not already set
+        if (string.IsNullOrEmpty(displayName))
+        {
+            displayName = dbFish.Name;
+        }
+
+        // Store database properties
+        minWeight = dbFish.MinWeight;
+        maxWeight = dbFish.MaxWeight;
+        topSpeed = dbFish.TopSpeed;
+
+        // Generate random weight within database range and round to 2 decimal places
+        weight = Mathf.Round(UnityEngine.Random.Range(minWeight, maxWeight) * 100f) / 100f;
+
+        // Apply top speed to movement speeds
+        swimSpeed = topSpeed * 0.6f; // Normal swimming is 60% of top speed
+        chaseSpeed = topSpeed; // Chase speed is full top speed
     }
 } 

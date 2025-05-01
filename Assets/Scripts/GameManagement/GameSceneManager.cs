@@ -258,6 +258,16 @@ public class GameSceneManager : MonoBehaviour
         }
     }
 
+    public void SaveCoolerToInventory(Cooler cooler)
+    {
+        List<CaughtFishData> coolerFish = cooler.SendCoolerToMarket();
+        foreach (CaughtFishData fish in coolerFish)
+        {
+            SaveFishData(fish);
+        }
+        Debug.Log($"Saved {coolerFish.Count} fish from cooler to inventory database");
+    }
+
     // Add initialization check
     public static void EnsureExists()
     {

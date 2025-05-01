@@ -29,12 +29,66 @@ public class FishSpawnManager : MonoBehaviour
     private const float MIN_SPAWN_DISTANCE = 1f; // Minimum distance between spawned fish
     private List<Vector2> spawnedPositions = new List<Vector2>();
 
+    private FishRepository fishRepository;
+
     private void Start()
     {
         mainCamera = Camera.main;
         if (mainCamera == null)
         {
             Debug.LogError("No main camera found in the scene!");
+            return;
+        }
+
+        // Initialize fish repository
+        fishRepository = FishRepository.Instance;
+
+        // Debug log: Print all available fish in database
+        var allFish = fishRepository.GetAllFish();
+        Debug.Log("Available fish in database:");
+        foreach (var fish in allFish)
+        {
+            Debug.Log($"- {fish.Name}");
+        }
+
+        // Validate fish spawn data
+        bool hasErrors = false;
+        Debug.Log($"Number of fish types to spawn: {fishTypes.Count}");
+        for (int i = 0; i < fishTypes.Count; i++)
+        {
+            var fishData = fishTypes[i];
+
+            // Check if prefab exists
+            if (fishData.fishPrefab == null)
+            {
+                Debug.LogError($"Fish #{i + 1} is missing its prefab! Please assign a prefab in the Unity Inspector.");
+                hasErrors = true;
+                continue;
+            }
+
+            // Get the BasicFish component and validate name
+            BasicFish basicFish = fishData.fishPrefab.GetComponent<BasicFish>();
+            if (basicFish == null)
+            {
+                Debug.LogError($"Fish #{i + 1}'s prefab is missing the BasicFish component!");
+                hasErrors = true;
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(basicFish.Name))
+            {
+                Debug.LogError($"Fish #{i + 1}'s prefab has no name set! Please set the 'Display Name' in the prefab's BasicFish component.");
+                hasErrors = true;
+            }
+            else
+            {
+                Debug.Log($"Fish #{i + 1} will spawn: '{basicFish.Name}'");
+            }
+        }
+
+        if (hasErrors)
+        {
+            Debug.LogError("Please fix the above errors in the fish prefabs.");
             return;
         }
 
@@ -136,6 +190,18 @@ public class FishSpawnManager : MonoBehaviour
 
         foreach (var fishData in fishTypes)
         {
+            // Get fish name from prefab
+            BasicFish prefabFish = fishData.fishPrefab.GetComponent<BasicFish>();
+            string fishName = prefabFish.Name;
+
+            // Get fish data from database
+            Fish dbFish = fishRepository.GetFishByName(fishName);
+            if (dbFish == null)
+            {
+                Debug.LogError($"Fish '{fishName}' not found in database! Check that the name in the prefab matches exactly with one in the database.");
+                continue;
+            }
+
             // Get the corresponding level zone
             LevelZone targetZone = GetZoneForLevel(fishData.level);
             if (targetZone == null)
@@ -163,13 +229,13 @@ public class FishSpawnManager : MonoBehaviour
                     // Get position near the school center with minimum distance check
                     Vector2 spawnPos = GetValidSpawnPosition(zoneCollider, schoolCenter, schoolSpawnRadius);
                     
-                    // Spawn the fish
+                    // Spawn the fish and apply database properties
                     GameObject fishObject = Instantiate(fishData.fishPrefab, spawnPos, Quaternion.identity);
-                    
-                    // Set schooling behavior
                     BasicFish fishComponent = fishObject.GetComponent<BasicFish>();
                     if (fishComponent != null)
                     {
+                        // Apply database properties
+                        fishComponent.SetDatabaseProperties(dbFish);
                         fishComponent.SetSchooling(true, fishData.schoolingRadius);
                     }
                 }
@@ -181,6 +247,13 @@ public class FishSpawnManager : MonoBehaviour
                 {
                     Vector2 spawnPos = GetValidSpawnPosition(zoneCollider);
                     GameObject fishObject = Instantiate(fishData.fishPrefab, spawnPos, Quaternion.identity);
+                    
+                    // Apply database properties
+                    BasicFish fishComponent = fishObject.GetComponent<BasicFish>();
+                    if (fishComponent != null)
+                    {
+                        fishComponent.SetDatabaseProperties(dbFish);
+                    }
                 }
             }
         }
