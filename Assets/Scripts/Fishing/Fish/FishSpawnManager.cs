@@ -44,16 +44,16 @@ public class FishSpawnManager : MonoBehaviour
         fishRepository = FishRepository.Instance;
 
         // Debug log: Print all available fish in database
-        var allFish = fishRepository.GetAllFish();
-        Debug.Log("Available fish in database:");
-        foreach (var fish in allFish)
-        {
-            Debug.Log($"- {fish.Name}");
-        }
+        //var allFish = fishRepository.GetAllFish();
+        //Debug.Log("Available fish in database:");
+        // foreach (var fish in allFish)
+        // {
+        //     //Debug.Log($"- {fish.Name}");
+        // }
 
         // Validate fish spawn data
         bool hasErrors = false;
-        Debug.Log($"Number of fish types to spawn: {fishTypes.Count}");
+        //Debug.Log($"Number of fish types to spawn: {fishTypes.Count}");
         for (int i = 0; i < fishTypes.Count; i++)
         {
             var fishData = fishTypes[i];
@@ -61,7 +61,7 @@ public class FishSpawnManager : MonoBehaviour
             // Check if prefab exists
             if (fishData.fishPrefab == null)
             {
-                Debug.LogError($"Fish #{i + 1} is missing its prefab! Please assign a prefab in the Unity Inspector.");
+                //Debug.LogError($"Fish #{i + 1} is missing its prefab! Please assign a prefab in the Unity Inspector.");
                 hasErrors = true;
                 continue;
             }
@@ -70,19 +70,19 @@ public class FishSpawnManager : MonoBehaviour
             BasicFish basicFish = fishData.fishPrefab.GetComponent<BasicFish>();
             if (basicFish == null)
             {
-                Debug.LogError($"Fish #{i + 1}'s prefab is missing the BasicFish component!");
+                //Debug.LogError($"Fish #{i + 1}'s prefab is missing the BasicFish component!");
                 hasErrors = true;
                 continue;
             }
 
             if (string.IsNullOrEmpty(basicFish.Name))
             {
-                Debug.LogError($"Fish #{i + 1}'s prefab has no name set! Please set the 'Display Name' in the prefab's BasicFish component.");
+                //Debug.LogError($"Fish #{i + 1}'s prefab has no name set! Please set the 'Display Name' in the prefab's BasicFish component.");
                 hasErrors = true;
             }
             else
             {
-                Debug.Log($"Fish #{i + 1} will spawn: '{basicFish.Name}'");
+                //Debug.Log($"Fish #{i + 1} will spawn: '{basicFish.Name}'");
             }
         }
 

@@ -129,7 +129,14 @@ public class PlayerController : MonoBehaviour
         var boatInput = playerActions.MoveBoat.ReadValue<float>();
         var reelInput = playerActions.ReelLine.ReadValue<float>();
         
-        //boat.SetBoatForce(boatInput);
+        //Debug.Log($"Boat Input: {boatInput}"); // Debug input value
+        
+        if (boat == null)
+        {
+            Debug.LogError("Boat reference is missing!");
+            return;
+        }
+        
         boat.SetBoatForce(boatInput);
         
         if (rod.IsFishing)

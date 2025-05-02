@@ -114,6 +114,7 @@ public class BoatController : MonoBehaviour
         // Calculate movement direction
         Vector2 movement = new Vector2(input, 0);
         
+        //Debug.Log($"Boat Force - Input: {input}, Current Velocity: {rb.velocity}");
         
         // Check if we're moving
         if (input != 0)
@@ -123,10 +124,12 @@ public class BoatController : MonoBehaviour
             
             // Debug collision check
             bool willCollide = tilemapCollision.IsColliding(nextPosition);
-            //Debug.Log($"Next position: {nextPosition}, Will collide: {willCollide}");
+            //Debug.Log($"Movement Check - Next Position: {nextPosition}, Will Collide: {willCollide}");
             
             var xVelocity = willCollide ? 0 : input * moveSpeed;
             rb.velocity = new Vector2(xVelocity, rb.velocity.y);
+            
+            //Debug.Log($"Applied Velocity: {rb.velocity}");
         }
         else
         {
