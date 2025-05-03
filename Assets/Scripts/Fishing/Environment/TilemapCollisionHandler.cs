@@ -9,6 +9,10 @@ using UnityEngine.Tilemaps;
 [RequireComponent(typeof(TilemapCollider2D))]
 public class TilemapCollisionHandler : MonoBehaviour
 {
+    [Header("Collision Settings")]
+    [SerializeField] private LayerMask collisionLayers = Physics2D.AllLayers; // Which layers to check collisions against
+    [SerializeField] private bool showDebugCollisions = false;
+
     private Tilemap tilemap;
     private TilemapCollider2D tilemapCollider;
     private ContactFilter2D contactFilter;
@@ -25,14 +29,20 @@ public class TilemapCollisionHandler : MonoBehaviour
             return;
         }
 
-        // Set up contact filter
+        // Set up contact filter with specified layers
         contactFilter = new ContactFilter2D();
         contactFilter.useTriggers = false;
-        contactFilter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
+        contactFilter.SetLayerMask(collisionLayers);
+        contactFilter.useLayerMask = true;
+
+        if (showDebugCollisions)
+        {
+            Debug.Log($"TilemapCollisionHandler initialized on {gameObject.name} checking against layers: {collisionLayers.value}");
+        }
     }
 
     /// <summary>
-    /// Checks if a position is colliding with the tilemap
+    /// Checks if a position is colliding with the tilemap on the specified layers
     /// </summary>
     /// <param name="position">World position to check</param>
     /// <returns>True if there is a collidable tile at the position</returns>
@@ -42,8 +52,12 @@ public class TilemapCollisionHandler : MonoBehaviour
         Collider2D[] results = new Collider2D[1];
         int numColliders = Physics2D.OverlapCircle(position, 0.1f, contactFilter, results);
         
-        // Only return true if we hit the tilemap collider
-        return numColliders > 0 && results[0] == tilemapCollider;
+        if (showDebugCollisions && numColliders > 0)
+        {
+            Debug.Log($"Collision detected at {position} with {results[0].gameObject.name} on layer {results[0].gameObject.layer}");
+        }
+
+        return numColliders > 0;
     }
 
     /// <summary>
@@ -87,5 +101,15 @@ public class TilemapCollisionHandler : MonoBehaviour
         BoundsInt bounds = tilemap.cellBounds;
         Vector3Int tilePos = tilemap.WorldToCell(position);
         return bounds.Contains(tilePos);
+    }
+
+    /// <summary>
+    /// Updates which layers to check collisions against
+    /// </summary>
+    /// <param name="layers">The LayerMask containing the layers to check</param>
+    public void SetCollisionLayers(LayerMask layers)
+    {
+        collisionLayers = layers;
+        contactFilter.SetLayerMask(collisionLayers);
     }
 } 

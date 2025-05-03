@@ -13,6 +13,8 @@ public class FishMarketPlayerController : MonoBehaviour
     private PlayerControls playerControls;
     private Vector2 movement;
     private string currentDirection = "Down"; // Track last direction for idle
+    private Rigidbody2D rb;
+    private BoxCollider2D boxCollider;
 
     private void Awake()
     {
@@ -31,6 +33,28 @@ public class FishMarketPlayerController : MonoBehaviour
             animator.SetBool("IsWalking", false);
             animator.Play("Idle", 0, 0f);
         };
+
+        // Get or add required components
+        rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody2D>();
+        }
+        
+        boxCollider = GetComponent<BoxCollider2D>();
+        if (boxCollider == null)
+        {
+            boxCollider = gameObject.AddComponent<BoxCollider2D>();
+            // Set a default size for the collider
+            boxCollider.size = new Vector2(0.8f, 0.8f);
+        }
+
+        // Configure Rigidbody2D for top-down movement
+        rb.gravityScale = 0;
+        rb.drag = 0; // No drag needed for direct movement
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        rb.interpolation = RigidbodyInterpolation2D.Interpolate; // Smoother movement
     }
 
     private void UpdateAnimation(Vector2 input)
@@ -45,7 +69,7 @@ public class FishMarketPlayerController : MonoBehaviour
             if (input.y > 0 && input.y > Mathf.Abs(input.x))
             {
                 SetDirection("Up");
-                animator.Play("Walk_Up", 0); // Force play the walking animation
+                animator.Play("Walk_Up", 0);
             }
             else if (input.y < 0 && -input.y > Mathf.Abs(input.x))
             {
@@ -100,6 +124,16 @@ public class FishMarketPlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        transform.position += new Vector3(movement.x, movement.y, 0) * moveSpeed * Time.fixedDeltaTime;
+        // Set velocity directly for responsive movement
+        if (movement != Vector2.zero)
+        {
+            // Normalize for consistent speed in all directions
+            rb.velocity = movement.normalized * moveSpeed;
+        }
+        else
+        {
+            // Stop immediately when no input
+            rb.velocity = Vector2.zero;
+        }
     }
 } 

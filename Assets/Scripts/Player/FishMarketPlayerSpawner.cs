@@ -30,7 +30,7 @@ public class FishMarketPlayerSpawner : MonoBehaviour
 
         // Get the spawn position from the box collider
         Vector3 spawnPosition = spawnArea.transform.position;
-        spawnPosition.z = -1f; // Set z position to be in front of sellers
+        spawnPosition.z = -5f; // Set z position to -2
 
         Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
     }
