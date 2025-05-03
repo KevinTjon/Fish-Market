@@ -34,6 +34,9 @@ public class FishMarketPlayerController : MonoBehaviour
             animator.Play("Idle", 0, 0f);
         };
 
+        // Add interaction handling
+        playerControls.Player.Interact.performed += ctx => HandleInteraction();
+
         // Get or add required components
         rb = GetComponent<Rigidbody2D>();
         if (rb == null)
@@ -55,6 +58,21 @@ public class FishMarketPlayerController : MonoBehaviour
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         rb.interpolation = RigidbodyInterpolation2D.Interpolate; // Smoother movement
+    }
+
+    private void HandleInteraction()
+    {
+        // Find any nearby interactables
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, 2f);
+        foreach (Collider2D collider in colliders)
+        {
+            MarketStallInteractable interactable = collider.GetComponent<MarketStallInteractable>();
+            if (interactable != null)
+            {
+                interactable.TryInteract();
+                break; // Only interact with the first one found
+            }
+        }
     }
 
     private void UpdateAnimation(Vector2 input)
