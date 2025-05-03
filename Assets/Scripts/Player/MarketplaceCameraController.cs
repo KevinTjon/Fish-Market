@@ -104,7 +104,7 @@ public class MarketplaceCameraController : MonoBehaviour
             transform.position = targetPos;
             lastTargetPosition = targetPos;
             velocity = Vector3.zero;
-            Debug.Log($"Set initial camera position to: {targetPos}");
+            //Debug.Log($"Set initial camera position to: {targetPos}");
         }
         else
         {
@@ -178,7 +178,7 @@ public class MarketplaceCameraController : MonoBehaviour
 
         if (debugMode)
         {
-            Debug.Log($"Camera Update - Position: {transform.position}, Target: {targetPosition}");
+           // Debug.Log($"Camera Update - Position: {transform.position}, Target: {targetPosition}");
         }
     }
 

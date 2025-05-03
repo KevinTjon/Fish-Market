@@ -127,7 +127,11 @@ public class CustomerRepository
             while (reader.Read())
             {
                 int sellerId = reader.GetInt32(0);
-                Customer.FISHRARITY rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), reader.GetString(1));
+                // Parse the rarity string to enum
+                Customer.FISHRARITY rarity = (Customer.FISHRARITY)Enum.Parse(
+                    typeof(Customer.FISHRARITY), 
+                    reader.GetString(1).ToUpper()
+                );
                 float biasValue = reader.GetFloat(2);
                 
                 biases[(sellerId, rarity)] = biasValue;
@@ -160,7 +164,10 @@ public class CustomerRepository
         // Update cache
         if (biasCache.TryGetValue(customerId, out var customerBiases))
         {
-            var rarityEnum = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), rarity);
+            var rarityEnum = (Customer.FISHRARITY)Enum.Parse(
+                typeof(Customer.FISHRARITY), 
+                rarity.ToUpper()
+            );
             customerBiases[(sellerId, rarityEnum)] = biasValue;
         }
     }

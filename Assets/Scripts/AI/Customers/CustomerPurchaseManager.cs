@@ -17,6 +17,7 @@ public class CustomerPurchaseManager : MonoBehaviour
     private Dictionary<int, List<Customer.SellerType>> customerTriedSellers = new Dictionary<int, List<Customer.SellerType>>();
     [SerializeField] private TextMeshProUGUI debugText;
     [SerializeField] private int maxWaitingCustomers = 20; // Maximum number of waiting customers
+    [SerializeField] private float customerProcessingDelay = 2f; // Delay between processing each customer
 
     // Add at class level
     private static List<string> purchaseHistory = new List<string>();
@@ -30,16 +31,57 @@ public class CustomerPurchaseManager : MonoBehaviour
     private Dictionary<Customer.FISHRARITY, List<MarketListing>> listingsCache = new Dictionary<Customer.FISHRARITY, List<MarketListing>>();
     private bool listingsCacheNeedsRefresh = true;
 
+    [Header("Visual Management")]
+    [SerializeField] private CustomerVisualManager visualManager;
+
     private void Awake()
     {
+        Debug.Log("CustomerPurchaseManager Awake - Initializing dependencies...");
+
         customerManager = FindObjectOfType<CustomerManager>();
         if (customerManager == null)
         {
             Debug.LogError("CustomerManager not found!");
         }
+        else
+        {
+            Debug.Log("CustomerManager found and initialized");
+        }
+
         if (purchaseEvaluator == null)
         {
-            Debug.LogError("CustomerPurchaseEvaluator not found!");
+            purchaseEvaluator = GetComponent<CustomerPurchaseEvaluator>();
+            if (purchaseEvaluator == null)
+            {
+                Debug.LogError("CustomerPurchaseEvaluator not found on this GameObject!");
+            }
+            else
+            {
+                Debug.Log("CustomerPurchaseEvaluator found and initialized");
+            }
+        }
+
+        if (visualManager == null)
+        {
+            visualManager = FindObjectOfType<CustomerVisualManager>();
+            if (visualManager == null)
+            {
+                Debug.LogError("CustomerVisualManager not found!");
+            }
+            else
+            {
+                Debug.Log("CustomerVisualManager found and initialized");
+            }
+        }
+
+        // Initialize DatabaseManager reference
+        if (DatabaseManager.Instance == null)
+        {
+            Debug.LogError("DatabaseManager not found!");
+        }
+        else
+        {
+            Debug.Log("DatabaseManager found and initialized");
         }
     }
 
@@ -80,22 +122,52 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     public void ProcessCustomerPurchases()
     {
+        StartCoroutine(ProcessCustomerPurchasesCoroutine());
+    }
+
+    private IEnumerator ProcessCustomerPurchasesCoroutine()
+    {
+        Debug.Log("Starting ProcessCustomerPurchases...");
+        Debug.Log($"Initial state - Waiting customers: {waitingCustomers.Count}, Active customers: {activeCustomers.Count}");
+
+        // First check if there are any listings at all
+        bool hasListings = false;
+        foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+        {
+            var listings = GetListings(rarity);
+            if (listings.Any())
+            {
+                hasListings = true;
+                Debug.Log($"Found {listings.Count} listings for rarity {rarity}");
+                break;
+            }
+        }
+
+        if (!hasListings)
+        {
+            Debug.Log("No listings available in any rarity. Skipping customer processing.");
+            yield break;
+        }
+
         bool shouldGenerateMore;
         int maxGenerationCycles = 2; // Reduced from 3 to 2 cycles
         int generationCycle = 0;
 
         do {
             shouldGenerateMore = false;
+            Debug.Log($"Starting generation cycle {generationCycle + 1}/{maxGenerationCycles}");
             
             // First check if we need to generate more customers
             if (waitingCustomers.Count == 0)
             {
+                Debug.Log("No waiting customers, attempting to generate more...");
                 CheckAndGenerateMoreCustomers();
+                yield return new WaitForSeconds(customerProcessingDelay);
                 // If we still have no customers after generation, then we can return
                 if (waitingCustomers.Count == 0)
                 {
-                    Debug.Log("No customers waiting to make purchases.");
-                    return;
+                    Debug.Log("No customers waiting to make purchases after generation attempt.");
+                    yield break;
                 }
             }
 
@@ -106,13 +178,15 @@ public class CustomerPurchaseManager : MonoBehaviour
             listingsCacheNeedsRefresh = true;
             
             // Pre-load all rarities into cache
+            Debug.Log("Pre-loading listings cache for all rarities...");
             foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
             {
-                GetListings(rarity);
+                var listings = GetListings(rarity);
+                Debug.Log($"Found {listings.Count} listings for rarity {rarity}");
             }
 
             // Process all current waiting customers
-            ProcessCurrentWaitingCustomers();
+            yield return StartCoroutine(ProcessCurrentWaitingCustomersCoroutine());
 
             Debug.Log($"After processing: {waitingCustomers.Count} customers still shopping");
             
@@ -120,10 +194,13 @@ public class CustomerPurchaseManager : MonoBehaviour
             if (generationCycle < maxGenerationCycles)
             {
                 int unsoldListings = GetTotalUnsoldListings();
+                Debug.Log($"Found {unsoldListings} unsold listings (need {unsoldListingsPerCustomer} per customer)");
                 if (unsoldListings >= unsoldListingsPerCustomer) // Only generate if we have enough unsold listings
                 {
                     generationCycle++;
+                    Debug.Log($"Generating more customers in cycle {generationCycle}");
                     CheckAndGenerateMoreCustomers();
+                    yield return new WaitForSeconds(customerProcessingDelay);
                     if (waitingCustomers.Count > 0)
                     {
                         shouldGenerateMore = true;
@@ -131,9 +208,11 @@ public class CustomerPurchaseManager : MonoBehaviour
                 }
             }
         } while (shouldGenerateMore);
+
+        Debug.Log($"ProcessCustomerPurchases complete. Final state - Waiting customers: {waitingCustomers.Count}, Active customers: {activeCustomers.Count}");
     }
 
-    private void ProcessCurrentWaitingCustomers()
+    private IEnumerator ProcessCurrentWaitingCustomersCoroutine()
     {
         for (int i = waitingCustomers.Count - 1; i >= 0; i--)
         {
@@ -145,100 +224,51 @@ public class CustomerPurchaseManager : MonoBehaviour
             int maxSellerVisits = System.Enum.GetValues(typeof(Customer.SellerType)).Length;
             int visitCount = 0;
 
-            while (!customer.HasVisitedAllSellers() && !customer.HasReachedMaxPurchases() && visitCount < maxSellerVisits)
+            while (visitCount < maxSellerVisits)
             {
-                visitCount++;
-                var preferences = customer.GetUnpurchasedPreferences();
-                if (!preferences.Any()) break;
+                // Select a seller to visit
+                int sellerId = SelectSeller(customer, Customer.FISHRARITY.COMMON); // Using COMMON as default for seller selection
+                if (sellerId == -1) break; // No more sellers to visit
 
-                int selectedSellerId = SelectSeller(customer, preferences[0].Rarity);
-                if (selectedSellerId == -1) break;
-
-                bool boughtAnything = false;
-                bool foundDesiredFish = false;
-                
-                // Add a maximum number of purchase attempts per seller
-                int maxPurchaseAttempts = 3;
-                int purchaseAttempts = 0;
-                
-                do
+                // Send customer to the selected stall
+                if (visualManager != null)
                 {
-                    purchaseAttempts++;
-                    bool shouldContinueWithSeller = true;
-                    
-                    while (shouldContinueWithSeller && !customer.HasReachedMaxPurchases() && purchaseAttempts <= maxPurchaseAttempts)
-                    {
-                        shouldContinueWithSeller = false;
-                        preferences = customer.GetUnpurchasedPreferences();
-                        
-                        foreach (var preference in preferences)
-                        {
-                            var listings = GetListings(preference.Rarity)
-                                .Where(l => !l.IsSold && 
-                                       l.SellerID == selectedSellerId && 
-                                       l.FishName == preference.FishName)
-                                .ToList();
-
-                            if (listings.Any())
-                            {
-                                foundDesiredFish = true;
-                                
-                                var decision = purchaseEvaluator.EvaluatePurchase(
-                                    customer,
-                                    listings
-                                );
-
-                                if (decision.WillPurchase && !customer.HasReachedMaxPurchases())
-                                {
-                                    customer.Budget -= (int)decision.SelectedListing.ListedPrice;
-                                    if (MarkListingAsSold(decision.SelectedListing.ListingID, customer.CustomerID))
-                                    {
-                                        madeAnyPurchase = true;
-                                        boughtAnything = true;
-                                        shouldContinueWithSeller = true;
-
-                                        // Calculate bias change based on preference score
-                                        float biasChange = preference.PreferenceScore < 0.5f ? -0.1f : 0.1f;
-                                        // Scale bias change based on how far from neutral (0.5) the preference was
-                                        biasChange *= Mathf.Abs(preference.PreferenceScore - 0.5f) * 2f;
-                                        
-                                        AdjustSellerBias(customer, selectedSellerId, preference.Rarity, biasChange, 
-                                            $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) for {decision.SelectedListing.ListedPrice} gold from Seller {selectedSellerId}");
-                                        
-                                        // Update the HasPurchased status in the database
-                                        Debug.Log($"Attempting to update HasPurchased for Customer {customer.CustomerID}, Fish {decision.SelectedListing.FishName}");
-                                        bool updateSuccess = DatabaseManager.Instance.UpdateCustomerPreference(
-                                            customer.CustomerID, 
-                                            decision.SelectedListing.FishName, 
-                                            true
-                                        );
-                                        Debug.Log($"HasPurchased update {(updateSuccess ? "succeeded" : "failed")}");
-                                        
-                                        customerHistory.AppendLine($"Customer {customer.CustomerID} ({customer.Type}): " +
-                                            $"Bought {decision.SelectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) " +
-                                            $"for {decision.SelectedListing.ListedPrice} gold from Seller {selectedSellerId} " +
-                                            $"(New Bias: {customer.GetBias(selectedSellerId, preference.Rarity):F2})");
-                                        
-                                        customer.RecordPurchase(
-                                            decision.SelectedListing.FishName,
-                                            decision.SelectedListing.ListedPrice,
-                                            decision.SelectedListing.SellerID
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } while (boughtAnything && !customer.HasReachedMaxPurchases() && purchaseAttempts < maxPurchaseAttempts);
-
-                if (!foundDesiredFish)
-                {
-                    AdjustSellerBias(customer, selectedSellerId, preferences[0].Rarity, -0.15f, $"No desired fish available");
-                    customerHistory.AppendLine($"Customer {customer.CustomerID}: Decreased bias for Seller {selectedSellerId} " +
-                        $"(New Bias: {customer.GetBias(selectedSellerId, preferences[0].Rarity):F2}) - No desired fish available");
+                    visualManager.SendCustomerToStall(customer.CustomerID, sellerId);
+                    yield return new WaitForSeconds(customerProcessingDelay); // Wait for movement
                 }
 
-                customer.AddVisitedSeller(selectedSellerId);
+                customer.AddVisitedSeller(sellerId);
+                visitCount++;
+
+                // Get listings for this seller
+                var listings = GetListings(Customer.FISHRARITY.COMMON)
+                    .Where(l => l.SellerID == sellerId && !l.IsSold)
+                    .ToList();
+
+                // Evaluate purchase
+                var decision = purchaseEvaluator.EvaluatePurchase(customer, listings);
+                if (decision.WillPurchase && decision.SelectedListing != null)
+                {
+                    // Handle purchase success
+                    HandlePurchaseSuccess(customer, decision.SelectedListing);
+                    madeAnyPurchase = true;
+
+                    if (visualManager != null)
+                    {
+                        visualManager.CustomerFinishedAtStall(customer.CustomerID, true);
+                        yield return new WaitForSeconds(customerProcessingDelay); // Wait for movement
+                    }
+                    break;
+                }
+                else
+                {
+                    // Handle purchase failure
+                    if (visualManager != null)
+                    {
+                        visualManager.CustomerFinishedAtStall(customer.CustomerID, false);
+                        yield return new WaitForSeconds(customerProcessingDelay); // Wait for movement
+                    }
+                }
             }
 
             // Always remove customer after processing
@@ -259,6 +289,7 @@ public class CustomerPurchaseManager : MonoBehaviour
             }
 
             purchaseHistory.Add(customerHistory.ToString().TrimEnd());
+            yield return new WaitForSeconds(customerProcessingDelay); // Wait between customers
         }
     }
 
@@ -274,6 +305,8 @@ public class CustomerPurchaseManager : MonoBehaviour
 
     private void CheckAndGenerateMoreCustomers()
     {
+        Debug.Log($"Starting CheckAndGenerateMoreCustomers - Current active customers: {activeCustomers.Count}/{maxTotalCustomers}");
+        
         // Check total customer count first
         if (activeCustomers.Count >= maxTotalCustomers)
         {
@@ -283,6 +316,7 @@ public class CustomerPurchaseManager : MonoBehaviour
 
         // Calculate total remaining potential purchases across all active customers
         int totalRemainingPurchases = activeCustomers.Sum(c => c.MaxPurchases - c.PurchaseHistory.Count);
+        Debug.Log($"Total remaining potential purchases: {totalRemainingPurchases}");
         
         if (totalRemainingPurchases >= 6)
         {
@@ -291,6 +325,8 @@ public class CustomerPurchaseManager : MonoBehaviour
         }
 
         int unsoldListings = GetTotalUnsoldListings();
+        Debug.Log($"Found {unsoldListings} unsold listings (need {unsoldListingsPerCustomer} per customer)");
+        
         if (unsoldListings >= unsoldListingsPerCustomer) // Only generate if we have enough unsold listings
         {
             // Calculate new customers needed (1 per 5 unsold listings)
@@ -304,6 +340,8 @@ public class CustomerPurchaseManager : MonoBehaviour
                 maxPossibleNewCustomers
             );
 
+            Debug.Log($"Calculated customers to add: {customersToAdd} (Max possible: {maxPossibleNewCustomers}, Based on listings: {unsoldListings / unsoldListingsPerCustomer})");
+
             if (customersToAdd > 0)
             {
                 Debug.Log($"Generating {customersToAdd} new customers " +
@@ -315,6 +353,10 @@ public class CustomerPurchaseManager : MonoBehaviour
                 
                 // Generate the new customers
                 customerManager.GenerateCustomersForCurrentDay(customersToAdd, rarityWeights);
+            }
+            else
+            {
+                Debug.Log("No new customers needed based on calculations");
             }
         }
         else
@@ -390,7 +432,7 @@ public class CustomerPurchaseManager : MonoBehaviour
                 ListingID = Convert.ToInt32(row["ListingID"]),
                 FishName = row["FishName"].ToString(),
                 ListedPrice = Convert.ToSingle(row["ListedPrice"]),
-                Rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), row["Rarity"].ToString()),
+                Rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), row["Rarity"].ToString().ToUpper()),
                 SellerID = Convert.ToInt32(row["SellerID"]),
                 IsSold = false
             });
@@ -413,7 +455,13 @@ public class CustomerPurchaseManager : MonoBehaviour
     {
         Debug.Log($"Adding customer {customer.CustomerID} to active and waiting customers");
         activeCustomers.Add(customer);
-        waitingCustomers.Add(customer);  // Add to waiting customers as well
+        waitingCustomers.Add(customer);
+
+        // Spawn visual representation
+        if (visualManager != null)
+        {
+            visualManager.SpawnCustomer(customer);
+        }
     }
 
     public Dictionary<string, float> GetHistoricalAveragePrices(Customer.FISHRARITY rarity)
@@ -657,5 +705,42 @@ public class CustomerPurchaseManager : MonoBehaviour
         }
 
         return rarityWeights;
+    }
+
+    private void HandlePurchaseSuccess(Customer customer, MarketListing selectedListing)
+    {
+        customer.Budget -= (int)selectedListing.ListedPrice;
+        if (MarkListingAsSold(selectedListing.ListingID, customer.CustomerID))
+        {
+            // Get the preference that matched this purchase
+            var preference = customer.GetUnpurchasedPreferences()
+                .FirstOrDefault(p => p.FishName == selectedListing.FishName);
+
+            if (preference != null)
+            {
+                // Calculate bias change based on preference score
+                float biasChange = preference.PreferenceScore < 0.5f ? -0.1f : 0.1f;
+                // Scale bias change based on how far from neutral (0.5) the preference was
+                biasChange *= Mathf.Abs(preference.PreferenceScore - 0.5f) * 2f;
+                
+                AdjustSellerBias(customer, selectedListing.SellerID, preference.Rarity, biasChange, 
+                    $"Bought {selectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) for {selectedListing.ListedPrice} gold from Seller {selectedListing.SellerID}");
+                
+                // Update the HasPurchased status in the database
+                Debug.Log($"Attempting to update HasPurchased for Customer {customer.CustomerID}, Fish {selectedListing.FishName}");
+                bool updateSuccess = DatabaseManager.Instance.UpdateCustomerPreference(
+                    customer.CustomerID, 
+                    selectedListing.FishName, 
+                    true
+                );
+                Debug.Log($"HasPurchased update {(updateSuccess ? "succeeded" : "failed")}");
+            }
+
+            customer.RecordPurchase(
+                selectedListing.FishName,
+                selectedListing.ListedPrice,
+                selectedListing.SellerID
+            );
+        }
     }
 }

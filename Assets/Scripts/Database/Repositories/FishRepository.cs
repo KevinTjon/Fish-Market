@@ -191,7 +191,9 @@ public class FishRepository
             FROM Fish 
             WHERE Rarity = @rarity";
 
-        var parameters = new Dictionary<string, object> { { "@rarity", rarity } };
+        // Convert rarity to title case (e.g., "RARE" -> "Rare")
+        string titleCaseRarity = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(rarity.ToLower());
+        var parameters = new Dictionary<string, object> { { "@rarity", titleCaseRarity } };
 
         DbManager.ExecuteReader(sql, reader =>
         {
@@ -205,7 +207,10 @@ public class FishRepository
             }
         }, parameters);
 
-        QueryCache.Instance.Set(cacheKey, fishList, TimeSpan.FromMinutes(5));
+        if (fishList.Count > 0)
+        {
+            QueryCache.Instance.Set(cacheKey, fishList, TimeSpan.FromMinutes(5));
+        }
         return fishList;
     }
 

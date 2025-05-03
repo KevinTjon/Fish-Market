@@ -32,8 +32,10 @@ public class EndDayManager : MonoBehaviour
     [SerializeField] private FisherAIManager fisherAIManager;
     [SerializeField] private MarketPriceAdjuster marketPriceAdjuster;
     [SerializeField] private TextMeshProUGUI dayText; // Reference to UI text showing current day
+    [SerializeField] private float customerProcessingDelay = 2f; // Delay between customer processing to allow for movement
     
     private int currentDay = 1;
+    private bool isProcessingCustomers = false;
 
     private void Awake()
     {
@@ -63,12 +65,81 @@ public class EndDayManager : MonoBehaviour
         if (marketPriceAdjuster == null)
             Debug.LogError("MarketPriceAdjuster not found!");
 
+        // Initialize MarketPriceInitializer if not set
+        if (marketPriceInitializer == null)
+        {
+            marketPriceInitializer = FindObjectOfType<MarketPriceInitializer>();
+            if (marketPriceInitializer == null)
+            {
+                Debug.LogError("MarketPriceInitializer not found in scene! Creating one...");
+                GameObject obj = new GameObject("MarketPriceInitializer");
+                marketPriceInitializer = obj.AddComponent<MarketPriceInitializer>();
+                Debug.Log("Created new MarketPriceInitializer");
+            }
+            else
+            {
+                Debug.Log("MarketPriceInitializer found and initialized");
+            }
+        }
+
+        // Initialize CustomerPurchaseManager if not set
+        if (purchaseManager == null)
+        {
+            purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
+            if (purchaseManager == null)
+            {
+                Debug.LogError("CustomerPurchaseManager not found in scene!");
+            }
+            else
+            {
+                Debug.Log("CustomerPurchaseManager found and initialized");
+            }
+        }
+
+        // Initialize CustomerManager if not set
+        if (customerManager == null)
+        {
+            customerManager = FindObjectOfType<CustomerManager>();
+            if (customerManager == null)
+            {
+                Debug.LogError("CustomerManager not found in scene!");
+            }
+            else
+            {
+                Debug.Log("CustomerManager found and initialized");
+            }
+        }
+
+        // Initialize FisherAIManager if not set
+        if (fisherAIManager == null)
+        {
+            fisherAIManager = FindObjectOfType<FisherAIManager>();
+            if (fisherAIManager == null)
+            {
+                Debug.LogError("FisherAIManager not found in scene! Creating one...");
+                GameObject obj = new GameObject("FisherAIManager");
+                fisherAIManager = obj.AddComponent<FisherAIManager>();
+                Debug.Log("Created new FisherAIManager");
+            }
+            else
+            {
+                Debug.Log("FisherAIManager found and initialized");
+            }
+        }
+
         UpdateDayText();
     }
 
     public void ProcessDay()
     {
-        StartCoroutine(ProcessDaySequence());
+        if (!isProcessingCustomers)
+        {
+            StartCoroutine(ProcessDaySequence());
+        }
+        else
+        {
+            Debug.Log("Already processing customers, please wait...");
+        }
     }
 
     public void ResetToDay1()
@@ -99,6 +170,7 @@ public class EndDayManager : MonoBehaviour
 
     private IEnumerator ProcessDaySequence()
     {
+        isProcessingCustomers = true;
         Debug.Log($"Processing Day {currentDay}...");
 
         // Generate initial customers only on day 1
@@ -106,7 +178,7 @@ public class EndDayManager : MonoBehaviour
         {
             Debug.Log("Day 1: Generating initial customers...");
             customerManager.GenerateInitialCustomers(5);
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(customerProcessingDelay);
 
             // Initialize first day prices
             Debug.Log("Day 1: Generating initial market prices...");
@@ -119,13 +191,37 @@ public class EndDayManager : MonoBehaviour
         fisherAIManager.GenerateAllFishersCatch();
         yield return new WaitForSeconds(0.1f);
 
-        // Process purchases
-        Debug.Log("Processing customer purchases...");
-        purchaseManager.ProcessCustomerPurchases();
-        
-        // Optional: Display debug information
-        string debugInfo = purchaseManager.DebugRemainingShoppingLists();
-        Debug.Log($"Customer Status after purchases:\n{debugInfo}");
+        // Check if there are any listings before processing purchases
+        var listings = DatabaseManager.Instance.GetUnsoldListings("COMMON"); // Check at least common fish
+        Debug.Log($"Found {listings.Count} unsold common fish listings before processing purchases");
+
+        if (listings.Count == 0)
+        {
+            Debug.LogWarning("No listings available! Skipping customer purchases.");
+        }
+        else
+        {
+            // Process purchases
+            Debug.Log("Processing customer purchases...");
+            Debug.Log($"Active customers before processing: {purchaseManager.GetActiveCustomers().Count}");
+            Debug.Log($"Waiting customers before processing: {purchaseManager.GetWaitingCustomers().Count}");
+            
+            purchaseManager.ProcessCustomerPurchases();
+            
+            // Wait for customers to finish their movement
+            while (purchaseManager.GetActiveCustomers().Count > 0)
+            {
+                Debug.Log($"Waiting for {purchaseManager.GetActiveCustomers().Count} customers to finish...");
+                yield return new WaitForSeconds(customerProcessingDelay);
+            }
+            
+            Debug.Log($"Active customers after processing: {purchaseManager.GetActiveCustomers().Count}");
+            Debug.Log($"Waiting customers after processing: {purchaseManager.GetWaitingCustomers().Count}");
+            
+            // Optional: Display debug information
+            string debugInfo = purchaseManager.DebugRemainingShoppingLists();
+            Debug.Log($"Customer Status after purchases:\n{debugInfo}");
+        }
 
         // Generate next day's market prices after purchases are processed
         if (currentDay >= 1)
@@ -141,11 +237,13 @@ public class EndDayManager : MonoBehaviour
 
             // Clear the listings cache in purchase manager
             purchaseManager.ClearListingsCache();
+            Debug.Log("Cleared listings cache in purchase manager");
         }
 
         currentDay++;
         UpdateDayText();
         Debug.Log($"Day {currentDay-1} processing complete! Total active customers: {purchaseManager.GetActiveCustomers().Count}");
+        isProcessingCustomers = false;
     }
 
     // For testing in Unity Editor

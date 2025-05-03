@@ -86,8 +86,12 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
     // Main evaluation method - updated to use fish preferences
     public PurchaseDecision EvaluatePurchase(Customer customer, List<CustomerPurchaseManager.MarketListing> listings)
     {
+        Debug.Log($"Evaluating purchase for customer {customer.CustomerID} (Type: {customer.Type})");
+        Debug.Log($"Available listings: {listings?.Count ?? 0}");
+
         if (listings == null || !listings.Any())
         {
+            Debug.Log("No listings available for evaluation");
             return new PurchaseDecision
             {
                 WillPurchase = false,
@@ -97,8 +101,11 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
 
         // Get customer's unpurchased preferences in order of preference
         var preferences = customer.GetUnpurchasedPreferences();
+        Debug.Log($"Customer has {preferences.Count()} unpurchased preferences");
+
         if (!preferences.Any())
         {
+            Debug.Log("Customer has no remaining unpurchased preferences");
             foreach (var listing in listings)
             {
                 purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.ReachedPurchaseLimit);
@@ -113,25 +120,36 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
         // For each preference, try to find a suitable listing
         foreach (var preference in preferences)
         {
+            Debug.Log($"Evaluating preference for {preference.FishName} (Score: {preference.PreferenceScore:F2}, Rarity: {preference.Rarity})");
+            
             var matchingListings = listings
                 .Where(l => l.FishName == preference.FishName && !l.IsSold)
                 .OrderBy(l => l.ListedPrice)
                 .ThenByDescending(l => customer.GetBias(l.SellerID, preference.Rarity))
                 .ToList();
 
+            Debug.Log($"Found {matchingListings.Count} matching listings for {preference.FishName}");
+
             if (!matchingListings.Any())
+            {
+                Debug.Log($"No matching listings found for {preference.FishName}");
                 continue;
+            }
 
             foreach (var listing in matchingListings)
             {
+                Debug.Log($"Evaluating listing {listing.ListingID} - Price: {listing.ListedPrice}, Seller: {listing.SellerID}");
+
                 // For wealthy customers, prioritize preferences over price
                 if (customer.Type == Customer.CUSTOMERTYPE.WEALTHY)
                 {
+                    Debug.Log($"Wealthy customer evaluation - Budget: {customer.Budget}, PreferenceScore: {preference.PreferenceScore:F2}");
                     // Changed condition to be more lenient for wealthy customers
                     if (listing.ListedPrice <= customer.Budget && 
                         (preference.PreferenceScore >= 0.4f || // Lowered threshold
                          preference.Rarity >= Customer.FISHRARITY.EPIC)) // Always consider EPIC and LEGENDARY
                     {
+                        Debug.Log("Wealthy customer accepting purchase");
                         return new PurchaseDecision
                         {
                             WillPurchase = true,
@@ -139,12 +157,15 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
                             Reason = $"Wealthy customer accepting {preference.Rarity} fish ({preference.FishName}) within budget"
                         };
                     }
+                    Debug.Log("Wealthy customer rejected listing - recording reason");
                     purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.OutOfBudget);
                     continue;
                 }
 
                 var (minWTP, maxWTP) = PriceThresholds[customer.Type];
                 float sellerBias = customer.GetBias(listing.SellerID, preference.Rarity);
+
+                Debug.Log($"Price thresholds - Min: {minWTP:F2}, Max: {maxWTP:F2}, Seller Bias: {sellerBias:F2}");
 
                 // Adjust WTP based on preference score, seller bias, and rarity
                 float rarityMultiplier = preference.Rarity switch
@@ -159,15 +180,20 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
                 float adjustedMaxWTP = maxWTP * (1 + preference.PreferenceScore) * (1 + sellerBias * 0.2f) * rarityMultiplier;
                 float adjustedMinWTP = minWTP * (1 - (1 - preference.PreferenceScore) * 0.2f);
 
+                Debug.Log($"Adjusted thresholds - Min: {adjustedMinWTP:F2}, Max: {adjustedMaxWTP:F2}, Rarity Multiplier: {rarityMultiplier:F2}");
+
                 // Get market average price for this rarity
                 var marketAverage = purchaseManager.GetHistoricalAveragePrices(preference.Rarity)
                     .GetValueOrDefault(listing.FishName, listing.ListedPrice);
 
                 float priceRatio = listing.ListedPrice / marketAverage;
 
+                Debug.Log($"Price evaluation - Market Average: {marketAverage:F2}, Listed Price: {listing.ListedPrice:F2}, Ratio: {priceRatio:F2}");
+
                 // Check if price is acceptable and within budget
                 if (priceRatio >= adjustedMinWTP && priceRatio <= adjustedMaxWTP && listing.ListedPrice <= customer.Budget)
                 {
+                    Debug.Log("Purchase accepted - price and preferences match criteria");
                     return new PurchaseDecision
                     {
                         WillPurchase = true,
@@ -178,6 +204,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
                 }
                 
                 // Record rejection reason
+                Debug.Log("Purchase rejected - recording reason");
                 if (listing.ListedPrice > customer.Budget)
                 {
                     purchaseManager.RecordRejectionReason(listing.ListingID, customer.CustomerID, CustomerPurchaseManager.RejectionReason.OutOfBudget);
@@ -193,6 +220,7 @@ public class CustomerPurchaseEvaluator : MonoBehaviour
             }
         }
 
+        Debug.Log("No acceptable listings found after evaluating all preferences");
         return new PurchaseDecision
         {
             WillPurchase = false,

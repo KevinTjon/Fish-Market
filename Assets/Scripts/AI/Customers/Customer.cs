@@ -68,6 +68,7 @@ public class Customer
     public List<FishPreference> FishPreferences { get; private set; } = new List<FishPreference>();
     public List<SellerBias> SellerPreferences { get; private set; }
     public List<Purchase> PurchaseHistory { get; private set; } = new List<Purchase>();
+    public SellerType CurrentSeller { get; private set; }
 
     private Dictionary<(int sellerId, FISHRARITY rarity), float> biases = 
         new Dictionary<(int sellerId, FISHRARITY rarity), float>();
@@ -280,6 +281,7 @@ public class Customer
     public void AddVisitedSeller(int sellerId)
     {
         visitedSellers.Add(sellerId);
+        CurrentSeller = (SellerType)sellerId;
     }
 
     public bool HasVisitedSeller(int sellerId)

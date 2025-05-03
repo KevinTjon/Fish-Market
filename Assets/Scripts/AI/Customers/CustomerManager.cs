@@ -101,7 +101,11 @@ public class CustomerManager : MonoBehaviour
         foreach (var bias in biases)
         {
             int sellerId = Convert.ToInt32(bias["SellerID"]);
-            Customer.FISHRARITY rarity = (Customer.FISHRARITY)Enum.Parse(typeof(Customer.FISHRARITY), bias["Rarity"].ToString());
+            // Parse the rarity string to enum
+            Customer.FISHRARITY rarity = (Customer.FISHRARITY)Enum.Parse(
+                typeof(Customer.FISHRARITY), 
+                bias["Rarity"].ToString().ToUpper()
+            );
             float biasValue = Convert.ToSingle(bias["BiasValue"]);
                     
                     customer.SetBias(sellerId, rarity, biasValue);
@@ -325,7 +329,7 @@ public class CustomerManager : MonoBehaviour
 
     public void GenerateInitialCustomers(int count = 5)
     {
-        Debug.Log($"Generating {count} initial customers for new game");
+        //Debug.Log($"Generating {count} initial customers for new game");
         
         // Clear existing customers
         allCustomers.Clear();
@@ -343,8 +347,8 @@ public class CustomerManager : MonoBehaviour
         int collectorCount = Mathf.RoundToInt(count * customerDistribution[2]);
         int wealthyCount = count - (budgetCount + casualCount + collectorCount); // Remainder goes to wealthy
         
-        Debug.Log($"Generating exact distribution - Budget: {budgetCount}, Casual: {casualCount}, " +
-                 $"Collector: {collectorCount}, Wealthy: {wealthyCount}");
+        // Debug.Log($"Generating exact distribution - Budget: {budgetCount}, Casual: {casualCount}, " +
+        //          $"Collector: {collectorCount}, Wealthy: {wealthyCount}");
         
         // Create list of customer types to generate
         List<Customer.CUSTOMERTYPE> typesToGenerate = new List<Customer.CUSTOMERTYPE>();

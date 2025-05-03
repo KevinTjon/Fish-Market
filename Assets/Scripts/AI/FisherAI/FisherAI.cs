@@ -58,6 +58,7 @@ public abstract class FisherAI
 
     public virtual List<string> GenerateFishCatch()
     {
+        //Debug.Log($"{aiName} starting to generate fish catch...");
         List<string> caughtFish = new List<string>();
         string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
 
@@ -67,21 +68,30 @@ public abstract class FisherAI
             {
                 connection.Open();
                 int fishToGenerate = DetermineNumberOfFish();
+                //Debug.Log($"{aiName} will generate {fishToGenerate} fish");
 
                 for (int i = 0; i < fishToGenerate; i++)
                 {
                     string rarity = SelectFishRarity();
+                    // Convert rarity to title case (e.g., "RARE" -> "Rare")
+                    string titleCaseRarity = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(rarity.ToLower());
+                    //Debug.Log($"{aiName} selected rarity: {titleCaseRarity} for fish {i + 1}");
                     
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = "SELECT Name FROM Fish WHERE Rarity = @rarity ORDER BY RANDOM() LIMIT 1";
-                        command.Parameters.AddWithValue("@rarity", rarity);
+                        command.Parameters.AddWithValue("@rarity", titleCaseRarity);
                         
                         var result = command.ExecuteScalar();
                         if (result != null)
                         {
                             string fishName = result.ToString();
                             caughtFish.Add(fishName);
+                            //Debug.Log($"{aiName} caught a {titleCaseRarity} fish: {fishName}");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"{aiName} failed to find a fish of rarity {titleCaseRarity} in the database");
                         }
                     }
                 }
@@ -89,9 +99,10 @@ public abstract class FisherAI
         }
         catch (Exception e)
         {
-            Debug.LogError($"Database error: {e.Message}");
+            Debug.LogError($"Database error in GenerateFishCatch for {aiName}: {e.Message}");
         }
 
+        //Debug.Log($"{aiName} finished generating catch. Total fish caught: {caughtFish.Count}");
         return caughtFish;
     }
 
@@ -137,11 +148,11 @@ public abstract class FisherAI
                         
                         basePrice = rarity switch
                         {
-                            "COMMON" => 10f,
-                            "UNCOMMON" => 30f,
-                            "RARE" => 50f,
-                            "EPIC" => 80f,
-                            "LEGENDARY" => 150f,
+                            "Common" => 10f,
+                            "Uncommon" => 30f,
+                            "Rare" => 50f,
+                            "Epic" => 80f,
+                            "Legendary" => 150f,
                             _ => 10f
                         };
 
@@ -219,6 +230,7 @@ public abstract class FisherAI
 
     public void CreateMarketListings(List<string> fishNames)
     {
+        //Debug.Log($"{aiName} starting to create market listings for {fishNames.Count} fish...");
         string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
 
         try
@@ -235,9 +247,11 @@ public abstract class FisherAI
                         command.CommandText = "SELECT Rarity FROM Fish WHERE Name = @fishName";
                         command.Parameters.AddWithValue("@fishName", fishName);
                         string rarity = (string)command.ExecuteScalar();
+                        //Debug.Log($"{aiName} got rarity {rarity} for fish {fishName}");
 
                         float basePrice = GetBasePrice(fishName);
                         float sellPrice = DetermineSellPrice(basePrice);
+                        //Debug.Log($"{aiName} pricing {fishName}: Base price {basePrice}, Sell price {sellPrice}");
 
                         command.CommandText = @"
                             INSERT INTO MarketListings 
@@ -246,18 +260,28 @@ public abstract class FisherAI
                                 (@fishName, @rarity, @listedPrice, @sellerID, 0)";
 
                         command.Parameters.AddWithValue("@fishName", fishName);
-                        command.Parameters.AddWithValue("@rarity", rarity);
+                        command.Parameters.AddWithValue("@rarity", rarity.ToUpper());
                         command.Parameters.AddWithValue("@listedPrice", sellPrice);
                         command.Parameters.AddWithValue("@sellerID", sellerID);
 
-                        command.ExecuteNonQuery();
+                        int result = command.ExecuteNonQuery();
+                        if (result > 0)
+                        {
+                            //Debug.Log($"{aiName} successfully created market listing for {fishName} at {sellPrice} gold");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"{aiName} failed to create market listing for {fishName}");
+                        }
                     }
                 }
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"Error creating market listing: {e.Message}");
+            Debug.LogError($"Error creating market listing for {aiName}: {e.Message}");
         }
+
+        //Debug.Log($"{aiName} finished creating market listings");
     }
 } 

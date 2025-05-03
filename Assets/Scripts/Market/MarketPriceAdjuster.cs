@@ -68,12 +68,12 @@ public class MarketPriceAdjuster : MonoBehaviour
 
     public void UpdateAllPrices()
     {
-        Debug.Log("Starting daily price updates...");
+        //Debug.Log("Starting daily price updates...");
 
         // Get all fish types from database
         var fishTypes = GetAllFishTypes();
         int nextDay = GetNextMarketDay(); // Get next day once for all fish
-        Debug.Log($"Updating prices for day {nextDay}");
+        //Debug.Log($"Updating prices for day {nextDay}");
         
         foreach (var fish in fishTypes)
         {
@@ -88,8 +88,8 @@ public class MarketPriceAdjuster : MonoBehaviour
                 // Store new price in database with the same next day value
                 StoreFishPrice(fish.name, newPrice, nextDay);
                 
-                Debug.Log($"Updated price for {fish.name}: {metrics.CurrentBasePrice:F2} -> {newPrice:F2} " +
-                         $"(Preference Score: {metrics.PreferenceScore:F2}, Sales Score: {metrics.SalesScore:F2})");
+                //Debug.Log($"Updated price for {fish.name}: {metrics.CurrentBasePrice:F2} -> {newPrice:F2} " +
+                 //        $"(Preference Score: {metrics.PreferenceScore:F2}, Sales Score: {metrics.SalesScore:F2})");
             }
             catch (Exception e)
             {
@@ -97,7 +97,7 @@ public class MarketPriceAdjuster : MonoBehaviour
             }
         }
 
-        Debug.Log("Daily price updates completed.");
+        //Debug.Log("Daily price updates completed.");
     }
 
     private List<(string name, Customer.FISHRARITY rarity)> GetAllFishTypes()
@@ -112,7 +112,7 @@ public class MarketPriceAdjuster : MonoBehaviour
                     string name = reader.GetString(0);
                     Customer.FISHRARITY rarity = (Customer.FISHRARITY)Enum.Parse(
                         typeof(Customer.FISHRARITY), 
-                        reader.GetString(1)
+                        reader.GetString(1).ToUpper()
                     );
                     fishTypes.Add((name, rarity));
                 }
@@ -420,10 +420,10 @@ public class MarketPriceAdjuster : MonoBehaviour
                 maxPrice
             );
 
-            Debug.Log($"Price adjustment for {metrics.FishName}: " +
-                     $"Current: {metrics.CurrentBasePrice:F0} -> New: {newPrice:F0} " +
-                     $"(Change: {(newPrice - metrics.CurrentBasePrice):F0}, " +
-                     $"Min Change: {minPriceChange:F0}, Max Change: {maxChange:F0})");
+            // Debug.Log($"Price adjustment for {metrics.FishName}: " +
+            //          $"Current: {metrics.CurrentBasePrice:F0} -> New: {newPrice:F0} " +
+            //          $"(Change: {(newPrice - metrics.CurrentBasePrice):F0}, " +
+            //          $"Min Change: {minPriceChange:F0}, Max Change: {maxChange:F0})");
 
             return newPrice;
         }
@@ -445,7 +445,7 @@ public class MarketPriceAdjuster : MonoBehaviour
             price = RarityPriceRanges[fishRarity].min; // Use minimum price as fallback
         }
         
-        Debug.Log($"Storing price for {fishName}: {price} gold (Day {day})");
+        //Debug.Log($"Storing price for {fishName}: {price} gold (Day {day})");
         
         databaseManager.ExecuteNonQuery(
             @"INSERT INTO MarketPrices (FishName, Day, Price)
@@ -468,7 +468,7 @@ public class MarketPriceAdjuster : MonoBehaviour
         
         return (Customer.FISHRARITY)System.Enum.Parse(
             typeof(Customer.FISHRARITY), 
-            result.ToString()
+            result.ToString().ToUpper()
         );
     }
 

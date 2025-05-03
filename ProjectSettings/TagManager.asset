@@ -7,6 +7,8 @@ TagManager:
   - Fish
   - Cooler
   - Seller
+  - PlayerStall
+  - PlayerInteraction
   layers:
   - Default
   - TransparentFX
@@ -14,7 +16,7 @@ TagManager:
   - Environment
   - Water
   - UI
-  - 
+  - Ground
   - Fish
   - Boat
   - Hookable
