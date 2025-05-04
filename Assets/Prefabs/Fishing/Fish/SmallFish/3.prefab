@@ -11,9 +11,7 @@ GameObject:
   - component: {fileID: 4945207828635797447}
   - component: {fileID: 1737709261903671623}
   - component: {fileID: 3282330981470976938}
-  - component: {fileID: 7896484361107161292}
-  - component: {fileID: 2487256511649670671}
-  - component: {fileID: 5216722568664285801}
+  - component: {fileID: 2783347261432893872}
   m_Layer: 9
   m_Name: 3
   m_TagString: Fish
@@ -96,10 +94,10 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0.17166762, y: -0.012261982}
   serializedVersion: 2
-  m_Radius: 0.375
---- !u!114 &7896484361107161292
+  m_Radius: 0.029621199
+--- !u!114 &2783347261432893872
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -108,68 +106,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 2905340178631796857}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 420f6b7e1cadf6945862b5a80d70c68a, type: 3}
+  m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishType: {fileID: 0}
-  behavior: {fileID: 11400000, guid: 6c0cef1474fa5ff46ae012a7b4b3f220, type: 2}
-  fishLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  baitLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  showDebugRanges: 1
---- !u!114 &2487256511649670671
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2905340178631796857}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7594212a842a0cd438761e6c935ecd3a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawner: {fileID: 0}
-  boundaryArea: {fileID: 0}
-  boundaryForce: 5
-  boundaryTurnSpeed: 2
-  edgeBuffer: 2
-  hardBoundaryBuffer: 0.5
-  returnToCenterForce: 2
-  boundaryExponent: 2
-  baitChaseSpeedMultiplier: 2
-  baitChaseTurnSpeedMultiplier: 4
-  directionChangeSpeed: 0.1
-  minSpeedMultiplier: 0.5
-  maxSpeedMultiplier: 1.5
-  maxTurnSpeed: 2
-  minimumSpeed: 1
---- !u!114 &5216722568664285801
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2905340178631796857}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18a38fb2c43dc92479381b60d1379a98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  schoolRadius: 5
-  separationRadius: 1
-  maxSchoolSize: 10
-  optimalSchoolDistance: 2
-  predatorDetectionRadius: 2
-  panicSpeed: 2
-  minPredatorSize: 1.2
-  cohesionWeight: 1.5
-  alignmentWeight: 1.2
-  separationWeight: 1.5
-  predatorAvoidWeight: 3
+  displayName: Golden dorado
+  serializedSize: 2
+  weight: 1
+  swimSpeed: 3
+  chaseSpeed: 5
+  turnSpeed: 2
+  boundaryInfluenceDistance: 1
+  horizontalBias: 1.5
+  verticalMovementRange: 2
+  verticalMovementSpeed: 0.5
+  baitDetectionRadius: 5
+  minBaitChaseDistance: 0.5
+  interactionRadius: 5
+  minSeparationDistance: 1.5
+  separationWeight: 2
+  alignmentWeight: 1
+  cohesionWeight: 1
+  baseForwardWeight: 1.2
+  randomMovementWeight: 0.3
+  randomMovementInterval: 2
+  isSchooling: 0
+  schoolingRadius: 5
+  emergencySeperationForce: 5
+  emergencySeperationDistance: 0.5
+  showDebugGizmos: 0
 --- !u!1 &7667779802766240198
 GameObject:
   m_ObjectHideFlags: 0

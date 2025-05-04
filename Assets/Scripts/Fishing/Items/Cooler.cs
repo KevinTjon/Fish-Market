@@ -7,13 +7,11 @@ public class Cooler : MonoBehaviour
     private int count;
     public int Count => count;
 
-    private readonly float maxWeight = 5f;
-    private float currentWeight;
-
+    private readonly int maxFishCount = 5;
 
     private void Awake()
     {
-        currentWeight = 0f;
+        // currentWeight = 0f;
     }
 
     /// <summary>
@@ -23,15 +21,12 @@ public class Cooler : MonoBehaviour
     /// <returns>True if the fish was added successfully, false if the cooler is full.</returns>
     public bool AddFish(BasicFish fish)
     {
-
-        var newWeight = currentWeight + fish.Weight;
-        if (newWeight > maxWeight)
+        if (coolerItems.Count >= maxFishCount)
         {
             Debug.Log("Item cannot be added to cooler, it is full");
             return false;
         }
 
-        currentWeight = newWeight;
         CoolerItem item = new CoolerItem();
         item.Initialize(fish);
         coolerItems.AddLast(item);

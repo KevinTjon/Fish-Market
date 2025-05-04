@@ -11,9 +11,7 @@ GameObject:
   - component: {fileID: 2785513533108482242}
   - component: {fileID: 4990793634877834466}
   - component: {fileID: 4462337336055197749}
-  - component: {fileID: 8429604591524280671}
-  - component: {fileID: 2032517702754055807}
-  - component: {fileID: 6002277451482382397}
+  - component: {fileID: 6532868364253543557}
   m_Layer: 9
   m_Name: 46
   m_TagString: Fish
@@ -96,10 +94,10 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: -0.20845342, y: -0.009537086}
   serializedVersion: 2
-  m_Radius: 0.5
---- !u!114 &8429604591524280671
+  m_Radius: 0.050394565
+--- !u!114 &6532868364253543557
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -108,68 +106,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 207950335581133221}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 420f6b7e1cadf6945862b5a80d70c68a, type: 3}
+  m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishType: {fileID: 0}
-  behavior: {fileID: 11400000, guid: 39dd45b6172d33e40b1fd63d60230001, type: 2}
-  fishLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  baitLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  showDebugRanges: 1
---- !u!114 &2032517702754055807
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 207950335581133221}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7594212a842a0cd438761e6c935ecd3a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawner: {fileID: 0}
-  boundaryArea: {fileID: 0}
-  boundaryForce: 5
-  boundaryTurnSpeed: 2
-  edgeBuffer: 2
-  hardBoundaryBuffer: 0.5
-  returnToCenterForce: 2
-  boundaryExponent: 2
-  baitChaseSpeedMultiplier: 2
-  baitChaseTurnSpeedMultiplier: 4
-  directionChangeSpeed: 0.1
-  minSpeedMultiplier: 0.5
-  maxSpeedMultiplier: 1.5
-  maxTurnSpeed: 2
-  minimumSpeed: 1
---- !u!114 &6002277451482382397
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 207950335581133221}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18a38fb2c43dc92479381b60d1379a98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  schoolRadius: 5
-  separationRadius: 1
-  maxSchoolSize: 10
-  optimalSchoolDistance: 2
-  predatorDetectionRadius: 2
-  panicSpeed: 2
-  minPredatorSize: 1.2
-  cohesionWeight: 1.5
-  alignmentWeight: 1.2
-  separationWeight: 1.5
-  predatorAvoidWeight: 3
+  displayName: 'Striped bass '
+  serializedSize: 2
+  weight: 1
+  swimSpeed: 3
+  chaseSpeed: 5
+  turnSpeed: 2
+  boundaryInfluenceDistance: 1
+  horizontalBias: 1.5
+  verticalMovementRange: 2
+  verticalMovementSpeed: 0.5
+  baitDetectionRadius: 5
+  minBaitChaseDistance: 0.5
+  interactionRadius: 5
+  minSeparationDistance: 1.5
+  separationWeight: 2
+  alignmentWeight: 1
+  cohesionWeight: 1
+  baseForwardWeight: 1.2
+  randomMovementWeight: 0.3
+  randomMovementInterval: 2
+  isSchooling: 0
+  schoolingRadius: 5
+  emergencySeperationForce: 5
+  emergencySeperationDistance: 0.5
+  showDebugGizmos: 0
 --- !u!1 &5863138210477319097
 GameObject:
   m_ObjectHideFlags: 0

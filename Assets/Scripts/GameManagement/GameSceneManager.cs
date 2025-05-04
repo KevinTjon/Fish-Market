@@ -41,7 +41,6 @@ public class GameSceneManager : MonoBehaviour
         try
         {
             string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
-            // Debug.Log($"Attempting to load database from: {dbPath}");
             
             using (IDbConnection connection = new SqliteConnection(dbPath))
             {
@@ -51,7 +50,6 @@ public class GameSceneManager : MonoBehaviour
                     // First, let's count how many fish are in the database
                     command.CommandText = "SELECT COUNT(*) FROM Fish";
                     int count = Convert.ToInt32(command.ExecuteScalar());
-                    // Debug.Log($"Found {count} fish in database");
 
                     // Now load the fish data
                     command.CommandText = "SELECT Name, Rarity, AssetPath, MinWeight, MaxWeight, TopSpeed, HookedFuncNum FROM Fish";
@@ -63,12 +61,19 @@ public class GameSceneManager : MonoBehaviour
                             {
                                 string name = reader.GetString(0);
                                 string rarity = reader.GetString(1);
+                                string assetPath = reader.GetString(2);
+                                
+                                // Ensure asset path starts with Resources/
+                                if (!assetPath.StartsWith("Resources/"))
+                                {
+                                    assetPath = "Resources/" + assetPath;
+                                }
                                 
                                 FishInfo fish = new FishInfo
                                 {
                                     Name = name,
                                     Rarity = rarity,
-                                    AssetPath = reader.GetString(2),
+                                    AssetPath = assetPath,
                                     MinWeight = reader.GetFloat(3),
                                     MaxWeight = reader.GetFloat(4),
                                     TopSpeed = reader.GetFloat(5),
@@ -93,12 +98,12 @@ public class GameSceneManager : MonoBehaviour
 
     public void LoadFishingScene()
     {
-        SceneManager.LoadScene("FishingScene"); // Replace with your actual scene name
+        SceneManager.LoadScene("FishingScene");
     }
 
     public void LoadMarketScene()
     {
-        SceneManager.LoadScene("NewMarketUI"); // Replace with your actual scene name
+        SceneManager.LoadScene("NewMarketUI");
     }
 
     public void SimulateFishCatch()
@@ -205,15 +210,42 @@ public class GameSceneManager : MonoBehaviour
         using IDbConnection connection = new SqliteConnection(dbPath);
         connection.Open();
         using IDbCommand command = connection.CreateCommand();
-        // Insert into Inventory table
+        
+        // First get the fish's asset path and ensure it has the Resources/ prefix
+        command.CommandText = "SELECT AssetPath FROM Fish WHERE Name = @Name";
+        var nameParam = command.CreateParameter();
+        nameParam.ParameterName = "@Name";
+        nameParam.Value = fish.Name;
+        command.Parameters.Add(nameParam);
+        
+        string assetPath = "";
+        try
+        {
+            var result = command.ExecuteScalar();
+            if (result != null && result != DBNull.Value)
+            {
+                assetPath = result.ToString();
+                if (!assetPath.StartsWith("Resources/"))
+                {
+                    assetPath = "Resources/" + assetPath;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error getting asset path: {e.Message}");
+        }
+
+        // Clear parameters for next command
+        command.Parameters.Clear();
+
+        // Insert into Inventory table with the corrected asset path
         command.CommandText = @"
             INSERT INTO Inventory (Name, Weight, Rarity, AssetPath)
-            SELECT @Name, @Weight, Rarity, AssetPath
-            FROM Fish
-            WHERE Name = @Name";
+            VALUES (@Name, @Weight, (SELECT Rarity FROM Fish WHERE Name = @Name), @AssetPath)";
 
         // Add parameters
-        var nameParam = command.CreateParameter();
+        nameParam = command.CreateParameter();
         nameParam.ParameterName = "@Name";
         nameParam.Value = fish.Name;
         command.Parameters.Add(nameParam);
@@ -223,10 +255,15 @@ public class GameSceneManager : MonoBehaviour
         weightParam.Value = fish.Weight.ToString(); // Convert to string as Weight is TEXT in DB
         command.Parameters.Add(weightParam);
 
+        var assetPathParam = command.CreateParameter();
+        assetPathParam.ParameterName = "@AssetPath";
+        assetPathParam.Value = assetPath;
+        command.Parameters.Add(assetPathParam);
+
         try
         {
             command.ExecuteNonQuery();
-            Debug.Log($"Saved to inventory: {fish.Name}, Weight: {fish.Weight}");
+            Debug.Log($"Saved to inventory: {fish.Name}, Weight: {fish.Weight}, AssetPath: {assetPath}");
         }
         catch (Exception e)
         {
@@ -256,6 +293,16 @@ public class GameSceneManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void SaveCoolerToInventory(Cooler cooler)
+    {
+        List<CaughtFishData> coolerFish = cooler.SendCoolerToMarket();
+        foreach (CaughtFishData fish in coolerFish)
+        {
+            SaveFishData(fish);
+        }
+        Debug.Log($"Saved {coolerFish.Count} fish from cooler to inventory database");
     }
 
     // Add initialization check

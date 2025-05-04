@@ -11,9 +11,7 @@ GameObject:
   - component: {fileID: 423200324533148032}
   - component: {fileID: 2159900411722598182}
   - component: {fileID: 8054639078791543600}
-  - component: {fileID: 5548108434180874935}
-  - component: {fileID: 1961664172012815239}
-  - component: {fileID: 8615951288286785747}
+  - component: {fileID: 5446783585051946816}
   m_Layer: 9
   m_Name: 136
   m_TagString: Fish
@@ -96,10 +94,10 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.012534317, y: -0.070744365}
+  m_Offset: {x: 0.050174188, y: -0.038476877}
   serializedVersion: 2
-  m_Radius: 0.030881224
---- !u!114 &5548108434180874935
+  m_Radius: 0.011804865
+--- !u!114 &5446783585051946816
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -108,68 +106,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 5531755810262855031}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 420f6b7e1cadf6945862b5a80d70c68a, type: 3}
+  m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishType: {fileID: 11400000, guid: 1d5cf9ef8971a0d4a8ae17f00ef87f06, type: 2}
-  behavior: {fileID: 11400000, guid: 43f0365180eba9b42996552cec0cdc19, type: 2}
-  fishLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  baitLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  showDebugRanges: 1
---- !u!114 &1961664172012815239
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5531755810262855031}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7594212a842a0cd438761e6c935ecd3a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  spawner: {fileID: 0}
-  boundaryArea: {fileID: 0}
-  boundaryForce: 5
-  boundaryTurnSpeed: 2
-  edgeBuffer: 2
-  hardBoundaryBuffer: 0.5
-  returnToCenterForce: 2
-  boundaryExponent: 2
-  baitChaseSpeedMultiplier: 2
-  baitChaseTurnSpeedMultiplier: 4
-  directionChangeSpeed: 0.1
-  minSpeedMultiplier: 0.5
-  maxSpeedMultiplier: 1.5
-  maxTurnSpeed: 2
-  minimumSpeed: 1
---- !u!114 &8615951288286785747
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5531755810262855031}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18a38fb2c43dc92479381b60d1379a98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  schoolRadius: 5
-  separationRadius: 1
-  maxSchoolSize: 10
-  optimalSchoolDistance: 2
-  predatorDetectionRadius: 2
-  panicSpeed: 2
-  minPredatorSize: 1.2
-  cohesionWeight: 1.5
-  alignmentWeight: 1.2
-  separationWeight: 1.5
-  predatorAvoidWeight: 3
+  displayName: Japanese pygmy angelfish
+  serializedSize: 2
+  weight: 1
+  swimSpeed: 3
+  chaseSpeed: 5
+  turnSpeed: 2
+  boundaryInfluenceDistance: 1
+  horizontalBias: 1.5
+  verticalMovementRange: 2
+  verticalMovementSpeed: 0.5
+  baitDetectionRadius: 5
+  minBaitChaseDistance: 0.5
+  interactionRadius: 5
+  minSeparationDistance: 1.5
+  separationWeight: 2
+  alignmentWeight: 1
+  cohesionWeight: 1
+  baseForwardWeight: 1.2
+  randomMovementWeight: 0.3
+  randomMovementInterval: 2
+  isSchooling: 0
+  schoolingRadius: 5
+  emergencySeperationForce: 5
+  emergencySeperationDistance: 0.5
+  showDebugGizmos: 0
 --- !u!1 &8526922780008096033
 GameObject:
   m_ObjectHideFlags: 0

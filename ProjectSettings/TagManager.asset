@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Fish
   - Cooler
+  - Seller
   layers:
   - Default
   - TransparentFX
@@ -20,7 +21,7 @@ TagManager:
   - Hook
   - Bait
   - Predator
-  - 
+  - Buildings
   - 
   - 
   - 

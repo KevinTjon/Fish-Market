@@ -94,9 +94,9 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: -0.14935863, y: -0.024220314}
   serializedVersion: 2
-  m_Radius: 0.375
+  m_Radius: 0.029860433
 --- !u!114 &2328710143213546442
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -109,7 +109,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 627c87a09a01f0448bffca5403a24997, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishSize: 0
+  displayName: Mrigal carp
+  serializedSize: 2
+  weight: 1
   swimSpeed: 3
   chaseSpeed: 5
   turnSpeed: 2
