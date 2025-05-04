@@ -423,7 +423,7 @@ public partial class @FishingControls: IInputActionCollection2, IDisposable
                     ""id"": ""e25d9774-381c-4a61-b47c-7b6b299ad9f9"",
                     ""path"": ""2DVector"",
                     ""interactions"": """",
-                    ""processors"": """",
+                    ""processors"": ""StickDeadzone"",
                     ""groups"": """",
                     ""action"": ""Navigate"",
                     ""isComposite"": true,

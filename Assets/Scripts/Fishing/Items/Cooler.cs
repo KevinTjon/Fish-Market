@@ -4,6 +4,9 @@ using UnityEngine;
 public class Cooler : MonoBehaviour
 {
     private LinkedList<CoolerItem> coolerItems = new LinkedList<CoolerItem>();
+    private int count;
+    public int Count => count;
+
     private readonly float maxWeight = 5f;
     private float currentWeight;
 
@@ -12,6 +15,7 @@ public class Cooler : MonoBehaviour
     {
         currentWeight = 0f;
     }
+
     /// <summary>
     /// Adds a fish to the cooler if there is enough space.
     /// </summary>
@@ -31,7 +35,24 @@ public class Cooler : MonoBehaviour
         CoolerItem item = new CoolerItem();
         item.Initialize(fish);
         coolerItems.AddLast(item);
+        count++;
         return true;
+    }
+
+    public CoolerItem GetFish(int index)
+    {
+        if (index < 0 || index >= count)
+        {
+            Debug.LogWarning("Index out of range: " + index);
+            return null;
+        }
+
+        var node = coolerItems.First;
+        for (int i = 0; i < index; i++)
+        {
+            node = node.Next;
+        }
+        return node.Value;
     }
 
     public void DisplayCooler()
@@ -45,19 +66,24 @@ public class Cooler : MonoBehaviour
     public List<CaughtFishData> SendCoolerToMarket()
     {
         var coolerMarket = new List<CaughtFishData>();
-        foreach (CoolerItem item in coolerItems)
+        var currFish = coolerItems.First;
+        for (int i = 0; i < count; i++)
         {
-            coolerMarket.Add(item.GetCaughtFishData());
+            coolerMarket.Add(currFish.Value.GetCaughtFishData());
+            currFish = currFish.Next;
         }
+        
         return coolerMarket;
     }
 
     public LinkedList<string> GetListEntries()
     {
         var entries = new LinkedList<string>();
-        foreach (CoolerItem item in coolerItems)
+        var currFish = coolerItems.First;
+        for (int i = 0; i < count; i++)
         {
-            entries.AddLast(item.GetCoolerListEntry());
+            entries.AddLast(currFish.Value.GetCoolerListEntry());
+            currFish = currFish.Next;
         }
         return entries;
     }

@@ -10,7 +10,7 @@ public class HookController : MonoBehaviour
     public bool OnWaterSurface { get; private set; }
     public bool IsFishing { get; private set; }
     // Attached object parameters
-    public bool HasHookedObject { get; private set; }  // Track if we have something hooked
+    public bool HasHookedObject { get; private set; }
     public FishSize AttractedSize { get; private set; }
     
     // Serialized parameters

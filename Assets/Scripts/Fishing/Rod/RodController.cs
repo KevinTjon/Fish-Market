@@ -160,20 +160,30 @@ public class RodController : MonoBehaviour
 
             if (input > 0)
             {
-                var fish = hook.attachedObject.GetComponent<BasicFish>();
-                if (fish)
+                
+                if (hook.attachedObject != null)
                 {
-                    // Debug
-                    if (fishCooler.AddFish(fish))
+                    Debug.Log("Hook is attached to an object");
+                    var fish = hook.attachedObject.GetComponent<BasicFish>();
+                    Debug.Log("Fish: " + fish);
+                    if (fish != null)
                     {
-                        fishCooler.DisplayCooler();
-                        Debug.Log(fish.name + " caught!");
-                        hook.CatchObject();
+                        // Debug
+                        if (fishCooler.AddFish(fish))
+                        {
+                            fishCooler.DisplayCooler();
+                            Debug.Log(fish.name + " caught!");
+                            hook.CatchObject();
+                        }
+                        else
+                        {
+                            Debug.Log("Item cannot be added to cooler, it is full");
+                        }
                     }
-                    else
-                    {
-                        Debug.Log("Item cannot be added to cooler, it is full");
-                    }
+                }
+                else
+                {
+                    Debug.Log("Hook is not attached to an object");
                 }
             }
             else if (input < 0)
