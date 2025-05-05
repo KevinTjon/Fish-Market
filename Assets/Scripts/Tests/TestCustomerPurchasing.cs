@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Linq;
+using Market;
 
 public class TestCustomerPurchasing : MonoBehaviour
 {

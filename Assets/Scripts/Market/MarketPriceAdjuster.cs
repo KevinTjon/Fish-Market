@@ -2,12 +2,16 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Market;
 
 public class MarketPriceAdjuster : MonoBehaviour
 {
     [SerializeField] private CustomerPurchaseManager purchaseManager;
     [SerializeField] private CustomerManager customerManager;
     [SerializeField] private DatabaseManager databaseManager;
+    [SerializeField] private float priceChangeThreshold = 0.1f; // 10% threshold for price changes
+    [SerializeField] private float maxPriceIncrease = 0.2f; // Maximum 20% price increase
+    [SerializeField] private float maxPriceDecrease = 0.2f; // Maximum 20% price decrease
 
     // Weights for different customer types
     private readonly Dictionary<Customer.CUSTOMERTYPE, float> CustomerTypeWeights = new()
@@ -44,7 +48,13 @@ public class MarketPriceAdjuster : MonoBehaviour
     private void Awake()
     {
         if (purchaseManager == null)
+        {
             purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
+            if (purchaseManager == null)
+            {
+                Debug.LogError("CustomerPurchaseManager not found!");
+            }
+        }
         if (customerManager == null)
             customerManager = FindObjectOfType<CustomerManager>();
         if (databaseManager == null)
@@ -67,6 +77,15 @@ public class MarketPriceAdjuster : MonoBehaviour
     }
 
     public void UpdateAllPrices()
+    {
+        foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
+        {
+            var listings = purchaseManager.GetListings(rarity);
+            UpdatePricesForRarity(rarity, listings);
+        }
+    }
+
+    private void UpdatePricesForRarity(Customer.FISHRARITY rarity, List<MarketListing> listings)
     {
         //Debug.Log("Starting daily price updates...");
 
@@ -207,9 +226,9 @@ public class MarketPriceAdjuster : MonoBehaviour
         }
     }
 
-    private List<CustomerPurchaseManager.MarketListing> GetTodaysListings(string fishName)
+    private List<MarketListing> GetTodaysListings(string fishName)
     {
-        var listings = new List<CustomerPurchaseManager.MarketListing>();
+        var listings = new List<MarketListing>();
         
         databaseManager.ExecuteReader(
             @"SELECT ListingID, ListedPrice, IsSold, SellerID 
@@ -218,7 +237,7 @@ public class MarketPriceAdjuster : MonoBehaviour
             reader => {
                 while (reader.Read())
                 {
-                    var listing = new CustomerPurchaseManager.MarketListing
+                    var listing = new MarketListing
                     {
                         ListingID = reader.GetInt32(0),
                         FishName = fishName,
@@ -247,7 +266,7 @@ public class MarketPriceAdjuster : MonoBehaviour
         
         if (result == null || result == DBNull.Value)
         {
-            Debug.LogWarning($"No current price found for {fishName}, using fallback price");
+            //Debug.LogWarning($"No current price found for {fishName}, using fallback price");
             var fishRarity = GetFishRarity(fishName);
             return RarityPriceRanges[fishRarity].min;
         }

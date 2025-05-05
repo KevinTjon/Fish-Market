@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using TMPro;
+using Market;
 
 public class EndDayManager : MonoBehaviour
 {
@@ -88,7 +89,10 @@ public class EndDayManager : MonoBehaviour
             purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
             if (purchaseManager == null)
             {
-                Debug.LogError("CustomerPurchaseManager not found in scene!");
+                Debug.LogError("CustomerPurchaseManager not found in scene! Creating one...");
+                GameObject obj = new GameObject("CustomerPurchaseManager");
+                purchaseManager = obj.AddComponent<CustomerPurchaseManager>();
+                Debug.Log("Created new CustomerPurchaseManager");
             }
             else
             {
@@ -102,7 +106,10 @@ public class EndDayManager : MonoBehaviour
             customerManager = FindObjectOfType<CustomerManager>();
             if (customerManager == null)
             {
-                Debug.LogError("CustomerManager not found in scene!");
+                Debug.LogError("CustomerManager not found in scene! Creating one...");
+                GameObject obj = new GameObject("CustomerManager");
+                customerManager = obj.AddComponent<CustomerManager>();
+                Debug.Log("Created new CustomerManager");
             }
             else
             {
@@ -185,6 +192,13 @@ public class EndDayManager : MonoBehaviour
             marketPriceInitializer.GenerateDayPrices();
             yield return new WaitForSeconds(0.1f);
         }
+        else
+        {
+            // On subsequent days, update prices before generating fish
+            Debug.Log($"Day {currentDay}: Updating market prices...");
+            marketPriceAdjuster.UpdateAllPrices();
+            yield return new WaitForSeconds(0.1f);
+        }
 
         // Generate AI fisher catches and listings
         Debug.Log("Generating AI fisher catches...");
@@ -198,51 +212,32 @@ public class EndDayManager : MonoBehaviour
         if (listings.Count == 0)
         {
             Debug.LogWarning("No listings available! Skipping customer purchases.");
-        }
-        else
-        {
-            // Process purchases
-            Debug.Log("Processing customer purchases...");
-            Debug.Log($"Active customers before processing: {purchaseManager.GetActiveCustomers().Count}");
-            Debug.Log($"Waiting customers before processing: {purchaseManager.GetWaitingCustomers().Count}");
-            
-            purchaseManager.ProcessCustomerPurchases();
-            
-            // Wait for customers to finish their movement
-            while (purchaseManager.GetActiveCustomers().Count > 0)
-            {
-                Debug.Log($"Waiting for {purchaseManager.GetActiveCustomers().Count} customers to finish...");
-                yield return new WaitForSeconds(customerProcessingDelay);
-            }
-            
-            Debug.Log($"Active customers after processing: {purchaseManager.GetActiveCustomers().Count}");
-            Debug.Log($"Waiting customers after processing: {purchaseManager.GetWaitingCustomers().Count}");
-            
-            // Optional: Display debug information
-            string debugInfo = purchaseManager.DebugRemainingShoppingLists();
-            Debug.Log($"Customer Status after purchases:\n{debugInfo}");
+            yield break;
         }
 
-        // Generate next day's market prices after purchases are processed
-        if (currentDay >= 1)
-        {
-            Debug.Log("Generating next day's market prices...");
-            marketPriceAdjuster.UpdateAllPrices();
-            yield return new WaitForSeconds(0.1f);
-            
-            // Clear daily tables after prices are updated but before next day
-            Debug.Log("Clearing daily tables for next day...");
-            clearMarketListings.ClearDailyTables();
-            yield return new WaitForSeconds(0.1f);
+        // Process customer purchases
+        Debug.Log("Processing customer purchases...");
+        Debug.Log($"Active customers before processing: {purchaseManager.GetActiveCustomers().Count}");
+        Debug.Log($"Waiting customers before processing: {purchaseManager.GetWaitingCustomers().Count}");
 
-            // Clear the listings cache in purchase manager
-            purchaseManager.ClearListingsCache();
-            Debug.Log("Cleared listings cache in purchase manager");
-        }
+        purchaseManager.ProcessCustomerPurchases();
+        yield return new WaitForSeconds(customerProcessingDelay);
 
-        currentDay++;
-        UpdateDayText();
-        Debug.Log($"Day {currentDay-1} processing complete! Total active customers: {purchaseManager.GetActiveCustomers().Count}");
+        // Optional: Display debug information
+        string debugInfo = purchaseManager.DebugRemainingShoppingLists();
+        Debug.Log($"Customer Status after purchases:\n{debugInfo}");
+
+        // Comment out daily table clearing for debugging
+        // Debug.Log("Clearing daily tables for next day...");
+        // clearMarketListings.ClearDailyTables();
+        // yield return new WaitForSeconds(0.1f);
+
+        // Clear the listings cache in purchase manager
+        purchaseManager.ClearListingsCache();
+        Debug.Log("Cleared listings cache in purchase manager");
+
+        Debug.Log($"Day {currentDay} processing complete! Total active customers: {purchaseManager.GetActiveCustomers().Count}");
+
         isProcessingCustomers = false;
     }
 

@@ -18,6 +18,7 @@ namespace Market
             if (stall != null && !activeStalls.Any(s => s.SellerType == stall.SellerType))
             {
                 activeStalls.Add(stall);
+                Debug.Log($"Added stall for {stall.SellerType} with interaction point at {(stall.InteractionPoint != null ? stall.InteractionPoint.position.ToString() : "NULL")}");
             }
         }
 
@@ -48,6 +49,28 @@ namespace Market
             return activeStalls.Where(s => s != null).ToList();
         }
 
+        public Transform GetSellerPosition(int sellerId)
+        {
+            var stall = GetStall((Customer.SellerType)sellerId);
+            if (stall == null)
+            {
+                Debug.LogError($"No stall found for seller {(Customer.SellerType)sellerId}. Currently registered stalls:");
+                foreach (var registeredStall in activeStalls)
+                {
+                    Debug.Log($"- {registeredStall.SellerType} at position {registeredStall.transform.position} with interaction point {(registeredStall.InteractionPoint != null ? registeredStall.InteractionPoint.position.ToString() : "NULL")}");
+                }
+                return null;
+            }
+            
+            if (stall.InteractionPoint == null)
+            {
+                Debug.LogError($"Stall found for {(Customer.SellerType)sellerId} but it has no interaction point set!");
+                return null;
+            }
+            
+            return stall.InteractionPoint;
+        }
+
         private void OnDrawGizmos()
         {
             if (!Application.isPlaying || !showDebugGizmos) return;
@@ -60,6 +83,27 @@ namespace Market
                 Gizmos.color = gizmoColor;
                 Gizmos.DrawWireCube(stall.transform.position, Vector3.one);
                 Gizmos.DrawWireSphere(stall.transform.position, stall.GetComponent<MarketStall>().GetInteractionRadius());
+                
+                // Draw interaction point
+                if (stall.InteractionPoint != null)
+                {
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawWireSphere(stall.InteractionPoint.position, 0.3f);
+                }
+            }
+        }
+
+        // Debug method to check stall registration
+        public void LogRegisteredStalls()
+        {
+            Debug.Log("Currently registered stalls:");
+            foreach (var stall in activeStalls)
+            {
+                if (stall != null)
+                {
+                    Debug.Log($"- {stall.SellerType} at position {stall.transform.position} " +
+                            $"with interaction point {(stall.InteractionPoint != null ? stall.InteractionPoint.position.ToString() : "NULL")}");
+                }
             }
         }
     }

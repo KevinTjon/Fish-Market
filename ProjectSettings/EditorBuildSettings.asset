@@ -23,5 +23,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/NewMarketUI.unity
     guid: e2d9ddd97fd5c7c409f2496afb30e78c
+  - enabled: 1
+    path: Assets/Scenes/Marketplace.unity
+    guid: f39d729bc4fbfb0458341b1d5e8f28de
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2d43e8e1a2e8ee348935b78c479958b8, type: 3}

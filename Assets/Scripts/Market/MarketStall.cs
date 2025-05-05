@@ -9,18 +9,26 @@ namespace Market
         [Header("Configuration")]
         [SerializeField] private StallConfig config;
         [SerializeField] private bool showDebugLogs = false;
+        [SerializeField] private Transform interactionPoint;
 
         [Header("Events")]
-        public UnityEvent<CustomerVisual> onCustomerArrived;
-        public UnityEvent<CustomerVisual> onCustomerLeft;
+        public UnityEvent<Customer> onCustomerArrived;
+        public UnityEvent<Customer> onCustomerLeft;
 
         public Customer.SellerType SellerType => config.sellerType;
+        public Transform InteractionPoint => interactionPoint;
 
         private void Awake()
         {
             if (showDebugLogs)
             {
                 Debug.Log($"MarketStall component added to {gameObject.name}");
+            }
+
+            if (interactionPoint == null)
+            {
+                Debug.LogWarning($"No interaction point set for {gameObject.name}. Using stall transform instead.");
+                interactionPoint = transform;
             }
         }
 
@@ -34,12 +42,12 @@ namespace Market
             }
         }
 
-        public void HandleCustomerArrival(CustomerVisual customer)
+        public void HandleCustomerArrival(Customer customer)
         {
             onCustomerArrived?.Invoke(customer);
         }
 
-        public void HandleCustomerDeparture(CustomerVisual customer)
+        public void HandleCustomerDeparture(Customer customer)
         {
             onCustomerLeft?.Invoke(customer);
         }
@@ -56,14 +64,6 @@ namespace Market
                 // Draw interaction radius
                 Gizmos.color = config.debugColor;
                 Gizmos.DrawWireSphere(transform.position, config.interactionRadius);
-
-                // Draw NPC position if not player stall
-                if (config.sellerType != Customer.SellerType.Player)
-                {
-                    Gizmos.color = Color.green;
-                    Vector3 npcPos = transform.position + (Vector3)config.npcOffset;
-                    Gizmos.DrawWireSphere(npcPos, 0.3f);
-                }
             }
         }
     }

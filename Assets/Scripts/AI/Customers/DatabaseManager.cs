@@ -507,16 +507,16 @@ public class DatabaseManager : MonoBehaviour
     /// </summary>
     public List<Dictionary<string, object>> GetUnsoldListings(string rarity)
     {
-        // Convert rarity to title case (e.g., "RARE" -> "Rare")
-        string titleCaseRarity = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(rarity.ToLower());
-        //Debug.Log($"Getting unsold listings for rarity: {titleCaseRarity}");
+        // Keep rarity in uppercase to match database
+        string upperRarity = rarity.ToUpper();
+        Debug.Log($"Getting unsold listings for rarity: {upperRarity}");
 
         return ExecuteQuery(@"
             SELECT ListingID, FishName, ListedPrice, Rarity, SellerID
             FROM MarketListings
             WHERE Rarity = @rarity
             AND IsSold = 0",
-            new Dictionary<string, object> { { "@rarity", titleCaseRarity } }
+            new Dictionary<string, object> { { "@rarity", upperRarity } }
         );
     }
 

@@ -9,6 +9,7 @@ TagManager:
   - Seller
   - PlayerStall
   - PlayerInteraction
+  - Customer
   layers:
   - Default
   - TransparentFX
@@ -24,7 +25,7 @@ TagManager:
   - Bait
   - Predator
   - Buildings
-  - 
+  - AiGround
   - 
   - 
   - 

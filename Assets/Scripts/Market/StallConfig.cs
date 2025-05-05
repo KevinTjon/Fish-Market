@@ -9,12 +9,6 @@ namespace Market
         public Customer.SellerType sellerType;
         public string stallName;
 
-        [Header("Visual Settings")]
-        [Tooltip("The sprite for the NPC seller. Not used for player stalls.")]
-        public Sprite npcSprite;
-        [Tooltip("Position offset for the NPC sprite relative to the stall")]
-        public Vector2 npcOffset = Vector2.zero;
-
         [Header("Interaction Settings")]
         public float interactionRadius = 1.5f;
         

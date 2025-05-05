@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Models
+namespace Market
 {
     public class MarketListing
     {
