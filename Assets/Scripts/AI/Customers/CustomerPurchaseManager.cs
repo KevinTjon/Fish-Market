@@ -44,7 +44,7 @@ namespace Market
 
         private void Awake()
         {
-            Debug.Log("CustomerPurchaseManager Awake - Initializing dependencies...");
+            //Debug.Log("CustomerPurchaseManager Awake - Initializing dependencies...");
 
             // Initialize references
             if (customerManager == null)
@@ -81,7 +81,7 @@ namespace Market
             }
             else
             {
-                Debug.Log("DatabaseManager found and initialized");
+                //Debug.Log("DatabaseManager found and initialized");
             }
 
             // Validate required references
@@ -95,7 +95,7 @@ namespace Market
                 Debug.LogError("Spawn point is not set in CustomerPurchaseManager!");
             }
 
-            Debug.Log("CustomerPurchaseManager initialized");
+            //Debug.Log("CustomerPurchaseManager initialized");
         }
 
         public float GetSellerBias(int customerId, Customer.SellerType seller, Customer.FISHRARITY rarity)
@@ -140,8 +140,8 @@ namespace Market
 
         private IEnumerator ProcessCustomerPurchasesCoroutine()
         {
-            Debug.Log("Starting ProcessCustomerPurchases...");
-            Debug.Log($"Initial state - Waiting customers: {waitingCustomers.Count}, Active customers: {activeCustomers.Count}");
+            //Debug.Log("Starting ProcessCustomerPurchases...");
+            //Debug.Log($"Initial state - Waiting customers: {waitingCustomers.Count}, Active customers: {activeCustomers.Count}");
 
             bool shouldGenerateMore;
             int generationCycle = 0;
@@ -152,22 +152,22 @@ namespace Market
                 shouldGenerateMore = false;
                 if (waitingCustomers.Count == 0)
                 {
-                    Debug.Log("No waiting customers to process");
+                    //Debug.Log("No waiting customers to process");
                     yield break;
                 }
 
-                Debug.Log($"Processing purchases for {waitingCustomers.Count} customers...");
+                //Debug.Log($"Processing purchases for {waitingCustomers.Count} customers...");
                 purchaseHistory.Clear();
                 
                 // Refresh the listings cache once before processing all customers
                 listingsCacheNeedsRefresh = true;
                 
                 // Pre-load all rarities into cache
-                Debug.Log("Pre-loading listings cache for all rarities...");
+                //Debug.Log("Pre-loading listings cache for all rarities...");
                 foreach (Customer.FISHRARITY rarity in Enum.GetValues(typeof(Customer.FISHRARITY)))
                 {
                     var listings = GetListings(rarity);
-                    Debug.Log($"Found {listings.Count} listings for rarity {rarity}");
+                    //Debug.Log($"Found {listings.Count} listings for rarity {rarity}");
                 }
 
                 // Process customers in rounds
@@ -200,7 +200,7 @@ namespace Market
                             int sellerId = SelectSeller(customer, customer.GetUnpurchasedPreferences().First().Rarity);
                             if (sellerId == -1)
                             {
-                                Debug.Log($"No more unvisited sellers for customer {customer.CustomerID}");
+                                //Debug.Log($"No more unvisited sellers for customer {customer.CustomerID}");
                                 continue;
                             }
 
@@ -224,7 +224,7 @@ namespace Market
                     List<Coroutine> movementCoroutines = new List<Coroutine>();
                     foreach (var (physicalCustomer, customer, sellerPosition, sellerId) in movementData)
                     {
-                        Debug.Log($"Starting movement for customer {customer.CustomerID} to seller {sellerId}");
+                        //Debug.Log($"Starting movement for customer {customer.CustomerID} to seller {sellerId}");
                         var coroutine = StartCoroutine(StartCustomerMovement(physicalCustomer, customer, sellerPosition, sellerId));
                         movementCoroutines.Add(coroutine);
                     }
@@ -246,7 +246,7 @@ namespace Market
                         {
                             if (physicalCustomers.TryGetValue(customer.CustomerID, out PhysicalCustomer physicalCustomer))
                             {
-                                Debug.Log($"Customer {customer.CustomerID} is done shopping, returning to spawn");
+                                //Debug.Log($"Customer {customer.CustomerID} is done shopping, returning to spawn");
                                 var returnCoroutine = StartCoroutine(physicalCustomer.ReturnToSpawn());
                                 returnCoroutines.Add(returnCoroutine);
                             }
@@ -296,7 +296,7 @@ namespace Market
                 }
             } while (shouldGenerateMore);
 
-            Debug.Log($"ProcessCustomerPurchases complete. Final state - Waiting: {waitingCustomers.Count}, Active: {activeCustomers.Count}");
+            //Debug.Log($"ProcessCustomerPurchases complete. Final state - Waiting: {waitingCustomers.Count}, Active: {activeCustomers.Count}");
         }
 
         private IEnumerator StartCustomerMovement(PhysicalCustomer physicalCustomer, Customer customer, Transform sellerPosition, int sellerId)
@@ -313,11 +313,11 @@ namespace Market
             if (decision.WillPurchase && decision.SelectedListing != null)
             {
                 HandlePurchaseSuccess(customer, decision.SelectedListing);
-                Debug.Log($"Customer {customer.CustomerID} purchased {decision.SelectedListing.FishName} from seller {sellerId}");
+                //Debug.Log($"Customer {customer.CustomerID} purchased {decision.SelectedListing.FishName} from seller {sellerId}");
             }
             else
             {
-                Debug.Log($"Customer {customer.CustomerID} did not make a purchase from seller {sellerId}");
+                //Debug.Log($"Customer {customer.CustomerID} did not make a purchase from seller {sellerId}");
             }
 
             yield return new WaitForSeconds(customerProcessingDelay);
@@ -361,27 +361,27 @@ namespace Market
 
         private void CheckAndGenerateMoreCustomers()
         {
-            Debug.Log($"Starting CheckAndGenerateMoreCustomers - Current active customers: {activeCustomers.Count}/{maxTotalCustomers}");
+            //Debug.Log($"Starting CheckAndGenerateMoreCustomers - Current active customers: {activeCustomers.Count}/{maxTotalCustomers}");
             
             // Check total customer count first
             if (activeCustomers.Count >= maxTotalCustomers)
             {
-                Debug.Log($"Not generating new customers - At maximum customer capacity ({activeCustomers.Count}/{maxTotalCustomers})");
+                //Debug.Log($"Not generating new customers - At maximum customer capacity ({activeCustomers.Count}/{maxTotalCustomers})");
                 return;
             }
 
             // Calculate total remaining potential purchases across all active customers
             int totalRemainingPurchases = activeCustomers.Sum(c => c.MaxPurchases - c.PurchaseHistory.Count);
-            Debug.Log($"Total remaining potential purchases: {totalRemainingPurchases}");
+            //Debug.Log($"Total remaining potential purchases: {totalRemainingPurchases}");
             
             if (totalRemainingPurchases >= 6)
             {
-                Debug.Log($"Not generating new customers - {totalRemainingPurchases} total purchases still remaining across all customers");
+                //Debug.Log($"Not generating new customers - {totalRemainingPurchases} total purchases still remaining across all customers");
                 return;
             }
 
             int unsoldListings = GetTotalUnsoldListings();
-            Debug.Log($"Found {unsoldListings} unsold listings (need {unsoldListingsPerCustomer} per customer)");
+            //Debug.Log($"Found {unsoldListings} unsold listings (need {unsoldListingsPerCustomer} per customer)");
             
             if (unsoldListings >= unsoldListingsPerCustomer) // Only generate if we have enough unsold listings
             {
@@ -396,13 +396,13 @@ namespace Market
                     maxPossibleNewCustomers
                 );
 
-                Debug.Log($"Calculated customers to add: {customersToAdd} (Max possible: {maxPossibleNewCustomers}, Based on listings: {unsoldListings / unsoldListingsPerCustomer})");
+                //Debug.Log($"Calculated customers to add: {customersToAdd} (Max possible: {maxPossibleNewCustomers}, Based on listings: {unsoldListings / unsoldListingsPerCustomer})");
 
                 if (customersToAdd > 0)
                 {
-                    Debug.Log($"Generating {customersToAdd} new customers " +
-                        $"(Current: {activeCustomers.Count}, Max: {maxTotalCustomers}, " +
-                        $"Unsold: {unsoldListings}, Remaining purchases: {totalRemainingPurchases})");
+                    //Debug.Log($"Generating {customersToAdd} new customers " +
+                        // $"(Current: {activeCustomers.Count}, Max: {maxTotalCustomers}, " +
+                        // $"Unsold: {unsoldListings}, Remaining purchases: {totalRemainingPurchases})");
                     
                     // Calculate rarity weights based on unsold listings
                     Dictionary<Customer.FISHRARITY, float> rarityWeights = CalculateRarityWeights();
@@ -412,13 +412,13 @@ namespace Market
                 }
                 else
                 {
-                    Debug.Log("No new customers needed based on calculations");
+                    //Debug.Log("No new customers needed based on calculations");
                 }
             }
             else
             {
-                Debug.Log($"Not enough unsold listings to generate new customers " +
-                    $"(Need {unsoldListingsPerCustomer}, Have {unsoldListings})");
+                //Debug.Log($"Not enough unsold listings to generate new customers " +
+                    // $"(Need {unsoldListingsPerCustomer}, Have {unsoldListings})");
             }
         }
 
@@ -434,13 +434,13 @@ namespace Market
 
         public bool MarkListingAsSold(int listingID, int buyerID)
         {
-            Debug.Log($"Starting MarkListingAsSold for ListingID {listingID}");
+            //Debug.Log($"Starting MarkListingAsSold for ListingID {listingID}");
             
             bool success = DatabaseManager.Instance.MarkListingAsSold(listingID);
             
             if (success)
             {
-                Debug.Log($"Successfully marked listing {listingID} as sold");
+                //Debug.Log($"Successfully marked listing {listingID} as sold");
                 // Invalidate the cache since a listing was sold
                 listingsCacheNeedsRefresh = true;
             }
@@ -498,7 +498,7 @@ namespace Market
 
         public void AddCustomer(Customer customer)
         {
-            Debug.Log($"Adding customer {customer.CustomerID} to active and waiting customers");
+            //Debug.Log($"Adding customer {customer.CustomerID} to active and waiting customers");
             activeCustomers.Add(customer);
             waitingCustomers.Add(customer);
 
@@ -607,8 +607,8 @@ namespace Market
 
             if (!string.IsNullOrEmpty(reason))
             {
-                Debug.Log($"Customer {customer.CustomerID}: Adjusted bias for Seller {sellerId} by {adjustmentAmount:F2} " +
-                    $"(New Bias: {customer.GetBias(sellerId, rarity):F2}) - {reason}");
+                // Debug.Log($"Customer {customer.CustomerID}: Adjusted bias for Seller {sellerId} by {adjustmentAmount:F2} " +
+                //     $"(New Bias: {customer.GetBias(sellerId, rarity):F2}) - {reason}");
             }
         }
 
@@ -676,14 +676,14 @@ namespace Market
 
         public void ClearCustomers()
         {
-            Debug.Log($"ClearCustomers called - Stack trace:\n{Environment.StackTrace}");
+            //Debug.Log($"ClearCustomers called - Stack trace:\n{Environment.StackTrace}");
             
             // Destroy all physical customers
             foreach (var physicalCustomer in physicalCustomers.Values)
             {
                 if (physicalCustomer != null && physicalCustomer.gameObject != null)
                 {
-                    Debug.Log($"Destroying physical customer {physicalCustomer.gameObject.name}");
+                    //Debug.Log($"Destroying physical customer {physicalCustomer.gameObject.name}");
                     Destroy(physicalCustomer.gameObject);
                 }
             }
@@ -697,7 +697,7 @@ namespace Market
             waitingCustomers.Clear();
             activeCustomers.Clear();
             
-            Debug.Log($"Cleared customers - Physical: {physicalCount}, Waiting: {waitingCount}, Active: {activeCount}");
+            //Debug.Log($"Cleared customers - Physical: {physicalCount}, Waiting: {waitingCount}, Active: {activeCount}");
         }
 
         public enum RejectionReason
@@ -740,7 +740,7 @@ namespace Market
         public void ClearListingsCache()
         {
             listingsCache.Clear();
-            Debug.Log("Cleared listings cache in CustomerPurchaseManager");
+            //Debug.Log("Cleared listings cache in CustomerPurchaseManager");
         }
 
         private Dictionary<Customer.FISHRARITY, float> CalculateRarityWeights()
@@ -789,13 +789,13 @@ namespace Market
                         $"Bought {selectedListing.FishName} (Preference: {preference.PreferenceScore:F2}) for {selectedListing.ListedPrice} gold from Seller {selectedListing.SellerID}");
                     
                     // Update the HasPurchased status in the database
-                    Debug.Log($"Attempting to update HasPurchased for Customer {customer.CustomerID}, Fish {selectedListing.FishName}");
+                    //Debug.Log($"Attempting to update HasPurchased for Customer {customer.CustomerID}, Fish {selectedListing.FishName}");
                     bool updateSuccess = DatabaseManager.Instance.UpdateCustomerPreference(
                         customer.CustomerID, 
                         selectedListing.FishName, 
                         true
                     );
-                    Debug.Log($"HasPurchased update {(updateSuccess ? "succeeded" : "failed")}");
+                    //Debug.Log($"HasPurchased update {(updateSuccess ? "succeeded" : "failed")}");
                 }
 
                 customer.RecordPurchase(

@@ -85,7 +85,7 @@ public class DatabaseManager : MonoBehaviour
             using (var connection = new SqliteConnection(dbPath))
             {
                 connection.Open();
-                Debug.Log("Database connection successful: " + dbPath);
+                //Debug.Log("Database connection successful: " + dbPath);
 
                 using (var command = connection.CreateCommand())
                 {
@@ -104,7 +104,7 @@ public class DatabaseManager : MonoBehaviour
                         // Check if Fish table has any data
                         command.CommandText = "SELECT COUNT(*) FROM Fish";
                         int count = Convert.ToInt32(command.ExecuteScalar());
-                        Debug.Log($"Fish table exists and contains {count} records");
+                        //Debug.Log($"Fish table exists and contains {count} records");
 
                         if (count == 0)
                         {
@@ -116,12 +116,12 @@ public class DatabaseManager : MonoBehaviour
                             command.CommandText = "SELECT Name, Rarity FROM Fish LIMIT 5";
                             using (var reader = command.ExecuteReader())
                             {
-                                Debug.Log("Sample fish in database:");
+                                //Debug.Log("Sample fish in database:");
                                 while (reader.Read())
                                 {
                                     string name = reader.GetString(0);
                                     string fishRarity = reader.GetString(1);
-                                    Debug.Log($"Fish: {name}, Rarity: {fishRarity}");
+                                    //Debug.Log($"Fish: {name}, Rarity: {fishRarity}");
                                 }
                             }
                         }
@@ -146,7 +146,7 @@ public class DatabaseManager : MonoBehaviour
                         // Check if MarketListings table has any data
                         command.CommandText = "SELECT COUNT(*) FROM MarketListings WHERE IsSold = 0";
                         int unsoldCount = Convert.ToInt32(command.ExecuteScalar());
-                        Debug.Log($"MarketListings table exists and contains {unsoldCount} unsold listings");
+                        //Debug.Log($"MarketListings table exists and contains {unsoldCount} unsold listings");
 
                         if (unsoldCount == 0)
                         {
@@ -162,7 +162,7 @@ public class DatabaseManager : MonoBehaviour
                                 LIMIT 5";
                             using (var reader = command.ExecuteReader())
                             {
-                                Debug.Log("Sample unsold listings in database:");
+                                //Debug.Log("Sample unsold listings in database:");
                                 while (reader.Read())
                                 {
                                     int listingId = reader.GetInt32(0);
@@ -170,7 +170,7 @@ public class DatabaseManager : MonoBehaviour
                                     float price = reader.GetFloat(2);
                                     string rarity = reader.GetString(3);
                                     int sellerId = reader.GetInt32(4);
-                                    Debug.Log($"Listing {listingId}: {fishName} (Rarity: {rarity}) - Price: {price}, Seller: {sellerId}");
+                                    //Debug.Log($"Listing {listingId}: {fishName} (Rarity: {rarity}) - Price: {price}, Seller: {sellerId}");
                                 }
                             }
                         }
@@ -509,7 +509,7 @@ public class DatabaseManager : MonoBehaviour
     {
         // Keep rarity in uppercase to match database
         string upperRarity = rarity.ToUpper();
-        Debug.Log($"Getting unsold listings for rarity: {upperRarity}");
+       // Debug.Log($"Getting unsold listings for rarity: {upperRarity}");
 
         return ExecuteQuery(@"
             SELECT ListingID, FishName, ListedPrice, Rarity, SellerID

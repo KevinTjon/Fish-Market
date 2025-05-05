@@ -9,12 +9,12 @@ namespace Market
         [Header("References")]
         private Customer customerData;
         private Animator animator;
-        private SpriteRenderer spriteRenderer;
         private NavMeshAgent agent;
 
         [Header("Movement Settings")]
         [SerializeField] private float stoppingDistance = 1f;
         [SerializeField] private float purchaseWaitTime = 2f;
+        [SerializeField] private float movementThreshold = 0.01f;
         
         private Transform spawnPoint;
         private bool isMoving = false;
@@ -23,13 +23,12 @@ namespace Market
 
         // Animation parameter names
         private readonly string isWalkingParam = "IsWalking";
-        private readonly string horizontalParam = "Horizontal";
-        private readonly string verticalParam = "Vertical";
+        private readonly string horizontalParam = "DirectionX";
+        private readonly string verticalParam = "DirectionY";
 
         private void Awake()
         {
             animator = GetComponent<Animator>();
-            spriteRenderer = GetComponent<SpriteRenderer>();
             agent = GetComponent<NavMeshAgent>();
             
             if (agent != null)
@@ -54,6 +53,46 @@ namespace Market
             {
                 agent.stoppingDistance = stoppingDistance;
             }
+
+            // Initialize animator parameters
+            if (animator != null)
+            {
+                Debug.Log($"[Customer {customer?.CustomerID}] Initializing animator parameters");
+                animator.SetBool(isWalkingParam, false);
+                animator.SetFloat(horizontalParam, 0);
+                animator.SetFloat(verticalParam, 0);
+                
+                Debug.Log($"[Customer {customer?.CustomerID}] Initial animator values - IsWalking: {animator.GetBool(isWalkingParam)}, " +
+                         $"DirectionX: {animator.GetFloat(horizontalParam)}, " +
+                         $"DirectionY: {animator.GetFloat(verticalParam)}");
+            }
+            else
+            {
+                Debug.LogError("Animator component is missing on customer!");
+            }
+        }
+
+        private void Start()
+        {
+            // Double check animator setup
+            if (animator == null)
+            {
+                animator = GetComponent<Animator>();
+                Debug.LogWarning("Animator was null in Start, attempting to get component");
+            }
+
+            if (animator != null)
+            {
+                // Verify animator has controller
+                if (animator.runtimeAnimatorController == null)
+                {
+                    Debug.LogError("Animator has no controller assigned!");
+                }
+                else
+                {
+                    Debug.Log($"Animator controller: {animator.runtimeAnimatorController.name}");
+                }
+            }
         }
 
         public IEnumerator MoveToSeller(Transform sellerPosition)
@@ -69,25 +108,75 @@ namespace Market
             targetPosition = sellerPosition.position;
             SetWalkingAnimation(true);
 
-            agent.SetDestination(targetPosition);
-            Debug.Log($"Set destination to {targetPosition}, current agent position: {agent.transform.position}");
+            // First move horizontally, then vertically
+            Vector3 horizontalTarget = new Vector3(targetPosition.x, transform.position.y, transform.position.z);
+            Vector3 finalTarget = targetPosition;
 
-            while (agent.pathStatus == NavMeshPathStatus.PathInvalid)
+            // Move horizontally first
+            Debug.Log($"Starting horizontal movement to {horizontalTarget}");
+            agent.SetDestination(horizontalTarget);
+            
+            Vector3 lastPosition = transform.position;
+            float elapsedTime = 0f;
+            
+            while (Vector3.Distance(transform.position, horizontalTarget) > stoppingDistance)
             {
-                Debug.LogWarning($"Invalid path to seller at {targetPosition}, waiting for valid path...");
-                yield return new WaitForSeconds(0.5f);
-                agent.SetDestination(targetPosition);
+                Vector3 currentPosition = transform.position;
+                Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
+                
+                Debug.Log($"Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                
+                if (movement.magnitude > movementThreshold)
+                {
+                    Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
+                    Debug.Log($"Horizontal movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    UpdateAnimation(movement2D);
+                }
+                
+                lastPosition = currentPosition;
+                elapsedTime += Time.deltaTime;
+                
+                // Timeout after 5 seconds to prevent infinite loops
+                if (elapsedTime > 5f)
+                {
+                    Debug.LogWarning("Horizontal movement timed out");
+                    break;
+                }
+                
+                yield return null;
             }
 
-            Debug.Log($"Path status: {agent.pathStatus}, remaining distance: {agent.remainingDistance}");
-            while (agent.pathStatus != NavMeshPathStatus.PathComplete || agent.remainingDistance > stoppingDistance)
+            // Then move vertically
+            Debug.Log($"Starting vertical movement to {finalTarget}");
+            agent.SetDestination(finalTarget);
+            
+            lastPosition = transform.position;
+            elapsedTime = 0f;
+            
+            while (Vector3.Distance(transform.position, finalTarget) > stoppingDistance)
             {
-                if (agent.velocity != Vector3.zero)
+                Vector3 currentPosition = transform.position;
+                Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
+                
+                Debug.Log($"Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                
+                if (movement.magnitude > movementThreshold)
                 {
-                    Vector2 movement = agent.velocity.normalized;
-                    UpdateAnimation(movement);
-                    Debug.Log($"Moving with velocity {agent.velocity}, remaining distance: {agent.remainingDistance}");
+                    Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
+                    Debug.Log($"Vertical movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    UpdateAnimation(movement2D);
                 }
+                
+                lastPosition = currentPosition;
+                elapsedTime += Time.deltaTime;
+                
+                // Timeout after 5 seconds to prevent infinite loops
+                if (elapsedTime > 5f)
+                {
+                    Debug.LogWarning("Vertical movement timed out");
+                    break;
+                }
+                
                 yield return null;
             }
 
@@ -101,26 +190,91 @@ namespace Market
         {
             if (isDone || agent == null) yield break;
 
+            Debug.Log($"Starting return movement to spawn at {spawnPoint.position}");
             isMoving = true;
             targetPosition = spawnPoint.position;
             SetWalkingAnimation(true);
 
-            agent.SetDestination(targetPosition);
+            // First move horizontally, then vertically
+            Vector3 horizontalTarget = new Vector3(targetPosition.x, transform.position.y, transform.position.z);
+            Vector3 finalTarget = targetPosition;
 
-            while (agent.pathStatus != NavMeshPathStatus.PathComplete || agent.remainingDistance > stoppingDistance)
+            // Move horizontally first
+            Debug.Log($"Starting return horizontal movement to {horizontalTarget}");
+            agent.SetDestination(horizontalTarget);
+            
+            Vector3 lastPosition = transform.position;
+            float elapsedTime = 0f;
+            
+            while (Vector3.Distance(transform.position, horizontalTarget) > stoppingDistance)
             {
-                if (agent.velocity != Vector3.zero)
+                Vector3 currentPosition = transform.position;
+                Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
+                
+                Debug.Log($"Return movement - Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                
+                if (movement.magnitude > movementThreshold)
                 {
-                    Vector2 movement = agent.velocity.normalized;
-                    UpdateAnimation(movement);
+                    Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
+                    Debug.Log($"Return horizontal movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    UpdateAnimation(movement2D);
                 }
+                
+                lastPosition = currentPosition;
+                elapsedTime += Time.deltaTime;
+                
+                // Timeout after 5 seconds to prevent infinite loops
+                if (elapsedTime > 5f)
+                {
+                    Debug.LogWarning("Return horizontal movement timed out");
+                    break;
+                }
+                
                 yield return null;
             }
 
+            // Then move vertically
+            Debug.Log($"Starting return vertical movement to {finalTarget}");
+            agent.SetDestination(finalTarget);
+            
+            lastPosition = transform.position;
+            elapsedTime = 0f;
+            
+            while (Vector3.Distance(transform.position, finalTarget) > stoppingDistance)
+            {
+                Vector3 currentPosition = transform.position;
+                Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
+                
+                Debug.Log($"Return movement - Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                
+                if (movement.magnitude > movementThreshold)
+                {
+                    Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
+                    Debug.Log($"Return vertical movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    UpdateAnimation(movement2D);
+                }
+                
+                lastPosition = currentPosition;
+                elapsedTime += Time.deltaTime;
+                
+                // Timeout after 5 seconds to prevent infinite loops
+                if (elapsedTime > 5f)
+                {
+                    Debug.LogWarning("Return vertical movement timed out");
+                    break;
+                }
+                
+                yield return null;
+            }
+
+            // Wait a moment at spawn point before destroying
+            Debug.Log("Reached spawn point, waiting before despawn...");
             isMoving = false;
             isDone = true;
             SetWalkingAnimation(false);
+            yield return new WaitForSeconds(1f);
 
+            Debug.Log("Customer despawning");
             // Destroy the physical representation
             Destroy(gameObject);
         }
@@ -129,15 +283,44 @@ namespace Market
         {
             if (animator != null)
             {
-                // Update movement direction
-                animator.SetFloat(horizontalParam, movement.x);
-                animator.SetFloat(verticalParam, movement.y);
+                // Calculate the absolute values for comparison
+                float absX = Mathf.Abs(movement.x);
+                float absY = Mathf.Abs(movement.y);
+                
+                Debug.Log($"Raw movement magnitudes - |X|: {absX}, |Y|: {absY}");
 
-                // Update sprite direction
-                if (spriteRenderer != null && Mathf.Abs(movement.x) > 0.1f)
+                float xDirection = 0;
+                float yDirection = 0;
+
+                // Determine dominant direction based on magnitude
+                if (absX > absY && absX > movementThreshold)
                 {
-                    spriteRenderer.flipX = movement.x < 0;
+                    // Horizontal movement is dominant
+                    xDirection = movement.x;
+                    yDirection = 0;
+                    Debug.Log("Horizontal movement dominant");
                 }
+                else if (absY > absX && absY > movementThreshold)
+                {
+                    // Vertical movement is dominant
+                    xDirection = 0;
+                    yDirection = movement.y;
+                    Debug.Log("Vertical movement dominant");
+                }
+                else if (absX > movementThreshold)
+                {
+                    // If exactly diagonal, prioritize horizontal
+                    xDirection = movement.x;
+                    yDirection = 0;
+                    Debug.Log("Diagonal movement, prioritizing horizontal");
+                }
+                
+                // Update movement direction
+                animator.SetFloat(horizontalParam, xDirection);
+                animator.SetFloat(verticalParam, yDirection);
+
+                Debug.Log($"Final animation values - DirectionX: {xDirection}, DirectionY: {yDirection}");
+                Debug.Log($"Actual animator values - DirectionX: {animator.GetFloat(horizontalParam)}, DirectionY: {animator.GetFloat(verticalParam)}");
             }
         }
 
@@ -145,14 +328,22 @@ namespace Market
         {
             if (animator != null)
             {
-                try
+                animator.SetBool(isWalkingParam, isWalking);
+                
+                // Reset direction parameters when stopping
+                if (!isWalking)
                 {
-                    animator.SetBool(isWalkingParam, isWalking);
+                    animator.SetFloat(horizontalParam, 0);
+                    animator.SetFloat(verticalParam, 0);
                 }
-                catch (System.Exception)
-                {
-                    // Parameter doesn't exist, silently fail
-                }
+                
+                Debug.Log($"Setting walking animation - IsWalking: {isWalking}, " +
+                         $"DirectionX: {animator.GetFloat(horizontalParam)}, " +
+                         $"DirectionY: {animator.GetFloat(verticalParam)}");
+            }
+            else
+            {
+                Debug.LogWarning("Animator is null when trying to set walking animation");
             }
         }
 

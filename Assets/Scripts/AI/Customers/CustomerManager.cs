@@ -42,11 +42,11 @@ namespace Market
                     Debug.LogError("CustomerPurchaseManager not found! Creating one...");
                     GameObject obj = new GameObject("CustomerPurchaseManager");
                     purchaseManager = obj.AddComponent<CustomerPurchaseManager>();
-                    Debug.Log("Created new CustomerPurchaseManager");
+                    //Debug.Log("Created new CustomerPurchaseManager");
                 }
                 else
                 {
-                    Debug.Log("Found existing CustomerPurchaseManager");
+                   // Debug.Log("Found existing CustomerPurchaseManager");
                 }
             }
         }
@@ -55,7 +55,7 @@ namespace Market
         {
             // Initialize biases for all customers
             CleanupAndInitializeBiases();
-            Debug.Log("CustomerManager initialized");
+            //Debug.Log("CustomerManager initialized");
         }
 
         public void LoadCustomers(TextMeshProUGUI outputText = null)
@@ -176,7 +176,7 @@ namespace Market
         {
             if (count <= 0) return;
             
-            Debug.Log($"Generating {count} new customers with weighted preferences");
+            //Debug.Log($"Generating {count} new customers with weighted preferences");
             
             // Determine customer type distribution based on rarity weights
             Dictionary<Customer.CUSTOMERTYPE, float> typeWeights;
@@ -185,7 +185,7 @@ namespace Market
             if (rarityWeights != null && rarityWeights.Count > 0)
             {
                 typeWeights = DetermineCustomerTypeWeights(rarityWeights);
-                Debug.Log("Using dynamic customer type weights based on market conditions");
+                //Debug.Log("Using dynamic customer type weights based on market conditions");
             }
             else
             {
@@ -197,12 +197,12 @@ namespace Market
                     { Customer.CUSTOMERTYPE.COLLECTOR, customerDistribution[2] },
                     { Customer.CUSTOMERTYPE.WEALTHY, customerDistribution[3] }
                 };
-                Debug.Log("Using predefined customer type distribution");
+                //Debug.Log("Using predefined customer type distribution");
             }
             
             // Log the distribution we're using
             string distributionLog = string.Join(", ", typeWeights.Select(kv => $"{kv.Key}: {kv.Value:P0}"));
-            Debug.Log($"Customer type distribution: {distributionLog}");
+            //Debug.Log($"Customer type distribution: {distributionLog}");
 
             // Get reference to PurchaseManager
             var purchaseManager = FindObjectOfType<CustomerPurchaseManager>();
@@ -259,7 +259,13 @@ namespace Market
                         // Add to purchase manager
                         if (purchaseManager != null)
                         {
+                            Debug.Log($"Adding customer {customer.CustomerID} to purchase manager...");
                             purchaseManager.AddCustomer(customer);
+                            Debug.Log($"Successfully added customer {customer.CustomerID} to purchase manager");
+                        }
+                        else
+                        {
+                            Debug.LogError($"PurchaseManager is null when trying to add customer {customer.CustomerID}!");
                         }
                         
                         // Add to our local list
@@ -268,7 +274,7 @@ namespace Market
                 }
             });
             
-            Debug.Log($"Successfully generated {count} new customers");
+            //Debug.Log($"Successfully generated {count} new customers");
         }
         
         private Dictionary<Customer.CUSTOMERTYPE, float> DetermineCustomerTypeWeights(Dictionary<Customer.FISHRARITY, float> rarityWeights)
@@ -350,7 +356,7 @@ namespace Market
 
         public void GenerateInitialCustomers(int count = 5)
         {
-            Debug.Log($"Starting GenerateInitialCustomers with count: {count}");
+           // Debug.Log($"Starting GenerateInitialCustomers with count: {count}");
             
             // Clear existing customers
             allCustomers.Clear();
@@ -366,7 +372,7 @@ namespace Market
                 }
             }
             
-            Debug.Log("Found PurchaseManager, clearing existing customers...");
+            //Debug.Log("Found PurchaseManager, clearing existing customers...");
             purchaseManager.ClearCustomers();
             
             // Calculate exact numbers for each customer type
@@ -375,8 +381,8 @@ namespace Market
             int collectorCount = Mathf.RoundToInt(count * customerDistribution[2]);
             int wealthyCount = count - (budgetCount + casualCount + collectorCount); // Remainder goes to wealthy
             
-            Debug.Log($"Generating exact distribution - Budget: {budgetCount}, Casual: {casualCount}, " +
-                     $"Collector: {collectorCount}, Wealthy: {wealthyCount}");
+            // Debug.Log($"Generating exact distribution - Budget: {budgetCount}, Casual: {casualCount}, " +
+            //          $"Collector: {collectorCount}, Wealthy: {wealthyCount}");
             
             // Create list of customer types to generate
             List<Customer.CUSTOMERTYPE> typesToGenerate = new List<Customer.CUSTOMERTYPE>();
@@ -394,7 +400,7 @@ namespace Market
                 typesToGenerate[j] = temp;
             }
             
-            Debug.Log($"Starting customer generation in database transaction...");
+            //Debug.Log($"Starting customer generation in database transaction...");
             
             // Generate customers
             DatabaseManager.Instance.ExecuteInTransaction((connection, transaction) => {
@@ -404,7 +410,7 @@ namespace Market
                     command.Transaction = transaction;
                     command.CommandText = "UPDATE Customers SET IsActive = 0";
                     command.ExecuteNonQuery();
-                    Debug.Log("Deactivated all existing customers in database");
+                    //Debug.Log("Deactivated all existing customers in database");
                     
                     // Create new CustomerPreferences table if needed
                     command.CommandText = @"
@@ -419,12 +425,12 @@ namespace Market
                             FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
                         );";
                     command.ExecuteNonQuery();
-                    Debug.Log("Recreated CustomerPreferences table");
+                    //Debug.Log("Recreated CustomerPreferences table");
                     
                     // Generate new customers using our exact distribution
                     foreach (var customerType in typesToGenerate)
                     {
-                        Debug.Log($"Creating new customer of type {customerType}...");
+                        //Debug.Log($"Creating new customer of type {customerType}...");
                         
                         // Create new customer
                         Customer customer = new Customer(customerType);
@@ -441,7 +447,7 @@ namespace Market
                         
                         // Get the new customer ID
                         customer.CustomerID = Convert.ToInt32(command.ExecuteScalar());
-                        Debug.Log($"Created customer with ID {customer.CustomerID} in database");
+                        //Debug.Log($"Created customer with ID {customer.CustomerID} in database");
                         
                         // Insert preferences
                         foreach (var preference in customer.FishPreferences)
@@ -461,11 +467,11 @@ namespace Market
                             
                             command.ExecuteNonQuery();
                         }
-                        Debug.Log($"Added {customer.FishPreferences.Count} preferences for customer {customer.CustomerID}");
+                        //Debug.Log($"Added {customer.FishPreferences.Count} preferences for customer {customer.CustomerID}");
                         
                         // Initialize biases for this customer
                         InitializeCustomerBiases(connection, transaction, customer);
-                        Debug.Log($"Initialized biases for customer {customer.CustomerID}");
+                        //Debug.Log($"Initialized biases for customer {customer.CustomerID}");
                         
                         // Add to purchase manager
                         if (purchaseManager != null)
@@ -481,15 +487,15 @@ namespace Market
                         
                         // Add to our local list
                         allCustomers.Add(customer);
-                        Debug.Log($"Added customer {customer.CustomerID} to local list");
+                        //Debug.Log($"Added customer {customer.CustomerID} to local list");
                     }
                 }
             });
             
-            Debug.Log($"Successfully generated {count} initial customers with exact distribution");
-            Debug.Log($"Final counts - All customers: {allCustomers.Count}, " +
-                     $"Active in PurchaseManager: {(purchaseManager != null ? purchaseManager.GetActiveCustomers().Count : 0)}, " +
-                     $"Waiting in PurchaseManager: {(purchaseManager != null ? purchaseManager.GetWaitingCustomers().Count : 0)}");
+            // Debug.Log($"Successfully generated {count} initial customers with exact distribution");
+            // Debug.Log($"Final counts - All customers: {allCustomers.Count}, " +
+            //          $"Active in PurchaseManager: {(purchaseManager != null ? purchaseManager.GetActiveCustomers().Count : 0)}, " +
+            //          $"Waiting in PurchaseManager: {(purchaseManager != null ? purchaseManager.GetWaitingCustomers().Count : 0)}");
         }
 
         private void InitializeCustomerBiases(SqliteConnection connection, SqliteTransaction transaction, Customer customer)
