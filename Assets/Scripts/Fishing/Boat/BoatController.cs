@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -119,12 +120,15 @@ public class BoatController : MonoBehaviour
         // Check if we're moving
         if (input != 0)
         {
+
             // Calculate next position with a small offset in the direction of movement
             Vector2 nextPosition = rb.position + movement.normalized * 0.1f;
             
             // Debug collision check
             bool willCollide = tilemapCollision.IsColliding(nextPosition);
-            //Debug.Log($"Movement Check - Next Position: {nextPosition}, Will Collide: {willCollide}");
+            Debug.Log($"Bounds: {tilemapCollision.GetComponent<TilemapCollider2D>().bounds}");
+            Debug.Log($"Movement Check - Next Position: {nextPosition}, Will Collide: {willCollide}");
+
             
             var xVelocity = willCollide ? 0 : input * moveSpeed;
             rb.velocity = new Vector2(xVelocity, rb.velocity.y);

@@ -82,9 +82,14 @@ public class InventoryUI : MonoBehaviour
     private void OnDisable()
     {
         uiActions.Disable();
-        // TODO: Change to gameManager type once implemented
-        gameManager.DisableScreen(gameObject);
-        //PlayerController.DisableScreen(gameObject);
+        if (gameManager != null)
+        {
+            gameManager.DisableScreen(gameObject);
+        }
+        else
+        {
+            Debug.LogWarning("gameManager is not assigned in InventoryUI.");
+        }
     }
     #endregion
     

@@ -105,7 +105,15 @@ public class PlayerController : MonoBehaviour
         //if (isCharging)
     }
 
-    private IEnumerator TurnPlayer()
+    private void OnDisable()
+    {
+        pauseUI.SetActive(false);
+        inventoryUI.SetActive(false);
+        
+        
+    }
+
+  private IEnumerator TurnPlayer()
     {
         isTurning = true;
         playerAnimator.SetTrigger("Turn");
