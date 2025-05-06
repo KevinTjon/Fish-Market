@@ -7,6 +7,9 @@ TagManager:
   - Fish
   - Cooler
   - Seller
+  - PlayerStall
+  - PlayerInteraction
+  - Customer
   layers:
   - Default
   - TransparentFX
@@ -14,7 +17,7 @@ TagManager:
   - Environment
   - Water
   - UI
-  - 
+  - Ground
   - Fish
   - Boat
   - Hookable
@@ -22,7 +25,7 @@ TagManager:
   - Bait
   - Predator
   - Buildings
-  - 
+  - AiGround
   - 
   - 
   - 

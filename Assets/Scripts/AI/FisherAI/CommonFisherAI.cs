@@ -11,11 +11,11 @@ public class CommonFisherAI : FisherAI
         
         rarityWeights = new Dictionary<string, float>
         {
-            { "COMMON", 0.75f },
-            { "UNCOMMON", 0.15f },
-            { "RARE", 0.05f },
-            { "EPIC", 0.03f },
-            { "LEGENDARY", 0.02f }
+            { "Common", 0.75f },
+            { "Uncommon", 0.15f },
+            { "Rare", 0.05f },
+            { "Epic", 0.03f },
+            { "Legendary", 0.02f }
         };
 
         minFishCount = 15;

@@ -137,7 +137,7 @@ public class PlayerController : MonoBehaviour
         var boatInput = playerActions.MoveBoat.ReadValue<float>();
         var reelInput = playerActions.ReelLine.ReadValue<float>();
         
-        //Debug.Log($"Boat Input: {boatInput}"); // Debug input value
+        Debug.Log($"Boat Input: {boatInput}"); // Debug input value
         
         if (boat == null)
         {

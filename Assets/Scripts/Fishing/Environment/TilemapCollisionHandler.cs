@@ -11,7 +11,7 @@ public class TilemapCollisionHandler : MonoBehaviour
 {
     [Header("Collision Settings")]
     [SerializeField] private LayerMask collisionLayers = Physics2D.AllLayers; // Which layers to check collisions against
-    [SerializeField] private bool showDebugCollisions = false;
+    [SerializeField] private bool showDebugCollisions = true; // Set to true by default
 
     private Tilemap tilemap;
     private TilemapCollider2D tilemapCollider;
@@ -29,16 +29,33 @@ public class TilemapCollisionHandler : MonoBehaviour
             return;
         }
 
-        // Set up contact filter with specified layers
+        // Set up contact filter with environment and ground layers only
+        int environmentLayer = LayerMask.NameToLayer("Environment");
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        
+        // Create a mask that only includes environment and ground
+        collisionLayers = (1 << environmentLayer) | (1 << groundLayer);
+        
         contactFilter = new ContactFilter2D();
         contactFilter.useTriggers = false;
         contactFilter.SetLayerMask(collisionLayers);
         contactFilter.useLayerMask = true;
 
-        if (showDebugCollisions)
+        Debug.Log($"TilemapCollisionHandler initialized on {gameObject.name}");
+        Debug.Log($"Checking against layers: {LayerMaskToString(collisionLayers)}");
+    }
+
+    private string LayerMaskToString(LayerMask mask)
+    {
+        string layerList = "";
+        for (int i = 0; i < 32; i++)
         {
-            Debug.Log($"TilemapCollisionHandler initialized on {gameObject.name} checking against layers: {collisionLayers.value}");
+            if ((mask & (1 << i)) != 0)
+            {
+                layerList += (layerList.Length == 0 ? "" : ", ") + LayerMask.LayerToName(i);
+            }
         }
+        return layerList;
     }
 
     /// <summary>
@@ -50,11 +67,13 @@ public class TilemapCollisionHandler : MonoBehaviour
     {
         // Create a small circle at the position to check for collisions
         Collider2D[] results = new Collider2D[1];
-        int numColliders = Physics2D.OverlapCircle(position, 0.1f, contactFilter, results);
+        int numColliders = Physics2D.OverlapCircle(position, 0.05f, contactFilter, results); // Reduced radius
         
-        if (showDebugCollisions && numColliders > 0)
+        if (numColliders > 0)
         {
-            Debug.Log($"Collision detected at {position} with {results[0].gameObject.name} on layer {results[0].gameObject.layer}");
+            string layerName = LayerMask.LayerToName(results[0].gameObject.layer);
+            Debug.Log($"Collision detected at {position} with {results[0].gameObject.name} on layer {layerName}");
+            Debug.Log($"Current collision mask is checking against layers: {LayerMaskToString(collisionLayers)}");
         }
 
         return numColliders > 0;

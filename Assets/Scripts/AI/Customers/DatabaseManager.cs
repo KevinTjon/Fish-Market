@@ -85,7 +85,97 @@ public class DatabaseManager : MonoBehaviour
             using (var connection = new SqliteConnection(dbPath))
             {
                 connection.Open();
-                Debug.Log("Database connection successful: " + dbPath);
+                //Debug.Log("Database connection successful: " + dbPath);
+
+                using (var command = connection.CreateCommand())
+                {
+                    // Check if Fish table exists
+                    command.CommandText = @"
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name='Fish'";
+                    var result = command.ExecuteScalar();
+                    
+                    if (result == null)
+                    {
+                        Debug.LogError("Fish table does not exist in the database!");
+                    }
+                    else
+                    {
+                        // Check if Fish table has any data
+                        command.CommandText = "SELECT COUNT(*) FROM Fish";
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+                        //Debug.Log($"Fish table exists and contains {count} records");
+
+                        if (count == 0)
+                        {
+                            Debug.LogWarning("Fish table exists but contains no data!");
+                        }
+                        else
+                        {
+                            // Log some sample data
+                            command.CommandText = "SELECT Name, Rarity FROM Fish LIMIT 5";
+                            using (var reader = command.ExecuteReader())
+                            {
+                                //Debug.Log("Sample fish in database:");
+                                while (reader.Read())
+                                {
+                                    string name = reader.GetString(0);
+                                    string fishRarity = reader.GetString(1);
+                                    //Debug.Log($"Fish: {name}, Rarity: {fishRarity}");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Check MarketListings table in a separate command
+                using (var command = connection.CreateCommand())
+                {
+                    // Check if MarketListings table exists
+                    command.CommandText = @"
+                        SELECT name FROM sqlite_master 
+                        WHERE type='table' AND name='MarketListings'";
+                    var result = command.ExecuteScalar();
+                    
+                    if (result == null)
+                    {
+                        Debug.LogError("MarketListings table does not exist in the database!");
+                    }
+                    else
+                    {
+                        // Check if MarketListings table has any data
+                        command.CommandText = "SELECT COUNT(*) FROM MarketListings WHERE IsSold = 0";
+                        int unsoldCount = Convert.ToInt32(command.ExecuteScalar());
+                        //Debug.Log($"MarketListings table exists and contains {unsoldCount} unsold listings");
+
+                        if (unsoldCount == 0)
+                        {
+                            Debug.LogWarning("MarketListings table exists but contains no unsold listings!");
+                        }
+                        else
+                        {
+                            // Log some sample data
+                            command.CommandText = @"
+                                SELECT ListingID, FishName, ListedPrice, Rarity, SellerID 
+                                FROM MarketListings 
+                                WHERE IsSold = 0 
+                                LIMIT 5";
+                            using (var reader = command.ExecuteReader())
+                            {
+                                //Debug.Log("Sample unsold listings in database:");
+                                while (reader.Read())
+                                {
+                                    int listingId = reader.GetInt32(0);
+                                    string fishName = reader.GetString(1);
+                                    float price = reader.GetFloat(2);
+                                    string rarity = reader.GetString(3);
+                                    int sellerId = reader.GetInt32(4);
+                                    //Debug.Log($"Listing {listingId}: {fishName} (Rarity: {rarity}) - Price: {price}, Seller: {sellerId}");
+                                }
+                            }
+                        }
+                    }
+                }
             }
             
             isInitialized = true;
@@ -417,18 +507,17 @@ public class DatabaseManager : MonoBehaviour
     /// </summary>
     public List<Dictionary<string, object>> GetUnsoldListings(string rarity)
     {
-        string sql = @"
-            SELECT ListingID, FishName, ListedPrice, Rarity, SellerID 
+        // Keep rarity in uppercase to match database
+        string upperRarity = rarity.ToUpper();
+       // Debug.Log($"Getting unsold listings for rarity: {upperRarity}");
+
+        return ExecuteQuery(@"
+            SELECT ListingID, FishName, ListedPrice, Rarity, SellerID
             FROM MarketListings
-            WHERE Rarity = @rarity 
-            AND IsSold = 0";
-            
-        var parameters = new Dictionary<string, object>
-        {
-            { "@rarity", rarity }
-        };
-            
-        return ExecuteQuery(sql, parameters);
+            WHERE Rarity = @rarity
+            AND IsSold = 0",
+            new Dictionary<string, object> { { "@rarity", upperRarity } }
+        );
     }
 
     /// <summary>
@@ -482,31 +571,31 @@ public class DatabaseManager : MonoBehaviour
     /// </summary>
     public Dictionary<string, float> GetHistoricalAveragePrices(string rarity)
     {
-        var result = new Dictionary<string, float>();
-        
-        string sql = @"
-            SELECT mp.FishName, AVG(mp.Price) as AvgPrice
-            FROM MarketPrices mp
-            JOIN Fish f ON mp.FishName = f.Name
+        // Convert rarity to title case (e.g., "RARE" -> "Rare")
+        string titleCaseRarity = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(rarity.ToLower());
+        Debug.Log($"Getting historical prices for rarity: {titleCaseRarity}");
+
+        Dictionary<string, float> prices = new Dictionary<string, float>();
+
+        ExecuteReader(@"
+            SELECT f.Name, AVG(mp.Price) as AvgPrice
+            FROM Fish f
+            LEFT JOIN MarketPrices mp ON f.Name = mp.FishName
             WHERE f.Rarity = @rarity
-            AND mp.Day >= (SELECT MAX(Day) - 4 FROM MarketPrices)
-            GROUP BY mp.FishName";
-            
-        var parameters = new Dictionary<string, object>
-        {
-            { "@rarity", rarity }
-        };
-        
-        ExecuteReader(sql, reader => {
-            while (reader.Read())
+            GROUP BY f.Name",
+            reader =>
             {
-                string fishName = reader.GetString(0);
-                float avgPrice = Convert.ToSingle(reader.GetDouble(1));
-                result[fishName] = avgPrice;
-            }
-        }, parameters);
-        
-        return result;
+                while (reader.Read())
+                {
+                    string fishName = reader.GetString(0);
+                    float avgPrice = reader.IsDBNull(1) ? 0f : (float)reader.GetDouble(1);
+                    prices[fishName] = avgPrice;
+                }
+            },
+            new Dictionary<string, object> { { "@rarity", titleCaseRarity } }
+        );
+
+        return prices;
     }
 
     /// <summary>
@@ -560,19 +649,26 @@ public class DatabaseManager : MonoBehaviour
     /// </summary>
     public List<string> GetFishNamesByRarity(string rarity)
     {
+        //Debug.Log($"Getting fish names for rarity: {rarity}");
         List<string> fishNames = new List<string>();
-        
+
+        // Convert rarity to title case (e.g., "RARE" -> "Rare")
+        string titleCaseRarity = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(rarity.ToLower());
+        //Debug.Log($"Converted rarity to title case: {titleCaseRarity}");
+
         ExecuteReader(
             "SELECT Name FROM Fish WHERE Rarity = @rarity",
-            reader => {
+            reader =>
+            {
                 while (reader.Read())
                 {
                     fishNames.Add(reader.GetString(0));
                 }
             },
-            new Dictionary<string, object> { { "@rarity", rarity } }
+            new Dictionary<string, object> { { "@rarity", titleCaseRarity } }
         );
-        
+
+        //Debug.Log($"Found {fishNames.Count} fish for rarity {titleCaseRarity}");
         return fishNames;
     }
 } 

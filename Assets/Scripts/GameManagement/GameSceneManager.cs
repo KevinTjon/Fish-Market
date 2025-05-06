@@ -103,7 +103,7 @@ public class GameSceneManager : MonoBehaviour
 
     public void LoadMarketScene()
     {
-        SceneManager.LoadScene("NewMarketUI");
+        SceneManager.LoadScene("Marketplace");
     }
 
     public void SimulateFishCatch()

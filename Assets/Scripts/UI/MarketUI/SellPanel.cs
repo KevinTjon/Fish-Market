@@ -205,7 +205,7 @@ public class SellPanel : MonoBehaviour
 
                         command.Parameters.Clear();
                         command.Parameters.AddWithValue("@fishName", selectedFishName);
-                        command.Parameters.AddWithValue("@rarity", rarity);
+                        command.Parameters.AddWithValue("@rarity", rarity.ToUpper());
                         command.Parameters.AddWithValue("@price", price);
 
                         command.ExecuteNonQuery();

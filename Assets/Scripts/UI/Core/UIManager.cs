@@ -42,6 +42,11 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    public bool IsInteractionPromptVisible()
+    {
+        return interactionPromptText != null && interactionPromptText.gameObject.activeSelf;
+    }
+
     public void ShowMarketplaceUI()
     {
         if (marketplaceUI != null)
