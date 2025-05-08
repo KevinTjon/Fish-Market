@@ -85,7 +85,7 @@ public class CoolerItem
     {
         Debug.Log("Fish Name: " + name);
         Debug.Log("Fish Size: " + size);
-        Debug.Log(AssetDatabase.GetAssetPath(sprite));
+        //Debug.Log(AssetDatabase.GetAssetPath(sprite));
         Debug.Log("Fish Weight: " + weight);
         Debug.Log("Fish Description: " + description);
     }
