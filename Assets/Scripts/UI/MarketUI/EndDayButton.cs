@@ -7,6 +7,7 @@ public class EndDayButton : MonoBehaviour
     [SerializeField] private Button nextDayButton;
     [SerializeField] private Button resetButton;
     private EndDayManager endDayManager;
+    private bool isFastForward = false;
 
     void OnEnable()
     {

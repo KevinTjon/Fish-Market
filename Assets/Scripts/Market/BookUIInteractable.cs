@@ -6,6 +6,7 @@ public class BookUIInteractable : MonoBehaviour
     [Header("UI Settings")]
     [SerializeField] private GameObject bookUI;
     [SerializeField] private GameObject interactionPrompt;
+    [SerializeField] private GameObject blurImage;
 
     private bool isPlayerInRange = false;
     private PlayerControls playerControls;
@@ -45,6 +46,17 @@ public class BookUIInteractable : MonoBehaviour
             {
                 bookUI.SetActive(!bookUI.activeSelf);
                 Debug.Log($"Book UI is now {(bookUI.activeSelf ? "open" : "closed")}");
+                // Hide or show the global interaction prompt
+                if (bookUI.activeSelf)
+                {
+                    UIManager.Instance.HideInteractionPrompt();
+                    if (blurImage != null) blurImage.SetActive(true);
+                }
+                else
+                {
+                    UIManager.Instance.ShowInteractionPrompt();
+                    if (blurImage != null) blurImage.SetActive(false);
+                }
             }
             else
             {
@@ -80,6 +92,7 @@ public class BookUIInteractable : MonoBehaviour
             if (bookUI != null && bookUI.activeSelf)
             {
                 bookUI.SetActive(false);
+                if (blurImage != null) blurImage.SetActive(false);
             }
         }
     }

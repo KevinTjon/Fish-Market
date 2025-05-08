@@ -43,6 +43,17 @@ public class BookController : MonoBehaviour
             {
                 endDayButtonComponent.ShowButtons(!isOpen);
             }
+            // Hide or show the interaction prompt
+            if (!isOpen)
+            {
+                // Book is being opened
+                UIManager.Instance.HideInteractionPrompt();
+            }
+            else
+            {
+                // Book is being closed
+                UIManager.Instance.ShowInteractionPrompt();
+            }
         }
     }
 }

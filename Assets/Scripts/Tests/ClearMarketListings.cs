@@ -15,8 +15,8 @@ public class ClearMarketListings : MonoBehaviour
                 using (var command = connection.CreateCommand())
                 {
                     // Clear MarketListings table
-                    command.CommandText = "DELETE FROM MarketListings";
-                    command.ExecuteNonQuery();
+                    //command.CommandText = "DELETE FROM MarketListings";
+                    //command.ExecuteNonQuery();
                     //Debug.Log("MarketListings table cleared successfully");
 
                     // Clear MarketPrices table

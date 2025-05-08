@@ -3,6 +3,7 @@ using System.Data;
 using Mono.Data.Sqlite; // Make sure to include this for SQLite
 using UnityEngine;
 using System.Linq;
+using TMPro;
 
 public class ExtensiveTab : MonoBehaviour
 {
@@ -18,14 +19,12 @@ public class ExtensiveTab : MonoBehaviour
     public string isDiscovered;
 
     public FishImagePanel fishImagePanel;
+    public TextMeshProUGUI priceText; // Assign this to FishCost in the Inspector
 
     private FishName fishNameComponent; // Reference to the FishName component
     private Description descriptionComponent; // Reference to the Description component
     private Rarity rarityComponent; // Reference to the Rarity component
     //[SerializeField] private FishPriceChart fishPriceChart;
-
-
-
 
     public void ShowFishDetails(ExtensiveTabData fishData)
     {
@@ -69,6 +68,11 @@ public class ExtensiveTab : MonoBehaviour
         descriptionComponent.SetDescription(descriptionText);
         rarityComponent.SetRarity(rarityText);
 
+        // Fetch and display the latest market price
+        float price = FetchLatestMarketPrice(fishData.Name);
+        if (priceText != null)
+            priceText.text = $"Price: {price}g";
+
         List<FishPriceData> fishPricesWithDays = GetFishPrices(fishData.Name);
     
         // Convert to arrays for the chart
@@ -81,50 +85,87 @@ public class ExtensiveTab : MonoBehaviour
         gameObject.SetActive(true);
     }
 
-    public struct FishPriceData
-{
-    public int Day;
-    public float Price;
-
-    public FishPriceData(int day, float price)
+    private float FetchLatestMarketPrice(string fishName)
     {
-        Day = day;
-        Price = price;
-    }
-}
-
-
-    public List<FishPriceData> GetFishPrices(string fishName)
-{
-    List<FishPriceData> pricesWithDays = new List<FishPriceData>();
-    string connectionString = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
-
-    using (IDbConnection dbConnection = new SqliteConnection(connectionString))
-    {
-        dbConnection.Open();
-        using (IDbCommand dbCommand = dbConnection.CreateCommand())
+        float currentMarketPrice = 0f;
+        string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+        using (IDbConnection dbConnection = new SqliteConnection(dbPath))
         {
-            // Modified query to get both Day and Price
-            dbCommand.CommandText = "SELECT Day, Price FROM MarketPrices WHERE FishName = @fishName ORDER BY Day";
-            var parameter = dbCommand.CreateParameter();
-            parameter.ParameterName = "@fishName";
-            parameter.Value = fishName;
-            dbCommand.Parameters.Add(parameter);
-
-            using (IDataReader reader = dbCommand.ExecuteReader())
+            dbConnection.Open();
+            using (IDbCommand cmd = dbConnection.CreateCommand())
             {
-                while (reader.Read())
+                cmd.CommandText = @"
+                    SELECT Price 
+                    FROM MarketPrices 
+                    WHERE FishName = @fishName 
+                    AND Day = (SELECT MAX(Day) FROM MarketPrices)
+                    LIMIT 1";
+
+                var parameter = cmd.CreateParameter();
+                parameter.ParameterName = "@fishName";
+                parameter.Value = fishName;
+                cmd.Parameters.Add(parameter);
+
+                try
                 {
-                    // Add both day and price to the list
-                    int day = reader.GetInt32(0);  // Get Day from first column
-                    float price = reader.GetFloat(1);  // Get Price from second column
-                    pricesWithDays.Add(new FishPriceData(day, price));
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != System.DBNull.Value)
+                    {
+                        currentMarketPrice = float.Parse(result.ToString());
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error fetching price: {e.Message}");
                 }
             }
         }
+        return currentMarketPrice;
     }
 
-    return pricesWithDays;
-}
+    public struct FishPriceData
+    {
+        public int Day;
+        public float Price;
+
+        public FishPriceData(int day, float price)
+        {
+            Day = day;
+            Price = price;
+        }
+    }
+
+    public List<FishPriceData> GetFishPrices(string fishName)
+    {
+        List<FishPriceData> pricesWithDays = new List<FishPriceData>();
+        string connectionString = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+
+        using (IDbConnection dbConnection = new SqliteConnection(connectionString))
+        {
+            dbConnection.Open();
+            using (IDbCommand dbCommand = dbConnection.CreateCommand())
+            {
+                // Modified query to get both Day and Price
+                dbCommand.CommandText = "SELECT Day, Price FROM MarketPrices WHERE FishName = @fishName ORDER BY Day";
+                var parameter = dbCommand.CreateParameter();
+                parameter.ParameterName = "@fishName";
+                parameter.Value = fishName;
+                dbCommand.Parameters.Add(parameter);
+
+                using (IDataReader reader = dbCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        // Add both day and price to the list
+                        int day = reader.GetInt32(0);  // Get Day from first column
+                        float price = reader.GetFloat(1);  // Get Price from second column
+                        pricesWithDays.Add(new FishPriceData(day, price));
+                    }
+                }
+            }
+        }
+
+        return pricesWithDays;
+    }
 
 }
