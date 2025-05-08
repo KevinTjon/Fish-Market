@@ -9201,7 +9201,6 @@ MonoBehaviour:
   m_DeselectOnBackgroundClick: 1
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
-  m_ScrollDeltaPerTick: 6
 --- !u!1 &3353966037032224783
 GameObject:
   m_ObjectHideFlags: 0
@@ -22606,8 +22605,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   purchaseEvaluator: {fileID: 3468288806192675330}
+  customerPrefab: {fileID: 0}
+  customerSpawnPoint: {fileID: 0}
+  stallManager: {fileID: 0}
   debugText: {fileID: 0}
   maxWaitingCustomers: 20
+  customerProcessingDelay: 2
   unsoldListingsPerCustomer: 5
   maxNewCustomersPerBatch: 5
   maxTotalCustomers: 30
@@ -22643,6 +22646,7 @@ MonoBehaviour:
   fisherAIManager: {fileID: 1203780703716051922}
   marketPriceAdjuster: {fileID: 193144921456476255}
   dayText: {fileID: 6830528112406986581}
+  customerProcessingDelay: 2
 --- !u!114 &1203780703716051922
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22670,6 +22674,9 @@ MonoBehaviour:
   purchaseManager: {fileID: 3186423237905366952}
   customerManager: {fileID: 52887005845419882}
   databaseManager: {fileID: 7293983343375027472}
+  priceChangeThreshold: 0.1
+  maxPriceIncrease: 0.2
+  maxPriceDecrease: 0.2
   globalVolatilityMultiplier: 1
 --- !u!114 &6094893746436231498
 MonoBehaviour:

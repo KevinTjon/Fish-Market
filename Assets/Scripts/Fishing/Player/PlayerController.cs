@@ -90,30 +90,16 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         // Don't talk input if game is paused
-        if (isPaused)
-        {
-            return;
-        }
+        if (isPaused) return;
 
         // Turn trigger
         if (rod.line.DoesTriggerTurn(isFacingRight) && !isTurning)
         {   
             StartCoroutine(TurnPlayer());
         }
-
-        // Charge timer
-        //if (isCharging)
     }
 
-    private void OnDisable()
-    {
-        pauseUI.SetActive(false);
-        inventoryUI.SetActive(false);
-        
-        
-    }
-
-  private IEnumerator TurnPlayer()
+    private IEnumerator TurnPlayer()
     {
         isTurning = true;
         playerAnimator.SetTrigger("Turn");
@@ -128,28 +114,26 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (isPaused)
+        if (isPaused) return;
+        if (boat == null)
         {
+            Debug.LogError("Boat reference is missing!");
             return;
         }
 
         // Handle input
         var boatInput = playerActions.MoveBoat.ReadValue<float>();
         var reelInput = playerActions.ReelLine.ReadValue<float>();
-        
-        Debug.Log($"Boat Input: {boatInput}"); // Debug input value
-        
-        if (boat == null)
-        {
-            Debug.LogError("Boat reference is missing!");
-            return;
-        }
-        
+
         boat.SetBoatForce(boatInput);
-        
         if (rod.IsFishing)
         {  
             rod.ReceiveReelInput(reelInput);
         }
+    }
+
+    private void OnDestroy()
+    {
+        playerActions.Disable();
     }
 }

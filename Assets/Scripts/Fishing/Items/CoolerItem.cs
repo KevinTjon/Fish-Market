@@ -91,6 +91,6 @@ public class CoolerItem
     }
     public string GetCoolerListEntry()
     {
-        return $"{name} | {rarity} | {weight} lbs.";
+        return $"{name} | {weight} lbs.";
     }
 }

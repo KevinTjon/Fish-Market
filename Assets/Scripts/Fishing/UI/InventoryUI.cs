@@ -6,7 +6,6 @@ using UnityEngine.UI;
 public class InventoryUI : MonoBehaviour
 {
     private readonly float pauseTime = 0.3f;
-    
     private FishingControls.UIActions uiActions;
     
     // Serialize objects
@@ -35,13 +34,12 @@ public class InventoryUI : MonoBehaviour
         uiActions.Disable();
         uiActions.Navigate.performed += HandleNavigation;
         uiActions.Point.performed += HandleMouse;
-        uiActions.Submit.performed += PauseGame;
         uiActions.Cancel.performed += PauseGame;
 
         // Assign children to variables
-        coolerList = transform.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
-        coolerPointer = transform.GetChild(1).GetChild(2).gameObject;
-        rDetails = transform.GetChild(2).gameObject;
+        coolerList = transform.GetChild(2).GetChild(0).GetComponent<TMP_Text>();
+        coolerPointer = transform.GetChild(2).GetChild(1).gameObject;
+        rDetails = transform.GetChild(3).gameObject;
         rFishSprite = rDetails.transform.GetChild(0).GetComponent<Image>();
         rFishName = Get_rFishTextComponent(1);
         rFishRarity = Get_rFishTextComponent(2);
@@ -72,7 +70,6 @@ public class InventoryUI : MonoBehaviour
             list += entry + "\n";
         }
         coolerList.text = list.TrimEnd('\n');
-        //coolerList.GetComponent<Text>().text = list.TrimEnd('\n');
 
         uiActions.Enable();
         //gameManager.SetActive(false);
@@ -90,6 +87,11 @@ public class InventoryUI : MonoBehaviour
         {
             Debug.LogWarning("gameManager is not assigned in InventoryUI.");
         }
+    }
+
+    void OnDestroy()
+    {
+        uiActions.Disable();
     }
     #endregion
     
@@ -194,7 +196,7 @@ public class InventoryUI : MonoBehaviour
         // Update pointer position
         coolerPointer.transform.localPosition = new Vector3(
             pointerHomePosition.x, 
-            pointerHomePosition.y - (pointerIndex * (coolerList.fontSize+5)),
+            pointerHomePosition.y - (pointerIndex * (coolerList.fontSize+1)),
             pointerHomePosition.z
         );
         

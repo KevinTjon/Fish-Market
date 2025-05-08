@@ -72,7 +72,7 @@ public class MarketplaceCameraController : MonoBehaviour
         // Validate the bounds
         if (maxX <= minX || maxY <= minY)
         {
-            Debug.LogError($"Camera bounds are too small for the camera view! Need at least {halfWidth * 2} width and {halfHeight * 2} height.");
+            Debug.Log($"Camera bounds are too small for the camera view! Need at least {halfWidth * 2} width and {halfHeight * 2} height.");
             // Set some minimal bounds to prevent errors
             float centerX = (boundsMin.x + boundsMax.x) * 0.5f;
             float centerY = (boundsMin.y + boundsMax.y) * 0.5f;

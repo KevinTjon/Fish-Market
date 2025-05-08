@@ -9,6 +9,7 @@ public class HookController : MonoBehaviour
     public float WaterLevel { get; private set; }
     public bool OnWaterSurface { get; private set; }
     public bool IsFishing { get; private set; }
+    
     // Attached object parameters
     public bool HasHookedObject { get; private set; }
     public FishSize AttractedSize { get; private set; }
@@ -18,6 +19,10 @@ public class HookController : MonoBehaviour
     [SerializeField] private Vector2 spawnOffset = Vector2.zero;
     [SerializeField] private float spawnRadius = 0.5f;
     
+    [Header("Sound Effects")]
+    [SerializeField] private AudioClip hookToWaterSound;
+    [SerializeField] private AudioClip fishCaughtSound;
+
     // Gizmo visualization
     [Header("Debug")]
     [SerializeField] private bool showGizmos = true;
@@ -25,12 +30,12 @@ public class HookController : MonoBehaviour
     [SerializeField] private float hookRadius = 0.2f;
     
     // Unity References
-    
     public GameObject attachedObject { get; private set; }
-
     public Rigidbody2D hookRB { get; private set; }
     private CircleCollider2D hookCollider;
     private Transform rodConnection;
+    private AudioSource source;
+
 
 
     // Add FishSize variable to help with detection
@@ -47,6 +52,12 @@ public class HookController : MonoBehaviour
 
         hookRB = GetComponent<Rigidbody2D>();
         hookRB.gravityScale = 0; // Disable gravity for the hook if not initialized
+
+        source = GetComponent<AudioSource>();
+        if (source == null)
+        {
+            source = gameObject.AddComponent<AudioSource>();
+        }
     }
 
     public void InitializeHook(Transform rodConnection)
@@ -88,18 +99,15 @@ public class HookController : MonoBehaviour
         hookRB.velocity = velocity;
     }
     
-    /*
     private void OnTriggerEnter2D(Collider2D other)
     {
         // Check if the hook has collided with a fish
         BasicFish fish = other.GetComponent<BasicFish>();
-        if (fish != null && !hasHookedFish)
+        if (fish != null && !HasHookedObject)
         {
-            // Check if the fish is compatible with the bait
-            OnFishContact(fish);
+            source.PlayOneShot(fishCaughtSound);
         }
     }
-    */
 
 
     #region Hooking Logic
@@ -209,6 +217,9 @@ public class HookController : MonoBehaviour
         hookRB.constraints = RigidbodyConstraints2D.FreezePositionY | RigidbodyConstraints2D.FreezeRotation;
         hookRB.position = new Vector2(hookRB.position.x, WaterLevel);
         OnWaterSurface = true;
+
+        // Play sound effect
+        source.PlayOneShot(hookToWaterSound);
     }
 
     public void DetachHookFromSurface(float detachForce = 0f)

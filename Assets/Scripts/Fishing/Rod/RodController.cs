@@ -23,6 +23,11 @@ public class RodController : MonoBehaviour
     [SerializeField] private readonly float maxChargeTime = 5f;
     [SerializeField] private readonly Vector2 castAngle = new Vector2(0.5f, 0.5f);
     private float chargeTime;
+    
+    [Header("SFX")]
+    //[SerializeField] private AudioClip chargeSound;
+    [SerializeField] private AudioClip chargeReleaseSound;
+    [SerializeField] private AudioClip fishToCoolerSound;
 
     [Header("References")]
     //[SerializeField] private Transform player;
@@ -31,6 +36,8 @@ public class RodController : MonoBehaviour
     
     public FishingLineController line { get; private set; }
     public HookController hook { get; private set; }
+
+    private AudioSource source;
     private Cooler fishCooler;
 
     public enum RodState
@@ -64,6 +71,8 @@ public class RodController : MonoBehaviour
         hook = Instantiate(hookPrefab, rodConnection.position, Quaternion.identity).GetComponent<HookController>();
         hook.transform.SetParent(transform);
 
+        source = GetComponent<AudioSource>();
+        
         fishCooler = GameObject.FindWithTag("Cooler").GetComponent<Cooler>();
     }
 
@@ -108,7 +117,7 @@ public class RodController : MonoBehaviour
     }
 
     /// <summary>
-    /// 
+    /// Handles charge input
     /// </summary>
     /// <param name="charge"></param>
     public void HandleChargeInput(bool charge)
@@ -129,12 +138,15 @@ public class RodController : MonoBehaviour
                     float chargePower = Mathf.Clamp(chargeTime, 0, maxChargeTime);
 
                     var hookVelocity = chargeTime * chargePower * castPowerMultiplier * castAngle;
+                    Debug.Log("Hook velocity: " + hookVelocity);
                     line.StartFishing();
                     hook.StartFishing(hookVelocity);
                     
                     chargeTime = 0f;
 
                     rodState = RodState.Casting;
+
+                    source.PlayOneShot(chargeReleaseSound);
                 }
                 break;
             default:
@@ -160,7 +172,6 @@ public class RodController : MonoBehaviour
 
             if (input > 0)
             {
-                
                 if (hook.attachedObject != null)
                 {
                     Debug.Log("Hook is attached to an object");
@@ -174,6 +185,8 @@ public class RodController : MonoBehaviour
                             fishCooler.DisplayCooler();
                             Debug.Log(fish.name + " caught!");
                             hook.CatchObject();
+                            source.PlayOneShot(fishToCoolerSound);
+                            //
                         }
                         else
                         {
