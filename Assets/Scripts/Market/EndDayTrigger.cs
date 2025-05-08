@@ -21,6 +21,11 @@ public class EndDayTrigger : MonoBehaviour
         {
             endDayButton.gameObject.SetActive(false);
             endDayButton.onClick.AddListener(OnEndDayClick);
+            Debug.Log("EndDayTrigger: Button setup complete and hidden");
+        }
+        else
+        {
+            Debug.LogWarning("End Day Button not assigned! Make sure to assign the Button reference.");
         }
 
         // Find the cooler if not assigned
@@ -36,24 +41,30 @@ public class EndDayTrigger : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        Debug.Log($"Trigger Enter detected with: {other.gameObject.name}, Tag: {other.tag}");
         // Check if it's the player
         if (other.CompareTag("Player"))
         {
+            Debug.Log("Player entered trigger area");
             if (endDayButton != null)
             {
                 endDayButton.gameObject.SetActive(true);
+                Debug.Log("EndDayButton activated");
             }
         }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
+        Debug.Log($"Trigger Exit detected with: {other.gameObject.name}, Tag: {other.tag}");
         // Hide button when player leaves the trigger area
         if (other.CompareTag("Player"))
         {
+            Debug.Log("Player exited trigger area");
             if (endDayButton != null)
             {
                 endDayButton.gameObject.SetActive(false);
+                Debug.Log("EndDayButton deactivated");
             }
         }
     }
