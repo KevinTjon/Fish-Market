@@ -8,6 +8,7 @@ public class UIManager : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private GameObject marketplaceUI;
     [SerializeField] private TextMeshProUGUI interactionPromptText;
+    [SerializeField] private GameObject blurImage;
 
     private void Awake()
     {
@@ -65,6 +66,7 @@ public class UIManager : MonoBehaviour
             marketplaceUI.SetActive(false);
             // Resume game
             Time.timeScale = 1f;
+            if (blurImage != null) blurImage.SetActive(false);
         }
     }
 } 

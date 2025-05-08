@@ -32,6 +32,11 @@ public class FishMarketPlayerSpawner : MonoBehaviour
         Vector3 spawnPosition = spawnArea.transform.position;
         spawnPosition.z = -5f; // Set z position to -2
 
-        Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+        var playerObj = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+        var playerController = playerObj.GetComponent<FishMarketPlayerController>();
+        if (playerController != null)
+        {
+            EndDayManager.Instance.playerController = playerController;
+        }
     }
 } 

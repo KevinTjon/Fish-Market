@@ -10,6 +10,7 @@ public class GameSceneManager : MonoBehaviour
 {
     public static GameSceneManager Instance { get; private set; }
     private Dictionary<string, FishInfo> fishDatabase = new Dictionary<string, FishInfo>();
+    private string lastSceneName = null;
 
     private struct FishInfo
     {
@@ -320,6 +321,34 @@ public class GameSceneManager : MonoBehaviour
                 Instance = go.AddComponent<GameSceneManager>();
             }
         }
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.activeSceneChanged += OnActiveSceneChanged;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    }
+
+    private void OnActiveSceneChanged(Scene oldScene, Scene newScene)
+    {
+        // Only trigger when entering the Marketplace scene from FishingScene
+        if (newScene.name == "Marketplace" && (oldScene.name == "FishingScene" || lastSceneName == "FishingScene"))
+        {
+            var endDayManager = EndDayManager.Instance;
+            if (endDayManager != null && endDayManager.CurrentDay == 1)
+            {
+                // Reset database and process day 1
+                endDayManager.ResetToDay1();
+                endDayManager.ProcessDay();
+                // Optionally reset inventory if needed
+                ResetInventory();
+            }
+        }
+        lastSceneName = newScene.name;
     }
 }
 

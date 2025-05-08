@@ -34,8 +34,15 @@ public class EndDayManager : MonoBehaviour
     [SerializeField] private MarketPriceAdjuster marketPriceAdjuster;
     [SerializeField] private TextMeshProUGUI dayText; // Reference to UI text showing current day
     [SerializeField] private float customerProcessingDelay = 2f; // Delay between customer processing to allow for movement
+    [SerializeField] private Camera mainCamera;
+    [SerializeField] private Collider2D targetArea; // Assign your market area 2D collider here
+    [SerializeField] private float cameraZoomDuration = 1.5f;
+    [SerializeField] private float cameraPadding = 2f; // Extra space around bounds
+    [SerializeField] private MarketplaceCameraController cameraController;
+    [SerializeField] public FishMarketPlayerController playerController;
     
     private int currentDay = 1;
+    public int CurrentDay => currentDay;
     private bool isProcessingCustomers = false;
 
     private void Awake()
@@ -175,16 +182,110 @@ public class EndDayManager : MonoBehaviour
         Debug.Log("Reset to Day 1 complete! Press Next Day to start the simulation.");
     }
 
+    private IEnumerator ZoomCameraToColliderBounds()
+    {
+        if (mainCamera == null || targetArea == null)
+        {
+            Debug.LogWarning("Camera or target area not assigned!");
+            yield break;
+        }
+
+        // Hide and freeze player
+        if (playerController != null)
+            playerController.gameObject.SetActive(false);
+
+        // Disable camera controller
+        if (cameraController != null)
+            cameraController.enabled = false;
+
+        // Ensure the collider is enabled to get correct bounds
+        bool wasEnabled = targetArea.enabled;
+        if (!wasEnabled) targetArea.enabled = true;
+
+        Bounds bounds = targetArea.bounds;
+        Vector3 targetPosition = bounds.center;
+
+        float halfHeight = bounds.size.y * 0.5f;
+        float halfWidth = bounds.size.x * 0.5f;
+        float aspect = mainCamera.aspect;
+        float sizeToFitWidth = halfWidth / aspect;
+        float targetSize = Mathf.Max(halfHeight, sizeToFitWidth) + cameraPadding;
+
+        Debug.Log($"Camera aspect: {aspect}");
+        Debug.Log($"Collider bounds: center={bounds.center}, size={bounds.size}");
+        Debug.Log($"halfHeight={halfHeight}, halfWidth={halfWidth}, sizeToFitWidth={sizeToFitWidth}, targetSize={targetSize}, startSize={mainCamera.orthographicSize}");
+
+        Vector3 startPosition = mainCamera.transform.position;
+        float startSize = mainCamera.orthographicSize;
+
+        // Only zoom out: if targetSize is less than current, keep current
+        if (targetSize < startSize)
+            targetSize = startSize;
+
+        float elapsed = 0f;
+        while (elapsed < cameraZoomDuration)
+        {
+            float t = elapsed / cameraZoomDuration;
+            mainCamera.transform.position = Vector3.Lerp(startPosition, new Vector3(targetPosition.x, targetPosition.y, startPosition.z), t);
+            mainCamera.orthographicSize = Mathf.Lerp(startSize, targetSize, t);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        mainCamera.transform.position = new Vector3(targetPosition.x, targetPosition.y, startPosition.z);
+        mainCamera.orthographicSize = targetSize;
+
+        // Restore collider enabled state if it was disabled
+        if (!wasEnabled) targetArea.enabled = false;
+
+        // Unhide and unfreeze player
+        // (Removed: do not re-enable playerController at the end of this phase)
+    }
+
     private IEnumerator ProcessDaySequence()
     {
         isProcessingCustomers = true;
         Debug.Log($"Processing Day {currentDay}...");
 
+        // Disable blurry background image if present
+        if (UIManager.Instance != null)
+        {
+            var uiManagerType = UIManager.Instance.GetType();
+            var blurImageField = uiManagerType.GetField("blurImage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (blurImageField != null)
+            {
+                GameObject blurImage = blurImageField.GetValue(UIManager.Instance) as GameObject;
+                if (blurImage != null)
+                    blurImage.SetActive(false);
+            }
+        }
+
+        // Close Book UI if open
+        var bookController = GameObject.FindObjectOfType<BookController>();
+        if (bookController != null)
+        {
+            var animator = bookController.GetComponent<Animator>();
+            if (animator != null && animator.GetBool("IsOpen"))
+            {
+                animator.SetBool("IsOpen", false);
+                // Wait for the close animation to finish (adjust duration as needed)
+                yield return new WaitForSeconds(0.5f);
+            }
+            // Now disable the BookUI GameObject if it exists
+            var bookUIGameObject = GameObject.Find("BookUI");
+            if (bookUIGameObject != null)
+            {
+                bookUIGameObject.SetActive(false);
+            }
+        }
+
+        // Camera zoom out before spawning customers
+        yield return StartCoroutine(ZoomCameraToColliderBounds());
+
         // Generate initial customers only on day 1
         if (currentDay == 1)
         {
             Debug.Log("Day 1: Generating initial customers...");
-            customerManager.GenerateInitialCustomers(5);
+            customerManager.GenerateInitialCustomers(10);
             yield return new WaitForSeconds(customerProcessingDelay);
 
             // Initialize first day prices
@@ -227,18 +328,24 @@ public class EndDayManager : MonoBehaviour
         string debugInfo = purchaseManager.DebugRemainingShoppingLists();
         Debug.Log($"Customer Status after purchases:\n{debugInfo}");
 
-        // Comment out daily table clearing for debugging
-        // Debug.Log("Clearing daily tables for next day...");
-        // clearMarketListings.ClearDailyTables();
-        // yield return new WaitForSeconds(0.1f);
-
         // Clear the listings cache in purchase manager
-        purchaseManager.ClearListingsCache();
+        //purchaseManager.ClearListingsCache();
         Debug.Log("Cleared listings cache in purchase manager");
 
         Debug.Log($"Day {currentDay} processing complete! Total active customers: {purchaseManager.GetActiveCustomers().Count}");
 
         isProcessingCustomers = false;
+
+        // Prepare customers for the next day based on unsold listings
+        //purchaseManager.PrepareCustomersForNextDay();
+
+        // Now clear daily tables as the very last thing before scene swap
+        Debug.Log("Clearing daily tables for next day...");
+        //clearMarketListings.ClearDailyTables();
+        yield return new WaitForSeconds(0.1f);
+
+        // Transition to fishing scene after customers are done shopping
+        GameSceneManager.Instance.LoadFishingScene();
     }
 
     // For testing in Unity Editor

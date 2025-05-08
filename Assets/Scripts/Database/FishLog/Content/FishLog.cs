@@ -3,11 +3,13 @@ using UnityEngine.UI;
 using Mono.Data.Sqlite;
 using System.Collections.Generic;
 using System.IO;
+using System.Data;
 
 public class FishLog : MonoBehaviour
 {
     public Transform content; // The parent object that holds the fish slots
     private List<GameObject> fishSlots; // List to hold the fish slots
+    public GameObject fishSlotPrefab; // Assign this in the Inspector
 
     private List<FishData> fishDataList; // List to hold fish data
 
@@ -21,63 +23,67 @@ public class FishLog : MonoBehaviour
 
     void LoadFishSlots()
     {
-        fishSlots.Clear(); // Clear the existing list
-
-        // Iterate through each child in the content transform
-        foreach (Transform child in content.transform)
+        // Clear existing slots from the UI
+        foreach (Transform child in content)
         {
-            // Add each child (slot) to the fishSlots list
-            fishSlots.Add(child.gameObject);
+            Destroy(child.gameObject);
         }
+        fishSlots.Clear();
 
-        // Pass fish data to each fish slot
-        for (int i = 0; i < fishSlots.Count && i < fishDataList.Count; i++)
+        for (int i = 0; i < fishDataList.Count; i++)
         {
-            FishSlot fishSlot = fishSlots[i].GetComponent<FishSlot>();
-            if (fishSlot != null) // Check if the component exists
+            // Instantiate a new slot
+            GameObject slotObj = Instantiate(fishSlotPrefab, content);
+            fishSlots.Add(slotObj);
+
+            // Enable all images and buttons in the slot
+            foreach (var img in slotObj.GetComponentsInChildren<Image>(true))
+                img.enabled = true;
+            foreach (var btn in slotObj.GetComponentsInChildren<Button>(true))
+                btn.enabled = true;
+
+            FishSlot fishSlot = slotObj.GetComponent<FishSlot>();
+            if (fishSlot != null)
             {
-                // Set the fish data from the database
                 fishSlot.SetFishData(fishDataList[i]);
-                //Debug.Log($"Setting data for slot {i}: {fishDataList[i].Name}");
+                Image fishImage = slotObj.transform.Find("FishImage").GetComponent<Image>();
 
-                // Get the Image component from the child GameObject named "Image"
-                Image fishImage = fishSlots[i].transform.Find("FishImage").GetComponent<Image>();
-
-                // Now check if the fish is discovered
                 if (fishSlot.isDiscovered == "Yes")
                 {
-                    // Load the sprite from the asset path
                     Sprite sprite = Resources.Load<Sprite>(fishSlot.assetPath);
                     if (sprite != null)
                     {
-                        fishImage.sprite = sprite; // Assign the sprite to the Image component
-                        fishImage.enabled = true; // Ensure the image is visible
+                        fishImage.sprite = sprite;
+                        fishImage.enabled = true;
                     }
                     else
                     {
-                        Debug.LogWarning($"Sprite not found at path: {fishSlot.assetPath}");
-                        fishImage.enabled = false; // Hide the image if not found
+                        Debug.LogWarning($"Sprite not found at path: {fishSlot.assetPath}, skipping fish: {fishSlot.Fishname}");
+                        Destroy(slotObj); // Remove this slot if sprite is missing
+                        fishSlots.RemoveAt(fishSlots.Count - 1);
+                        continue;
                     }
                 }
                 else
                 {
-                    // Load the default image for undiscovered fish
                     Sprite defaultSprite = Resources.Load<Sprite>("Art/Sprites/Fish/UnknownFish1");
                     if (defaultSprite != null)
                     {
-                        fishImage.sprite = defaultSprite; // Assign the default sprite
-                        fishImage.enabled = true; // Ensure the image is visible
+                        fishImage.sprite = defaultSprite;
+                        fishImage.enabled = true;
                     }
                     else
                     {
                         Debug.LogWarning("Default sprite not found at path: Art/Sprites/Fish/UnknownFish1");
-                        fishImage.enabled = false; // Hide the image if not found
+                        fishImage.enabled = false;
                     }
                 }
             }
             else
             {
-                Debug.LogWarning($"FishSlot component not found on {fishSlots[i].name}");
+                Debug.LogWarning("FishSlot component not found on instantiated slot.");
+                Destroy(slotObj);
+                fishSlots.RemoveAt(fishSlots.Count - 1);
             }
         }
     }
@@ -142,5 +148,49 @@ public class FishLog : MonoBehaviour
             Debug.LogWarning($"Sprite not found at path: {path}");
             Image fishImage = slot.transform.Find("Image").GetComponent<Image>();
         }
+    }
+
+    private float FetchLatestMarketPrice(string fishName)
+    {
+        float currentMarketPrice = 0f;
+        string dbPath = "URI=file:" + Application.dataPath + "/StreamingAssets/FishDB.db";
+        using (IDbConnection dbConnection = new SqliteConnection(dbPath))
+        {
+            dbConnection.Open();
+            using (IDbCommand cmd = dbConnection.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT Price 
+                    FROM MarketPrices 
+                    WHERE FishName = @fishName 
+                    AND Day = (SELECT MAX(Day) FROM MarketPrices)
+                    LIMIT 1";
+
+                var parameter = cmd.CreateParameter();
+                parameter.ParameterName = "@fishName";
+                parameter.Value = fishName;
+                cmd.Parameters.Add(parameter);
+
+                try
+                {
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != System.DBNull.Value)
+                    {
+                        currentMarketPrice = float.Parse(result.ToString());
+                    }
+                    else
+                    {
+                        currentMarketPrice = 0;
+                        Debug.LogWarning($"No price found for fish: {fishName}");
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Error fetching price: {e.Message}");
+                    currentMarketPrice = 0;
+                }
+            }
+        }
+        return currentMarketPrice;
     }
 }

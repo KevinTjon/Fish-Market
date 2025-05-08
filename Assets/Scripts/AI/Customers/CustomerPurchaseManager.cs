@@ -14,7 +14,7 @@ namespace Market
     {
         [Header("References")]
         [SerializeField] private CustomerPurchaseEvaluator purchaseEvaluator;
-        [SerializeField] private GameObject customerPrefab;
+        [SerializeField] private GameObject baseCustomerPrefab;
         [SerializeField] private Transform customerSpawnPoint;
         [SerializeField] private StallManager stallManager;
 
@@ -41,6 +41,11 @@ namespace Market
 
         // Track physical customers
         private Dictionary<int, PhysicalCustomer> physicalCustomers = new Dictionary<int, PhysicalCustomer>();
+
+        [SerializeField] private RuntimeAnimatorController budgetAnimatorController;
+        [SerializeField] private RuntimeAnimatorController casualAnimatorController;
+        [SerializeField] private RuntimeAnimatorController collectorAnimatorController;
+        [SerializeField] private RuntimeAnimatorController wealthyAnimatorController;
 
         private void Awake()
         {
@@ -85,11 +90,6 @@ namespace Market
             }
 
             // Validate required references
-            if (customerPrefab == null)
-            {
-                Debug.LogError("Customer prefab is not set in CustomerPurchaseManager!");
-            }
-
             if (customerSpawnPoint == null)
             {
                 Debug.LogError("Spawn point is not set in CustomerPurchaseManager!");
@@ -251,13 +251,10 @@ namespace Market
                                 returnCoroutines.Add(returnCoroutine);
                             }
 
+                            Debug.Log($"[CustomerPurchaseManager] Customer {customer.CustomerID} is done for the day. Reason: " +
+                                $"VisitedAllSellers={customer.HasVisitedAllSellers()}, ReachedMaxPurchases={customer.HasReachedMaxPurchases()}");
                             waitingCustomers.Remove(customer);
                             activeCustomers.Remove(customer);
-                        }
-                        else
-                        {
-                            // Reset visited sellers for next round
-                            customer.ClearVisitedSellers();
                         }
                     }
 
@@ -279,21 +276,9 @@ namespace Market
                     yield return new WaitForSeconds(customerProcessingDelay);
                 }
 
-                // Check if we should generate more customers
-                if (generationCycle < maxGenerationCycles)
-                {
-                    int unsoldListings = GetTotalUnsoldListings();
-                    if (unsoldListings >= unsoldListingsPerCustomer)
-                    {
-                        generationCycle++;
-                        CheckAndGenerateMoreCustomers();
-                        yield return new WaitForSeconds(customerProcessingDelay);
-                        if (waitingCustomers.Count > 0)
-                        {
-                            shouldGenerateMore = true;
-                        }
-                    }
-                }
+                // Always reset to normal speed after movement
+                SetAllCustomerSpeedMultiplier(1.0f);
+
             } while (shouldGenerateMore);
 
             //Debug.Log($"ProcessCustomerPurchases complete. Final state - Waiting: {waitingCustomers.Count}, Active: {activeCustomers.Count}");
@@ -325,14 +310,14 @@ namespace Market
 
         private PhysicalCustomer SpawnPhysicalCustomer(Customer customer)
         {
-            if (customerPrefab == null || customerSpawnPoint == null)
+            if (baseCustomerPrefab == null || customerSpawnPoint == null)
             {
-                Debug.LogError("Customer prefab or spawn point not set!");
+                Debug.LogError("Base customer prefab or spawn point not set!");
                 return null;
             }
 
             // Instantiate the physical customer at spawn point
-            GameObject customerObj = Instantiate(customerPrefab, customerSpawnPoint.position, Quaternion.identity);
+            GameObject customerObj = Instantiate(baseCustomerPrefab, customerSpawnPoint.position, Quaternion.identity);
             PhysicalCustomer physicalCustomer = customerObj.GetComponent<PhysicalCustomer>();
             
             if (physicalCustomer == null)
@@ -341,6 +326,28 @@ namespace Market
                 Destroy(customerObj);
                 return null;
             }
+
+            // Set the correct animator controller based on customer type
+            RuntimeAnimatorController controller = null;
+            switch (customer.Type)
+            {
+                case Customer.CUSTOMERTYPE.BUDGET:
+                    controller = budgetAnimatorController;
+                    break;
+                case Customer.CUSTOMERTYPE.CASUAL:
+                    controller = casualAnimatorController;
+                    break;
+                case Customer.CUSTOMERTYPE.COLLECTOR:
+                    controller = collectorAnimatorController;
+                    break;
+                case Customer.CUSTOMERTYPE.WEALTHY:
+                    controller = wealthyAnimatorController;
+                    break;
+                default:
+                    controller = budgetAnimatorController;
+                    break;
+            }
+            physicalCustomer.SetAnimatorController(controller);
 
             // Initialize the physical customer
             physicalCustomer.Initialize(customer, customerSpawnPoint);
@@ -822,6 +829,48 @@ namespace Market
             else
             {
                 Debug.LogWarning($"No physical customer found for customer ID {customer.CustomerID}");
+            }
+        }
+
+        /// <summary>
+        /// Sets the speed multiplier for all active physical customers (for fast forward effect).
+        /// </summary>
+        /// <param name="multiplier">Multiplier for movement speed (e.g., 2.0 for double speed)</param>
+        public void SetAllCustomerSpeedMultiplier(float multiplier)
+        {
+            foreach (var customer in physicalCustomers.Values)
+            {
+                if (customer != null)
+                {
+                    customer.SetSpeedMultiplier(multiplier);
+                }
+            }
+        }
+
+        // Add this method to prepare customers for the next day after shopping is done
+        public void PrepareCustomersForNextDay()
+        {
+            foreach (var customer in activeCustomers)
+            {
+                customer.ClearVisitedSellers();
+            }
+            // Existing logic for generating new customers can remain here
+            int unsoldListings = GetTotalUnsoldListings();
+            if (unsoldListings >= unsoldListingsPerCustomer)
+            {
+                int maxPossibleNewCustomers = Mathf.Min(
+                    maxTotalCustomers - activeCustomers.Count,
+                    maxNewCustomersPerBatch
+                );
+                int customersToAdd = Mathf.Min(
+                    unsoldListings / unsoldListingsPerCustomer,
+                    maxPossibleNewCustomers
+                );
+                if (customersToAdd > 0)
+                {
+                    Dictionary<Customer.FISHRARITY, float> rarityWeights = CalculateRarityWeights();
+                    customerManager.GenerateCustomersForCurrentDay(customersToAdd, rarityWeights);
+                }
             }
         }
     }

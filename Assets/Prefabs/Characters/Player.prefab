@@ -166,5 +166,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 4
+  interactableTags:
+  - PlayerInteraction
+  - Stall
+  - Customer
+  - Fish
+  - Vendor
   animator: {fileID: 699746640122077313}
   spriteRenderer: {fileID: 6578085870827733222}

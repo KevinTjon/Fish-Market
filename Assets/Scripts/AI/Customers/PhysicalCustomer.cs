@@ -26,6 +26,8 @@ namespace Market
         private readonly string horizontalParam = "DirectionX";
         private readonly string verticalParam = "DirectionY";
 
+        private float baseAgentSpeed = 0f;
+
         private void Awake()
         {
             animator = GetComponent<Animator>();
@@ -36,6 +38,7 @@ namespace Market
                 // Configure NavMeshAgent for 2D
                 agent.updateRotation = false;
                 agent.updateUpAxis = false;
+                baseAgentSpeed = agent.speed;
             }
             else
             {
@@ -62,9 +65,9 @@ namespace Market
                 animator.SetFloat(horizontalParam, 0);
                 animator.SetFloat(verticalParam, 0);
                 
-                Debug.Log($"[Customer {customer?.CustomerID}] Initial animator values - IsWalking: {animator.GetBool(isWalkingParam)}, " +
-                         $"DirectionX: {animator.GetFloat(horizontalParam)}, " +
-                         $"DirectionY: {animator.GetFloat(verticalParam)}");
+                // Debug.Log($"[Customer {customer?.CustomerID}] Initial animator values - IsWalking: {animator.GetBool(isWalkingParam)}, " +
+                //          $"DirectionX: {animator.GetFloat(horizontalParam)}, " +
+                //          $"DirectionY: {animator.GetFloat(verticalParam)}");
             }
             else
             {
@@ -90,7 +93,7 @@ namespace Market
                 }
                 else
                 {
-                    Debug.Log($"Animator controller: {animator.runtimeAnimatorController.name}");
+                    //Debug.Log($"Animator controller: {animator.runtimeAnimatorController.name}");
                 }
             }
         }
@@ -103,7 +106,7 @@ namespace Market
                 yield break;
             }
 
-            Debug.Log($"Starting movement to seller at position {sellerPosition.position}");
+            //Debug.Log($"Starting movement to seller at position {sellerPosition.position}");
             isMoving = true;
             targetPosition = sellerPosition.position;
             SetWalkingAnimation(true);
@@ -113,7 +116,7 @@ namespace Market
             Vector3 finalTarget = targetPosition;
 
             // Move horizontally first
-            Debug.Log($"Starting horizontal movement to {horizontalTarget}");
+            //Debug.Log($"Starting horizontal movement to {horizontalTarget}");
             agent.SetDestination(horizontalTarget);
             
             Vector3 lastPosition = transform.position;
@@ -129,7 +132,7 @@ namespace Market
                 if (movement.magnitude > movementThreshold)
                 {
                     Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
-                    Debug.Log($"Horizontal movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    //Debug.Log($"Horizontal movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
                     UpdateAnimation(movement2D);
                 }
                 
@@ -147,7 +150,7 @@ namespace Market
             }
 
             // Then move vertically
-            Debug.Log($"Starting vertical movement to {finalTarget}");
+            //Debug.Log($"Starting vertical movement to {finalTarget}");
             agent.SetDestination(finalTarget);
             
             lastPosition = transform.position;
@@ -158,12 +161,12 @@ namespace Market
                 Vector3 currentPosition = transform.position;
                 Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
                 
-                Debug.Log($"Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                //Debug.Log($"Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
                 
                 if (movement.magnitude > movementThreshold)
                 {
                     Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
-                    Debug.Log($"Vertical movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    //Debug.Log($"Vertical movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
                     UpdateAnimation(movement2D);
                 }
                 
@@ -180,7 +183,7 @@ namespace Market
                 yield return null;
             }
 
-            Debug.Log("Reached seller position");
+            //Debug.Log("Reached seller position");
             isMoving = false;
             SetWalkingAnimation(false);
             yield return new WaitForSeconds(purchaseWaitTime);
@@ -190,7 +193,7 @@ namespace Market
         {
             if (isDone || agent == null) yield break;
 
-            Debug.Log($"Starting return movement to spawn at {spawnPoint.position}");
+            //Debug.Log($"Starting return movement to spawn at {spawnPoint.position}");
             isMoving = true;
             targetPosition = spawnPoint.position;
             SetWalkingAnimation(true);
@@ -200,7 +203,7 @@ namespace Market
             Vector3 finalTarget = targetPosition;
 
             // Move horizontally first
-            Debug.Log($"Starting return horizontal movement to {horizontalTarget}");
+            //Debug.Log($"Starting return horizontal movement to {horizontalTarget}");
             agent.SetDestination(horizontalTarget);
             
             Vector3 lastPosition = transform.position;
@@ -211,12 +214,12 @@ namespace Market
                 Vector3 currentPosition = transform.position;
                 Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
                 
-                Debug.Log($"Return movement - Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                //Debug.Log($"Return movement - Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
                 
                 if (movement.magnitude > movementThreshold)
                 {
                     Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
-                    Debug.Log($"Return horizontal movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    //Debug.Log($"Return horizontal movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
                     UpdateAnimation(movement2D);
                 }
                 
@@ -234,7 +237,7 @@ namespace Market
             }
 
             // Then move vertically
-            Debug.Log($"Starting return vertical movement to {finalTarget}");
+            //Debug.Log($"Starting return vertical movement to {finalTarget}");
             agent.SetDestination(finalTarget);
             
             lastPosition = transform.position;
@@ -245,12 +248,12 @@ namespace Market
                 Vector3 currentPosition = transform.position;
                 Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
                 
-                Debug.Log($"Return movement - Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                //Debug.Log($"Return movement - Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
                 
                 if (movement.magnitude > movementThreshold)
                 {
                     Vector2 movement2D = new Vector2(movement.x, movement.y).normalized;
-                    Debug.Log($"Return vertical movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
+                    //Debug.Log($"Return vertical movement detected - Movement: {movement2D}, Magnitude: {movement2D.magnitude}");
                     UpdateAnimation(movement2D);
                 }
                 
@@ -268,13 +271,13 @@ namespace Market
             }
 
             // Wait a moment at spawn point before destroying
-            Debug.Log("Reached spawn point, waiting before despawn...");
+            //Debug.Log("Reached spawn point, waiting before despawn...");
             isMoving = false;
             isDone = true;
             SetWalkingAnimation(false);
             yield return new WaitForSeconds(1f);
 
-            Debug.Log("Customer despawning");
+            //Debug.Log("Customer despawning");
             // Destroy the physical representation
             Destroy(gameObject);
         }
@@ -287,7 +290,7 @@ namespace Market
                 float absX = Mathf.Abs(movement.x);
                 float absY = Mathf.Abs(movement.y);
                 
-                Debug.Log($"Raw movement magnitudes - |X|: {absX}, |Y|: {absY}");
+                //Debug.Log($"Raw movement magnitudes - |X|: {absX}, |Y|: {absY}");
 
                 float xDirection = 0;
                 float yDirection = 0;
@@ -298,29 +301,29 @@ namespace Market
                     // Horizontal movement is dominant
                     xDirection = movement.x;
                     yDirection = 0;
-                    Debug.Log("Horizontal movement dominant");
+                    //Debug.Log("Horizontal movement dominant");
                 }
                 else if (absY > absX && absY > movementThreshold)
                 {
                     // Vertical movement is dominant
                     xDirection = 0;
                     yDirection = movement.y;
-                    Debug.Log("Vertical movement dominant");
+                    //Debug.Log("Vertical movement dominant");
                 }
                 else if (absX > movementThreshold)
                 {
                     // If exactly diagonal, prioritize horizontal
                     xDirection = movement.x;
                     yDirection = 0;
-                    Debug.Log("Diagonal movement, prioritizing horizontal");
+                    //Debug.Log("Diagonal movement, prioritizing horizontal");
                 }
                 
                 // Update movement direction
                 animator.SetFloat(horizontalParam, xDirection);
                 animator.SetFloat(verticalParam, yDirection);
 
-                Debug.Log($"Final animation values - DirectionX: {xDirection}, DirectionY: {yDirection}");
-                Debug.Log($"Actual animator values - DirectionX: {animator.GetFloat(horizontalParam)}, DirectionY: {animator.GetFloat(verticalParam)}");
+                // Debug.Log($"Final animation values - DirectionX: {xDirection}, DirectionY: {yDirection}");
+                // Debug.Log($"Actual animator values - DirectionX: {animator.GetFloat(horizontalParam)}, DirectionY: {animator.GetFloat(verticalParam)}");
             }
         }
 
@@ -337,9 +340,9 @@ namespace Market
                     animator.SetFloat(verticalParam, 0);
                 }
                 
-                Debug.Log($"Setting walking animation - IsWalking: {isWalking}, " +
-                         $"DirectionX: {animator.GetFloat(horizontalParam)}, " +
-                         $"DirectionY: {animator.GetFloat(verticalParam)}");
+                // Debug.Log($"Setting walking animation - IsWalking: {isWalking}, " +
+                //          $"DirectionX: {animator.GetFloat(horizontalParam)}, " +
+                //          $"DirectionY: {animator.GetFloat(verticalParam)}");
             }
             else
             {
@@ -366,6 +369,32 @@ namespace Market
         public void OnDestroy()
         {
             // Clean up any resources if needed
+        }
+
+        public void SetAnimatorController(RuntimeAnimatorController controller)
+        {
+            if (animator == null)
+                animator = GetComponent<Animator>();
+            if (animator != null && controller != null)
+            {
+                animator.runtimeAnimatorController = controller;
+            }
+            else
+            {
+                Debug.LogWarning("Animator or controller is null when trying to set animator controller.");
+            }
+        }
+
+        /// <summary>
+        /// Sets the speed multiplier for the NavMeshAgent. Use for fast forward effects.
+        /// </summary>
+        /// <param name="multiplier">Multiplier for agent speed (e.g., 2.0 for double speed)</param>
+        public void SetSpeedMultiplier(float multiplier)
+        {
+            if (agent != null && baseAgentSpeed > 0f)
+            {
+                agent.speed = baseAgentSpeed * multiplier;
+            }
         }
     }
 } 
