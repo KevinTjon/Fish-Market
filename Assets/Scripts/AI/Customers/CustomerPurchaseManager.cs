@@ -144,8 +144,8 @@ namespace Market
             //Debug.Log($"Initial state - Waiting customers: {waitingCustomers.Count}, Active customers: {activeCustomers.Count}");
 
             bool shouldGenerateMore;
-            int generationCycle = 0;
-            const int maxGenerationCycles = 3;
+            //int generationCycle = 0;
+            //const int maxGenerationCycles = 3;
 
             do
             {

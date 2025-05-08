@@ -99,7 +99,7 @@ public class GameSceneManager : MonoBehaviour
 
     public void LoadFishingScene()
     {
-        SceneManager.LoadScene("FishingScene");
+        SceneManager.LoadScene("Fishing");
     }
 
     public void LoadMarketScene()

@@ -127,7 +127,7 @@ namespace Market
                 Vector3 currentPosition = transform.position;
                 Vector3 movement = (currentPosition - lastPosition) / Time.deltaTime;
                 
-                Debug.Log($"Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
+                //Debug.Log($"Current position: {currentPosition}, Movement: {movement}, Velocity: {agent.velocity}");
                 
                 if (movement.magnitude > movementThreshold)
                 {
@@ -368,6 +368,8 @@ namespace Market
 
         public void OnDestroy()
         {
+            Debug.Log($"[Customer {customerData?.CustomerID}] Destroying customer object");
+            StopAllCoroutines();
             // Clean up any resources if needed
         }
 
@@ -396,5 +398,7 @@ namespace Market
                 agent.speed = baseAgentSpeed * multiplier;
             }
         }
+
+        
     }
 } 

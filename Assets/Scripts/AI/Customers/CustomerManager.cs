@@ -4,7 +4,6 @@ using Mono.Data.Sqlite;
 using System;
 using System.Linq;
 using TMPro;
-using Market;
 
 namespace Market
 {
@@ -165,7 +164,7 @@ namespace Market
         /// DEPRECATED: Use GenerateInitialCustomers() instead.
         /// This method generates 30 customers based on distribution, which is too many.
         /// </summary>
-        [System.Obsolete("Use GenerateInitialCustomers() instead. This method generates too many customers.")]
+        [Obsolete("Use GenerateInitialCustomers() instead. This method generates too many customers.")]
         public void TestGenerateInitialCustomers()
         {
             Debug.LogWarning("TestGenerateInitialCustomers is deprecated. Using GenerateInitialCustomers(5) instead.");

@@ -59,6 +59,7 @@ public class MarketplaceCameraController : MonoBehaviour
         Debug.Log($"Camera viewport size - Width: {halfWidth * 2}, Height: {halfHeight * 2}");
 
         // Get the bounds from the collider
+        Debug.Log($"Camera bounds - Center: {cameraBounds.bounds.center}, Size: {cameraBounds.bounds.size}");
         Bounds bounds = cameraBounds.bounds;
         Vector2 boundsMin = bounds.min;
         Vector2 boundsMax = bounds.max;
@@ -69,10 +70,11 @@ public class MarketplaceCameraController : MonoBehaviour
         minY = Mathf.Min(boundsMin.y, boundsMax.y) + halfHeight;
         maxY = Mathf.Max(boundsMin.y, boundsMax.y) - halfHeight;
 
+        Debug.Log($"Camera bounds - Min: ({minX}, {minY}), Max: ({maxX}, {maxY})");
         // Validate the bounds
         if (maxX <= minX || maxY <= minY)
         {
-            Debug.Log($"Camera bounds are too small for the camera view! Need at least {halfWidth * 2} width and {halfHeight * 2} height.");
+            Debug.LogWarning($"Camera bounds are too small for the camera view! Need at least {halfWidth * 2} width and {halfHeight * 2} height.");
             // Set some minimal bounds to prevent errors
             float centerX = (boundsMin.x + boundsMax.x) * 0.5f;
             float centerY = (boundsMin.y + boundsMax.y) * 0.5f;

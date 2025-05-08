@@ -4800,6 +4800,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bookUI: {fileID: 1192795148}
   interactionPrompt: {fileID: 1379631817}
+  blurImage: {fileID: 0}
 --- !u!224 &407030923 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3888923805326585806, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
@@ -17213,6 +17214,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   marketplaceUI: {fileID: 1192795148}
   interactionPromptText: {fileID: 1379631819}
+  blurImage: {fileID: 0}
 --- !u!4 &895321166
 Transform:
   m_ObjectHideFlags: 0
@@ -20375,9 +20377,29 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 4535897866762832372, guid: fb546adafda26594c9646e595f5b3886, type: 3}
     - target: {fileID: 3186423237905366952, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: baseCustomerPrefab
+      value: 
+      objectReference: {fileID: 4535897866762832372, guid: fb546adafda26594c9646e595f5b3886, type: 3}
+    - target: {fileID: 3186423237905366952, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
       propertyPath: customerSpawnPoint
       value: 
       objectReference: {fileID: 1006223879}
+    - target: {fileID: 3186423237905366952, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: budgetAnimatorController
+      value: 
+      objectReference: {fileID: 9100000, guid: a672852776466584991b8165eb5397f0, type: 2}
+    - target: {fileID: 3186423237905366952, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: casualAnimatorController
+      value: 
+      objectReference: {fileID: 9100000, guid: a7dc93c672366874d9cee1efe194f22d, type: 2}
+    - target: {fileID: 3186423237905366952, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: wealthyAnimatorController
+      value: 
+      objectReference: {fileID: 9100000, guid: a3b6e2e3b3f987847a8c60320abec604, type: 2}
+    - target: {fileID: 3186423237905366952, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: collectorAnimatorController
+      value: 
+      objectReference: {fileID: 9100000, guid: 2b09b24f2d7a1344fb7aa21c658a7344, type: 2}
     - target: {fileID: 3699117502783545459, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -20746,6 +20768,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7408661260497123797, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: fishSlotPrefab
+      value: 
+      objectReference: {fileID: 1650608482}
     - target: {fileID: 7896233021723502616, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -20762,6 +20788,18 @@ PrefabInstance:
       propertyPath: dayText
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 8096419786497042490, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: mainCamera
+      value: 
+      objectReference: {fileID: 1810778661}
+    - target: {fileID: 8096419786497042490, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: targetArea
+      value: 
+      objectReference: {fileID: 2011603428}
+    - target: {fileID: 8096419786497042490, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+      propertyPath: cameraController
+      value: 
+      objectReference: {fileID: 1810778663}
     - target: {fileID: 8259185559285433765, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -20886,6 +20924,11 @@ PrefabInstance:
       addedObject: {fileID: 1087214581}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+--- !u!1 &1650608482 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4683158001039401167, guid: 83c999b59dfc7d54c976265fe4a1c2da, type: 3}
+  m_PrefabInstance: {fileID: 1650608481}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1657379344
 GameObject:
   m_ObjectHideFlags: 0

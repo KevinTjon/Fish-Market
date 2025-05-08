@@ -345,7 +345,11 @@ public class EndDayManager : MonoBehaviour
         yield return new WaitForSeconds(0.1f);
 
         // Transition to fishing scene after customers are done shopping
-        GameSceneManager.Instance.LoadFishingScene();
+        GameSceneManager.EnsureExists();
+        
+        
+        //Destroy(gameObject); // Destroy this manager to avoid duplicates
+        //GameSceneManager.Instance.LoadFishingScene();
     }
 
     // For testing in Unity Editor
