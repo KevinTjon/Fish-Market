@@ -3,40 +3,20 @@ using UnityEngine.UI;
 
 public class EndDayTrigger : MonoBehaviour
 {
-    [SerializeField] private Button endDayButton;
-    [SerializeField] private Cooler playerCooler; // Reference to player's cooler
+    [SerializeField] private GameObject endDayUI; // Reference to the End Day UI
+    //[SerializeField] private Button endDayButton;
+    //[SerializeField] private Cooler playerCooler; // Reference to player's cooler
 
-    private void Start()
+    private void Awake()
     {
-        // Ensure we have a BoxCollider2D and set it as trigger
-        BoxCollider2D boxCollider = GetComponent<BoxCollider2D>();
-        if (boxCollider == null)
+        if (endDayUI == null)
         {
-            boxCollider = gameObject.AddComponent<BoxCollider2D>();
-        }
-        boxCollider.isTrigger = true;
-
-        // Hide button initially
-        if (endDayButton != null)
-        {
-            endDayButton.gameObject.SetActive(false);
-            endDayButton.onClick.AddListener(OnEndDayClick);
-            Debug.Log("EndDayTrigger: Button setup complete and hidden");
-        }
-        else
-        {
-            Debug.LogWarning("End Day Button not assigned! Make sure to assign the Button reference.");
+            Debug.LogWarning("End Day UI not assigned! Make sure to assign the End Day UI reference.");
+            return;
         }
 
-        // Find the cooler if not assigned
-        if (playerCooler == null)
-        {
-            playerCooler = FindObjectOfType<Cooler>();
-            if (playerCooler == null)
-            {
-                Debug.LogWarning("No Cooler found in scene! Make sure to assign the Cooler reference.");
-            }
-        }
+        endDayUI.SetActive(false); // Hide the UI initially
+
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -46,11 +26,7 @@ public class EndDayTrigger : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             Debug.Log("Player entered trigger area");
-            if (endDayButton != null)
-            {
-                endDayButton.gameObject.SetActive(true);
-                Debug.Log("EndDayButton activated");
-            }
+            endDayUI.SetActive(true);
         }
     }
 
@@ -61,31 +37,7 @@ public class EndDayTrigger : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             Debug.Log("Player exited trigger area");
-            if (endDayButton != null)
-            {
-                endDayButton.gameObject.SetActive(false);
-                Debug.Log("EndDayButton deactivated");
-            }
+            endDayUI.SetActive(false);
         }
-    }
-
-    private void OnEndDayClick()
-    {
-        // Ensure GameSceneManager exists
-        GameSceneManager.EnsureExists();
-        
-        // Save cooler contents to inventory
-        if (playerCooler != null)
-        {
-            GameSceneManager.Instance.SaveCoolerToInventory(playerCooler);
-            Debug.Log("Saved cooler contents to inventory");
-        }
-        else
-        {
-            Debug.LogWarning("No Cooler reference found when trying to save!");
-        }
-        
-        // Load the market scene
-        GameSceneManager.Instance.LoadMarketScene();
     }
 } 
