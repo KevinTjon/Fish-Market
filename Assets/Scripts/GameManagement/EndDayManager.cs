@@ -324,32 +324,20 @@ public class EndDayManager : MonoBehaviour
         purchaseManager.ProcessCustomerPurchases();
         yield return new WaitForSeconds(customerProcessingDelay);
 
-        // Optional: Display debug information
-        string debugInfo = purchaseManager.DebugRemainingShoppingLists();
-        Debug.Log($"Customer Status after purchases:\n{debugInfo}");
+        // Wait for all customers to leave before transitioning scenes
+        StartCoroutine(WaitForAllCustomersToLeave());
+    }
 
-        // Clear the listings cache in purchase manager
-        //purchaseManager.ClearListingsCache();
-        Debug.Log("Cleared listings cache in purchase manager");
-
-        Debug.Log($"Day {currentDay} processing complete! Total active customers: {purchaseManager.GetActiveCustomers().Count}");
-
-        isProcessingCustomers = false;
-
-        // Prepare customers for the next day based on unsold listings
-        //purchaseManager.PrepareCustomersForNextDay();
-
-        // Now clear daily tables as the very last thing before scene swap
-        Debug.Log("Clearing daily tables for next day...");
-        //clearMarketListings.ClearDailyTables();
-        yield return new WaitForSeconds(0.1f);
-
-        // Transition to fishing scene after customers are done shopping
+    private IEnumerator WaitForAllCustomersToLeave()
+    {
+        // Wait until there are no PhysicalCustomer objects left in the scene
+        while (FindObjectsOfType<Market.PhysicalCustomer>().Length > 0)
+        {
+            yield return null;
+        }
+        // All customers have left, transition to fishing scene
         GameSceneManager.EnsureExists();
-        
-        
-        //Destroy(gameObject); // Destroy this manager to avoid duplicates
-        //GameSceneManager.Instance.LoadFishingScene();
+        GameSceneManager.Instance.LoadFishingScene();
     }
 
     // For testing in Unity Editor
