@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using TMPro;
 using Market;
+using UnityEngine.SceneManagement;
 
 public class EndDayManager : MonoBehaviour
 {
@@ -335,9 +336,13 @@ public class EndDayManager : MonoBehaviour
         {
             yield return null;
         }
-        // All customers have left, transition to fishing scene
+        // All customers have left, transition to EndDay scene
         GameSceneManager.EnsureExists();
-        GameSceneManager.Instance.LoadFishingScene();
+        if (purchaseManager != null)
+        {
+            purchaseManager.SaveAllSellerGold();
+        }
+        UnityEngine.SceneManagement.SceneManager.LoadScene("EndDay");
     }
 
     // For testing in Unity Editor
@@ -351,5 +356,23 @@ public class EndDayManager : MonoBehaviour
     public void TestResetToDay1()
     {
         ResetToDay1();
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name == "EndDay")
+        {
+            Destroy(gameObject);
+        }
     }
 }

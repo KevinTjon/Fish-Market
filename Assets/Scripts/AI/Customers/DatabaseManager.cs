@@ -35,6 +35,8 @@ public class DatabaseManager : MonoBehaviour
     private string dbPath;
     private SqliteConnection persistentConnection;
     private bool isInitialized = false;
+    private int dbInitAttempts = 0;
+    private const int MaxDbInitAttempts = 3;
 
     private void Awake()
     {
@@ -75,6 +77,13 @@ public class DatabaseManager : MonoBehaviour
     /// </summary>
     private void InitializeDatabase()
     {
+        dbInitAttempts++;
+        if (dbInitAttempts > MaxDbInitAttempts)
+        {
+            Debug.LogError($"Database initialization failed more than {MaxDbInitAttempts} times. Aborting further attempts.");
+            try { System.IO.File.AppendAllText("C:/temp/unity_debug.txt", $"Database initialization failed more than {MaxDbInitAttempts} times. Aborting.\n"); } catch { }
+            return;
+        }
         try
         {
             string dbName = "FishDB.db";
@@ -176,13 +185,32 @@ public class DatabaseManager : MonoBehaviour
                         }
                     }
                 }
+
+                // Create SellerEarnings table if it doesn't exist
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS SellerEarnings (
+                            SellerID INTEGER PRIMARY KEY,
+                            Gold REAL DEFAULT 0,
+                            PreviousGold REAL DEFAULT 0
+                        )";
+                    command.ExecuteNonQuery();
+                }
             }
             
+            // Ensure all sellers (player and AI) have a row in SellerEarnings
+            for (int sellerId = 0; sellerId <= 4; sellerId++)
+            {
+                SetSellerGold(sellerId, 0); // Set initial gold to 0
+                SetSellerPreviousGold(sellerId, 0); // Always set previous day to 0 on init
+            }
             isInitialized = true;
         }
         catch (Exception e)
         {
             Debug.LogError($"Failed to initialize database: {e.Message}");
+            try { System.IO.File.AppendAllText("C:/temp/unity_debug.txt", $"Failed to initialize database: {e.Message}\n"); } catch { }
             isInitialized = false;
         }
     }
@@ -195,8 +223,13 @@ public class DatabaseManager : MonoBehaviour
         if (!isInitialized)
         {
             InitializeDatabase();
+            if (!isInitialized)
+            {
+                Debug.LogError("Database is not initialized after retry. Returning null connection.");
+                try { System.IO.File.AppendAllText("C:/temp/unity_debug.txt", "Database is not initialized after retry. Returning null connection.\n"); } catch { }
+                return null;
+            }
         }
-
         var connection = new SqliteConnection(dbPath);
         connection.Open();
         return connection;
@@ -670,5 +703,23 @@ public class DatabaseManager : MonoBehaviour
 
         //Debug.Log($"Found {fishNames.Count} fish for rarity {titleCaseRarity}");
         return fishNames;
+    }
+
+    // Seller earnings methods
+    public void SetSellerGold(int sellerId, float gold)
+    {
+        string sql = @"
+            INSERT INTO SellerEarnings (SellerID, Gold)
+            VALUES (@sellerId, @gold)
+            ON CONFLICT(SellerID) DO UPDATE SET Gold = @gold";
+        var parameters = new Dictionary<string, object> { { "@sellerId", sellerId }, { "@gold", gold } };
+        ExecuteNonQuery(sql, parameters);
+    }
+
+    public void SetSellerPreviousGold(int sellerId, float value)
+    {
+        string sql = "UPDATE SellerEarnings SET PreviousGold = @value WHERE SellerID = @sellerId";
+        var parameters = new Dictionary<string, object> { { "@sellerId", sellerId }, { "@value", value } };
+        ExecuteNonQuery(sql, parameters);
     }
 } 

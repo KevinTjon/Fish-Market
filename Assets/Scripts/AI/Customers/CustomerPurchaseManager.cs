@@ -47,6 +47,8 @@ namespace Market
         [SerializeField] private RuntimeAnimatorController collectorAnimatorController;
         [SerializeField] private RuntimeAnimatorController wealthyAnimatorController;
 
+        private Dictionary<int, float> sellerGold = new Dictionary<int, float>();
+
         private void Awake()
         {
             //Debug.Log("CustomerPurchaseManager Awake - Initializing dependencies...");
@@ -96,6 +98,17 @@ namespace Market
             }
 
             //Debug.Log("CustomerPurchaseManager initialized");
+
+            InitializeSellerGold();
+        }
+
+        private void InitializeSellerGold()
+        {
+            sellerGold.Clear();
+            for (int sellerId = 0; sellerId <= 4; sellerId++)
+            {
+                sellerGold[sellerId] = 0f;
+            }
         }
 
         public float GetSellerBias(int customerId, Customer.SellerType seller, Customer.FISHRARITY rarity)
@@ -781,6 +794,11 @@ namespace Market
             customer.Budget -= (int)selectedListing.ListedPrice;
             if (MarkListingAsSold(selectedListing.ListingID, customer.CustomerID))
             {
+                // Add gold to the seller (player or AI) in memory
+                if (!sellerGold.ContainsKey(selectedListing.SellerID))
+                    sellerGold[selectedListing.SellerID] = 0f;
+                sellerGold[selectedListing.SellerID] += selectedListing.ListedPrice;
+
                 // Get the preference that matched this purchase
                 var preference = customer.GetUnpurchasedPreferences()
                     .FirstOrDefault(p => p.FishName == selectedListing.FishName);
@@ -871,6 +889,14 @@ namespace Market
                     Dictionary<Customer.FISHRARITY, float> rarityWeights = CalculateRarityWeights();
                     customerManager.GenerateCustomersForCurrentDay(customersToAdd, rarityWeights);
                 }
+            }
+        }
+
+        public void SaveAllSellerGold()
+        {
+            foreach (var kvp in sellerGold)
+            {
+                DatabaseManager.Instance.SetSellerGold(kvp.Key, kvp.Value);
             }
         }
     }
