@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: YOUR_SCRIPT_GUID_HERE, type: 3}
+  m_Name: TinyFish
+  m_EditorClassIdentifier: 
+  fishName: Tiny Fish
+  size: 0
+  prefab: {fileID: 0}
+  baseValue: 5
+  minDepth: 0
+  maxDepth: 5
+  spawnWeight: 2
+  spawnChance: 0.8
+  minSpeed: 2
+  maxSpeed: 4
+  preyChaseSpeed: 1.2
+  fleeSpeed: 2.5
+  turnSpeed: 4
+  preferredDepth: 2
+  depthVariance: 1
+  canEat: 0
+  preySizes: []
+  visionRange: 3
+  personalSpace: 0.5
+  isDayActive: 1
+  isNightActive: 0 

@@ -3,7 +3,13 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Fish
+  - Cooler
+  - Seller
+  - PlayerStall
+  - PlayerInteraction
+  - Customer
   layers:
   - Default
   - TransparentFX
@@ -11,18 +17,15 @@ TagManager:
   - Environment
   - Water
   - UI
-  - Hookable
-  - 
+  - Ground
+  - Fish
   - Boat
+  - Hookable
   - Hook
-  - 
-  - Obstacle
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Bait
+  - Predator
+  - Buildings
+  - AiGround
   - 
   - 
   - 
